@@ -2,9 +2,13 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "nodemon -w '../src/**/*.ts' -e .ts -x vite"
+    "vite:dev": "nodemon -w '../src/**/*.ts' -e .ts -x vite",
+    "vite:build": "nodemon -w '../src/**/*.ts' -e .ts -x vite build",
+    "rsbuild:dev": "nodemon -w '../src/**/*.ts' -e .ts -x rsbuild dev",
+    "rsbuild:build": "nodemon -w '../src/**/*.ts' -e .ts -x rsbuild build"
   },
   "devDependencies": {
+    "@rsbuild/core": "^1.5.3",
     "vite": "^6.3.5",
     "vite-plugin-inspect": "^11.1.0"
   }
