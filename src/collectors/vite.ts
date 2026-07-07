@@ -2,7 +2,6 @@ import type { Rollup } from 'vite'
 import type { AssetEntry, EntryFiles, NormalizedGraph } from '../types'
 
 interface ViteChunkMetadata {
-  importedAssets: Set<string>
   importedCss: Set<string>
 }
 type ViteOutputChunk = Rollup.OutputChunk & { viteMetadata?: ViteChunkMetadata }

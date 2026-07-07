@@ -22,5 +22,5 @@ export function buildManifest(graph: NormalizedGraph, ctx: BuildContext): Manife
   for (const { logicalName, fileName } of graph.assets) {
     manifest[ctx.manifestKeyPrefix + logicalName] = joinUrl(ctx.publicPath, fileName)
   }
-  return Object.fromEntries(Object.entries(manifest).sort(([a], [b]) => a.localeCompare(b)))
+  return Object.fromEntries(Object.entries(manifest).sort(([a], [b]) => a.localeCompare(b, 'en')))
 }

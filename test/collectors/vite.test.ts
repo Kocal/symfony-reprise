@@ -50,4 +50,15 @@ describe('bundleToGraph', () => {
     expect(graph.assets).toContainEqual({ logicalName: 'app.js', fileName: 'app-a1b2.js' })
     expect(graph.assets).toContainEqual({ logicalName: 'app.css', fileName: 'app-c3.css' })
   })
+
+  it('falls back to fileName when an asset has no names', () => {
+    const bundle = {
+      'app-a1b2.js': chunk({ fileName: 'app-a1b2.js', name: 'app', isEntry: true }),
+      'noname-x.png': asset('noname-x.png', []),
+    } as unknown as Rollup.OutputBundle
+
+    const graph = bundleToGraph(bundle)
+
+    expect(graph.assets).toContainEqual({ logicalName: 'noname-x.png', fileName: 'noname-x.png' })
+  })
 })
