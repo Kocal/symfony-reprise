@@ -14,6 +14,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
 
     vite: {
       config: () => ({
+        base: resolved.publicPath,
         build: {
           outDir: resolved.outputPath,
           copyPublicDir: false,

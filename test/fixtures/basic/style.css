@@ -1,1 +1,4 @@
-body { color: red; }
+body {
+  color: red;
+  background: url('./logo.svg');
+}
