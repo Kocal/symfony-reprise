@@ -1,47 +1,44 @@
 import type { UnpluginFactory } from 'unplugin'
-import type { Options } from './types'
-import * as path from 'node:path'
+import type { BuildContext, Options } from './types'
 import * as process from 'node:process'
 import { createUnplugin } from 'unplugin'
+import { bundleToGraph } from './collectors/vite'
+import { buildEntrypoints, buildManifest } from './core/format'
+import { normalizeOptions } from './core/options'
 
 export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _meta) => {
-  let outputPath = options?.outputPath ?? 'public/build'
-  outputPath = path.isAbsolute(outputPath) ? outputPath : path.join(process.cwd(), outputPath)
-
-  const publicPath = options?.publicPath ?? 'build/'
-
-  let manifestKeyPrefix = options?.manifestKeyPrefix ?? null
-  if (manifestKeyPrefix === null) {
-    if (publicPath === null) {
-      throw new Error('Option "publicPath" is missing')
-    }
-    manifestKeyPrefix = publicPath.replace(/^\//, '')
-  }
+  const resolved = normalizeOptions(options, process.cwd())
 
   return {
     name: 'unplugin-symfony',
-    buildStart() {
-      // TODO: emit entrypoints.json (+ manifest.json) into outputPath.
-      // outputPath / publicPath / manifestKeyPrefix are resolved above.
-    },
-    buildEnd() {
-      // TODO: finalize and write the Symfony integration files.
-    },
 
     vite: {
       config: () => ({
         build: {
-          outDir: outputPath,
+          outDir: resolved.outputPath,
           copyPublicDir: false,
           manifest: false,
           assetsDir: '.',
         },
       }),
+      generateBundle(_outputOptions, bundle) {
+        const graph = bundleToGraph(bundle)
+        const ctx: BuildContext = {
+          isProd: true,
+          devServer: null,
+          publicPath: resolved.publicPath,
+          manifestKeyPrefix: resolved.manifestKeyPrefix,
+        }
+        const entrypoints = buildEntrypoints(graph, ctx)
+        const manifest = buildManifest(graph, ctx)
+        this.emitFile({ type: 'asset', fileName: 'entrypoints.json', source: `${JSON.stringify(entrypoints, null, 2)}\n` })
+        this.emitFile({ type: 'asset', fileName: 'manifest.json', source: `${JSON.stringify(manifest, null, 2)}\n` })
+      },
     },
 
     rspack(compiler) {
-      compiler.options.output.path = outputPath
-      compiler.options.output.publicPath = publicPath
+      compiler.options.output.path = resolved.outputPath
+      compiler.options.output.publicPath = resolved.publicPath
     },
   }
 }

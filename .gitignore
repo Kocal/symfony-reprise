@@ -82,3 +82,6 @@ dist
 
 # IDE
 .idea
+
+# Subagent-driven-development scratch (briefs, reports, ledger, diffs)
+.superpowers/
