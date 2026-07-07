@@ -28,6 +28,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
           isProd: true,
           devServer: null,
           publicPath: resolved.publicPath,
+          urlPrefix: resolved.publicPath,
           manifestKeyPrefix: resolved.manifestKeyPrefix,
         }
         const entrypoints = buildEntrypoints(graph, ctx)

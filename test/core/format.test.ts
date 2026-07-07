@@ -6,6 +6,7 @@ const ctx: BuildContext = {
   isProd: true,
   devServer: null,
   publicPath: '/build/',
+  urlPrefix: '/build/',
   manifestKeyPrefix: 'build/',
 }
 
@@ -43,6 +44,20 @@ describe('buildEntrypoints', () => {
   it('inserts a slash when publicPath has no trailing slash', () => {
     const out = buildEntrypoints(graph, { ...ctx, publicPath: '/build' })
     expect(out.entryPoints.app.js).toEqual(['/build/app-a1b2.js'])
+  })
+
+  it('builds URLs from urlPrefix but emits the original publicPath field', () => {
+    const devCtx: BuildContext = {
+      isProd: false,
+      devServer: { origin: 'http://127.0.0.1:5173', client: 'vite' },
+      publicPath: '/build/',
+      urlPrefix: 'http://127.0.0.1:5173/build/',
+      manifestKeyPrefix: 'build/',
+    }
+    const out = buildEntrypoints({ entryPoints: { app: { js: ['assets/app.js'], css: [], preload: [], dynamic: [] } }, assets: [] }, devCtx)
+    expect(out.publicPath).toBe('/build/')
+    expect(out.devServer).toEqual({ origin: 'http://127.0.0.1:5173', client: 'vite' })
+    expect(out.entryPoints.app.js).toEqual(['http://127.0.0.1:5173/build/assets/app.js'])
   })
 })
 

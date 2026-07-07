@@ -97,9 +97,11 @@ export interface NormalizedGraph {
 export interface BuildContext {
   isProd: boolean
   devServer: DevServer | null
-  /** URL prefix for entrypoint/manifest asset URLs (the configured publicPath in build mode). */
+  /** Prefix for entry/asset URLs. Equals publicPath in build; origin+publicPath in dev. */
+  urlPrefix: string
+  /** The configured publicPath, emitted as the top-level `publicPath` field. */
   publicPath: string
-  /** Logical key prefix for manifest.json keys (publicPath minus leading slash, by default). */
+  /** Logical key prefix for manifest.json keys. */
   manifestKeyPrefix: string
 }
 

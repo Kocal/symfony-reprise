@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { normalizeOptions } from '../../src/core/options'
+import { normalizeOptions, resolvePublicPath } from '../../src/core/options'
 
 describe('normalizeOptions', () => {
   it('resolves a relative outputPath against cwd', () => {
@@ -39,5 +39,20 @@ describe('normalizeOptions', () => {
     const r = normalizeOptions({ publicPath: 'https://cdn.example.com/x', manifestKeyPrefix: 'build/' }, '/app')
     expect(r.publicPath).toBe('https://cdn.example.com/x')
     expect(r.manifestKeyPrefix).toBe('build/')
+  })
+})
+
+describe('resolvePublicPath', () => {
+  it('returns publicPath unchanged in build mode (no dev origin)', () => {
+    expect(resolvePublicPath('/build/', null)).toBe('/build/')
+  })
+  it('prefixes the dev-server origin in dev mode', () => {
+    expect(resolvePublicPath('/build/', 'http://127.0.0.1:5173')).toBe('http://127.0.0.1:5173/build/')
+  })
+  it('strips a trailing slash from the origin before joining', () => {
+    expect(resolvePublicPath('/build/', 'http://127.0.0.1:5173/')).toBe('http://127.0.0.1:5173/build/')
+  })
+  it('keeps an already-absolute publicPath (CDN) as-is even in dev', () => {
+    expect(resolvePublicPath('https://cdn.example.com/x/', 'http://127.0.0.1:5173')).toBe('https://cdn.example.com/x/')
   })
 })

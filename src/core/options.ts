@@ -20,3 +20,9 @@ export function normalizeOptions(options: Options | undefined, cwd: string): Res
 
   return { outputPath, publicPath, manifestKeyPrefix }
 }
+
+export function resolvePublicPath(publicPath: string, devOrigin: string | null): string {
+  if (!devOrigin || publicPath.includes('://'))
+    return publicPath
+  return `${devOrigin.replace(/\/$/, '')}${publicPath}`
+}
