@@ -6,7 +6,7 @@
 
 **Architecture:** Reuse A1's pure core. Add a dev-origin resolver and a config→graph collector; the factory writes the dev file from `configureServer` on the server's `listening` event. Entrypoint URLs are built from a `urlPrefix` (= `publicPath` in build, = `origin + publicPath` in dev), kept separate from the `publicPath` field emitted in the JSON.
 
-**Tech Stack:** TypeScript (ESM, strict, ES2017), unplugin 2, Vite 6, vitest 3, tsdown.
+**Tech Stack:** TypeScript (ESM, strict, ES2017), unplugin 2, Vite 8 (rolldown-based), vitest 4, tsdown.
 
 **Sources (derive from these — do NOT copy any third-party plugin):**
 - **Vite's public plugin API** (the platform): `configResolved`/`configureServer` hooks, `ResolvedConfig.{command,base,root,server,build.rollupOptions.input}`, `ViteDevServer.httpServer`, and `ServerOptions.origin`. This is the legitimate substrate to build on.
@@ -25,6 +25,7 @@
 - Dev entries carry only `js` OR `css` (native ESM in dev — no `preload`/`dynamic` chunk graph). Those arrays stay present but empty.
 - In serve mode there is no bundle: write with `node:fs`, not `emitFile`. Trigger on the dev server's `listening` event (the address/port is only valid then).
 - Node 22 (so `AddressInfo.family === 'IPv6'` is the string form — no legacy integer check); pnpm; run commands with `CI=true` prefix in this environment.
+- Vite 8 is rolldown-based and exposes the build input under BOTH `config.build.rollupOptions` and `config.build.rolldownOptions` (aliases). Read `rollupOptions?.input ?? rolldownOptions?.input`. The `Rollup` type namespace imported from `vite` still resolves (rolldown-backed), so A1's `Rollup.OutputBundle`/`Rollup.InputOption` usage is unchanged.
 - Automated tests use `test/fixtures/`, never the `playground/` app.
 
 ## File Structure
@@ -410,6 +411,11 @@ describe('configToDevGraph', () => {
     expect(configToDevGraph({ root: '/app', build: { rollupOptions: { input: ['/app/a.js'] } } } as any).entryPoints).toEqual({})
     expect(configToDevGraph({ root: '/app', build: { rollupOptions: {} } } as any).entryPoints).toEqual({})
   })
+
+  it('reads rolldownOptions.input when rollupOptions is absent (Vite 8)', () => {
+    const graph = configToDevGraph({ root: '/app', build: { rolldownOptions: { input: { app: '/app/assets/app.js' } } } } as any)
+    expect(graph.entryPoints.app).toEqual({ js: ['assets/app.js'], css: [], preload: [], dynamic: [] })
+  })
 })
 ```
 
@@ -429,7 +435,10 @@ const CSS_EXTS = new Set(['.css', '.scss', '.sass', '.less', '.styl', '.stylus',
 
 export interface DevConfig {
   root: string
-  build: { rollupOptions: { input?: Rollup.InputOption } }
+  build: {
+    rollupOptions?: { input?: Rollup.InputOption }
+    rolldownOptions?: { input?: Rollup.InputOption }
+  }
 }
 
 function slash(p: string): string {
@@ -438,7 +447,8 @@ function slash(p: string): string {
 
 export function configToDevGraph(config: DevConfig): NormalizedGraph {
   const entryPoints: Record<string, EntryFiles> = {}
-  const input = config.build.rollupOptions.input
+  // Vite 8 (rolldown) exposes the input under either key.
+  const input = config.build.rollupOptions?.input ?? config.build.rolldownOptions?.input
   const entries: Record<string, string>
     = typeof input === 'object' && input !== null && !Array.isArray(input) ? input as Record<string, string> : {}
 
