@@ -1,10 +1,12 @@
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { normalizeOptions } from '../../src/core/options'
 
 describe('normalizeOptions', () => {
   it('resolves a relative outputPath against cwd', () => {
     const r = normalizeOptions({ outputPath: 'public/build' }, '/app')
-    expect(r.outputPath).toBe('/app/public/build')
+    // outputPath is a filesystem path -> native separators (backslashes on Windows).
+    expect(r.outputPath).toBe(join('/app', 'public/build'))
   })
 
   it('keeps an absolute outputPath as-is', () => {
@@ -14,7 +16,7 @@ describe('normalizeOptions', () => {
 
   it('applies defaults (outputPath, publicPath)', () => {
     const r = normalizeOptions(undefined, '/app')
-    expect(r.outputPath).toBe('/app/public/build')
+    expect(r.outputPath).toBe(join('/app', 'public/build'))
     expect(r.publicPath).toBe('/build/')
   })
 
