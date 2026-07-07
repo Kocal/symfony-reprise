@@ -1,8 +1,8 @@
 # unplugin-symfony
 
-[![npm version](https://img.shields.io/npm/v/unplugin-symfony?color=crimson&label=)](https://www.npmjs.com/package/unplugin-symfony)
-[![npm downloads](https://img.shields.io/npm/dm/unplugin-symfony?color=crimson&label=)](https://www.npmjs.com/package/unplugin-symfony)
-[![license](https://img.shields.io/npm/l/unplugin-symfony?color=crimson&label=)](https://www.npmjs.com/package/unplugin-symfony)
+[![npm version](https://img.shields.io/npm/v/@kocal%40unplugin-symfony?color=crimson&label=)](https://www.npmjs.com/package/@kocal/unplugin-symfony)
+[![npm downloads](https://img.shields.io/npm/dm/@kocal%40unplugin-symfony?color=crimson&label=)](https://www.npmjs.com/package/@kocal/unplugin-symfony)
+[![license](https://img.shields.io/npm/l/@kocal%40unplugin-symfony?color=crimson&label=)](https://www.npmjs.com/package/@kocal/unplugin-symfony)
 
 Easily integrate the key features of Symfony's Webpack Encore into your Vite or Rsbuild/Rspack setup using a single unplugin.
 
@@ -32,7 +32,7 @@ npm install @kocal/unplugin-symfony --save-dev
 
 ```ts
 // vite.config.ts
-import Symfony from 'unplugin-symfony/vite'
+import Symfony from '@kocal/unplugin-symfony/vite'
 
 export default defineConfig({
   plugins: [
@@ -51,7 +51,7 @@ Example: [`playground/`](./playground/)
 ```ts
 // rsbuild.config.ts
 import { defineConfig } from '@rsbuild/core'
-import Symfony from 'unplugin-symfony/rspack'
+import Symfony from '@kocal/unplugin-symfony/rspack'
 
 export default defineConfig({
   tools: {
