@@ -1,4 +1,4 @@
-import type { BuildContext, EntryFiles, EntrypointsJson, NormalizedGraph } from '../types'
+import type { BuildContext, EntryFiles, EntrypointsJson, ManifestJson, NormalizedGraph } from '../types'
 
 function joinUrl(prefix: string, name: string): string {
   return prefix.endsWith('/') ? prefix + name : `${prefix}/${name}`
@@ -15,4 +15,12 @@ export function buildEntrypoints(graph: NormalizedGraph, ctx: BuildContext): Ent
     }
   }
   return { isProd: ctx.isProd, devServer: ctx.devServer, publicPath: ctx.publicPath, entryPoints }
+}
+
+export function buildManifest(graph: NormalizedGraph, ctx: BuildContext): ManifestJson {
+  const manifest: ManifestJson = {}
+  for (const { logicalName, fileName } of graph.assets) {
+    manifest[ctx.manifestKeyPrefix + logicalName] = joinUrl(ctx.publicPath, fileName)
+  }
+  return Object.fromEntries(Object.entries(manifest).sort(([a], [b]) => a.localeCompare(b)))
 }

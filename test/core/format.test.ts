@@ -1,6 +1,6 @@
 import type { BuildContext, NormalizedGraph } from '../../src/types'
 import { describe, expect, it } from 'vitest'
-import { buildEntrypoints } from '../../src/core/format'
+import { buildEntrypoints, buildManifest } from '../../src/core/format'
 
 const ctx: BuildContext = {
   isProd: true,
@@ -43,5 +43,27 @@ describe('buildEntrypoints', () => {
   it('inserts a slash when publicPath has no trailing slash', () => {
     const out = buildEntrypoints(graph, { ...ctx, publicPath: '/build' })
     expect(out.entryPoints.app.js).toEqual(['/build/app-a1b2.js'])
+  })
+})
+
+describe('buildManifest', () => {
+  it('maps logical keys (prefixed) to public URLs, sorted', () => {
+    const g: NormalizedGraph = {
+      entryPoints: {},
+      assets: [
+        { logicalName: 'app.js', fileName: 'app-a1b2.js' },
+        { logicalName: 'app.css', fileName: 'app-c3d4.css' },
+        { logicalName: 'images/logo.png', fileName: 'logo-77.png' },
+      ],
+    }
+    expect(buildManifest(g, ctx)).toEqual({
+      'build/app.css': '/build/app-c3d4.css',
+      'build/app.js': '/build/app-a1b2.js',
+      'build/images/logo.png': '/build/logo-77.png',
+    })
+  })
+
+  it('returns an empty object for no assets', () => {
+    expect(buildManifest({ entryPoints: {}, assets: [] }, ctx)).toEqual({})
   })
 })
