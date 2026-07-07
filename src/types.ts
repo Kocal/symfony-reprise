@@ -62,8 +62,8 @@ export interface Options {
    */
   manifestKeyPrefix?: string
 
-  //singleRuntimeChunk?: boolean
-  //stimlulusBridge?: object
+  // singleRuntimeChunk?: boolean
+  // stimulusBridge?: object
 }
 
 export type EntrypointName = string

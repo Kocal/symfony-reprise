@@ -49,16 +49,17 @@ Example: [`playground/`](./playground/)
 <summary>Rsbuild</summary><br>
 
 ```ts
+// rsbuild.config.ts
+import { defineConfig } from '@rsbuild/core'
 import Symfony from 'unplugin-symfony/rspack'
 
-// rsbuild.config.ts
-module.exports = {
-    tools: {
-        rspack: {
-            plugins: [Symfony({ /* options */ })],
-        },
+export default defineConfig({
+  tools: {
+    rspack: {
+      plugins: [Symfony({ /* options */ })],
     },
-}
+  },
+})
 ```
 
 <br></details>

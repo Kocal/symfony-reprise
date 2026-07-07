@@ -4,7 +4,7 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 import { createUnplugin } from 'unplugin'
 
-export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, meta) => {
+export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _meta) => {
   let outputPath = options?.outputPath ?? 'public/build'
   outputPath = path.isAbsolute(outputPath) ? outputPath : path.join(process.cwd(), outputPath)
 
@@ -21,12 +21,11 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, m
   return {
     name: 'unplugin-symfony',
     buildStart() {
-      console.log('Build started!')
-      console.log('Output path:', outputPath)
-      console.log('Public path:', publicPath)
+      // TODO: emit entrypoints.json (+ manifest.json) into outputPath.
+      // outputPath / publicPath / manifestKeyPrefix are resolved above.
     },
     buildEnd() {
-      console.log('build end!')
+      // TODO: finalize and write the Symfony integration files.
     },
 
     vite: {
