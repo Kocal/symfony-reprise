@@ -18,7 +18,12 @@ export function normalizeOptions(options: Options | undefined, cwd: string): Res
     manifestKeyPrefix = publicPath.replace(/^\//, '')
   }
 
-  return { outputPath, publicPath, manifestKeyPrefix }
+  return {
+    outputPath,
+    publicPath,
+    manifestKeyPrefix,
+    devServerOrigin: options?.devServerOrigin,
+  }
 }
 
 export function resolvePublicPath(publicPath: string, devOrigin: string | null): string {

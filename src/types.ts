@@ -62,6 +62,13 @@ export interface Options {
    */
   manifestKeyPrefix?: string
 
+  /**
+   * Explicit dev-server origin used in `entrypoints.json` (serve mode),
+   * e.g. `http://localhost:5173`. Overrides the auto-detected origin.
+   * Useful behind a proxy or when the server binds to `0.0.0.0` (Docker).
+   */
+  devServerOrigin?: string
+
   // singleRuntimeChunk?: boolean
   // stimulusBridge?: object
 }
@@ -70,6 +77,7 @@ export interface ResolvedOptions {
   outputPath: string
   publicPath: string
   manifestKeyPrefix: string
+  devServerOrigin?: string
 }
 
 export interface EntryFiles {
