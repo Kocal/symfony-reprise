@@ -49,9 +49,9 @@ Example: [`playground/`](./playground/)
 <summary>Rsbuild</summary><br>
 
 ```ts
+import Symfony from '@kocal/unplugin-symfony/rspack'
 // rsbuild.config.ts
 import { defineConfig } from '@rsbuild/core'
-import Symfony from '@kocal/unplugin-symfony/rspack'
 
 export default defineConfig({
   tools: {
