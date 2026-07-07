@@ -66,11 +66,48 @@ export interface Options {
   // stimulusBridge?: object
 }
 
-export type EntrypointName = string
-export interface Entrypoint {
+export interface ResolvedOptions {
+  outputPath: string
+  publicPath: string
+  manifestKeyPrefix: string
+}
+
+export interface EntryFiles {
   js: string[]
   css: string[]
+  preload: string[]
+  dynamic: string[]
 }
+
+export interface DevServer {
+  origin: string
+  client: 'vite' | null
+}
+
+export interface AssetEntry {
+  logicalName: string
+  fileName: string
+}
+
+export interface NormalizedGraph {
+  entryPoints: Record<string, EntryFiles>
+  assets: AssetEntry[]
+}
+
+export interface BuildContext {
+  isProd: boolean
+  devServer: DevServer | null
+  /** URL prefix for entrypoint/manifest asset URLs (the configured publicPath in build mode). */
+  publicPath: string
+  /** Logical key prefix for manifest.json keys (publicPath minus leading slash, by default). */
+  manifestKeyPrefix: string
+}
+
 export interface EntrypointsJson {
-  entrypoints: Record<EntrypointName, Entrypoint>
+  isProd: boolean
+  devServer: DevServer | null
+  publicPath: string
+  entryPoints: Record<string, EntryFiles>
 }
+
+export type ManifestJson = Record<string, string>
