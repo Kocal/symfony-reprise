@@ -1,9 +1,7 @@
 import type { UnpluginFactory } from 'unplugin'
-import type { RspackStats } from './collectors/rspack'
 import type { BuildContext, Options } from './types'
 import * as process from 'node:process'
 import { createUnplugin } from 'unplugin'
-import { statsToGraph } from './collectors/rspack'
 import { bundleToGraph, configToDevGraph } from './collectors/vite'
 import { resolveDevOrigin } from './core/dev-server'
 import { writeSymfonyFiles } from './core/emit'
@@ -70,46 +68,6 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
           }
         })
       },
-    },
-
-    rspack(compiler) {
-      // Build mode (a one-shot `compiler.run()`): our options drive Rspack's output so runtime
-      // asset URLs and our JSON agree. In Rsbuild dev (`compiler.watch()`, i.e. `watchRun` instead
-      // of `run`), Rsbuild has already resolved output.publicPath to the dev-server origin (from
-      // dev.assetPrefix); leave it alone and read it back in the `done` hook below.
-      //
-      // We gate on `compiler.hooks.run` rather than `compiler.options.mode`: Rsbuild only derives
-      // its own config mode from `process.env.NODE_ENV`, and only sets NODE_ENV when starting the
-      // dev server if it isn't already set. Under a test runner (NODE_ENV=test) or any other
-      // ambient value, `compiler.options.mode` resolves to 'none' even during a real dev run,
-      // which would wrongly clobber the dev origin here. `run` vs `watchRun` instead reflects the
-      // actual one-shot-build-vs-watch invocation, and is unaffected by NODE_ENV.
-      compiler.hooks.run.tap('unplugin-symfony', () => {
-        compiler.options.output.path = resolved.outputPath
-        compiler.options.output.publicPath = resolved.publicPath
-      })
-
-      compiler.hooks.done.tap('unplugin-symfony', (stats) => {
-        const isDev = compiler.watchMode
-        const outputPublicPath = String(compiler.options.output.publicPath ?? resolved.publicPath)
-        const urlPrefix = isDev ? outputPublicPath : resolved.publicPath
-        const origin = isDev && urlPrefix.includes('://') ? new URL(urlPrefix).origin : null
-
-        const ctx: BuildContext = {
-          isProd: !isDev,
-          devServer: origin ? { origin, client: null } : null,
-          publicPath: resolved.publicPath,
-          urlPrefix,
-          manifestKeyPrefix: resolved.manifestKeyPrefix,
-        }
-        const graph = statsToGraph(stats.toJson({ assets: true, entrypoints: true }) as RspackStats)
-        try {
-          writeSymfonyFiles(resolved.outputPath, buildEntrypoints(graph, ctx), buildManifest(graph, ctx))
-        }
-        catch (err) {
-          compiler.getInfrastructureLogger('unplugin-symfony').error(`[unplugin-symfony] failed to write entrypoints.json: ${err instanceof Error ? err.message : String(err)}`)
-        }
-      })
     },
   }
 }
