@@ -52,14 +52,10 @@ Example: [`playground/`](./playground/)
 ```ts
 // rsbuild.config.ts
 import { defineConfig } from '@rsbuild/core'
-import Symfony from '@kocal/unplugin-symfony/rspack'
+import Symfony from '@kocal/unplugin-symfony/rsbuild'
 
 export default defineConfig({
-  tools: {
-    rspack: {
-      plugins: [Symfony({ /* options */ })],
-    },
-  },
+  plugins: [Symfony({ /* options */ })],
 })
 ```
 

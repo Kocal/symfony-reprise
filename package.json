@@ -21,7 +21,7 @@
   ],
   "exports": {
     ".": "./dist/index.mjs",
-    "./rspack": "./dist/rspack.mjs",
+    "./rsbuild": "./dist/rsbuild.mjs",
     "./types": "./dist/types.mjs",
     "./vite": "./dist/vite.mjs",
     "./package.json": "./package.json"
@@ -51,9 +51,13 @@
     "test": "vitest"
   },
   "peerDependencies": {
+    "@rsbuild/core": ">=1",
     "vite": ">=3"
   },
   "peerDependenciesMeta": {
+    "@rsbuild/core": {
+      "optional": true
+    },
     "vite": {
       "optional": true
     }
