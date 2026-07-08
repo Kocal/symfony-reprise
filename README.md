@@ -32,11 +32,12 @@ npm install @kocal/unplugin-symfony --save-dev
 
 ```ts
 // vite.config.ts
+import { defineConfig } from 'vite'
 import Symfony from '@kocal/unplugin-symfony/vite'
 
 export default defineConfig({
   plugins: [
-    Symfony({ /* options */ }),
+    Symfony({ /* options */}),
   ],
 })
 ```
@@ -49,9 +50,9 @@ Example: [`playground/`](./playground/)
 <summary>Rsbuild</summary><br>
 
 ```ts
-import Symfony from '@kocal/unplugin-symfony/rspack'
 // rsbuild.config.ts
 import { defineConfig } from '@rsbuild/core'
+import Symfony from '@kocal/unplugin-symfony/rspack'
 
 export default defineConfig({
   tools: {

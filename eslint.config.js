@@ -13,6 +13,14 @@ export default antfu(
     ],
   },
   {
+    // Code blocks inside markdown are linted as virtual files named `<file>.md/<n>.ts`,
+    // so target that glob, not the .md file itself.
+    files: ['**/README.md/**'],
+    rules: {
+      'perfectionist/sort-imports': 'off',
+    },
+  },
+  {
     // antfu 9's pnpm/yaml-enforce-settings imposes opinionated pnpm-workspace settings
     // (shellEmulator, trustPolicy). Leave those to the maintainer's choice.
     rules: {
