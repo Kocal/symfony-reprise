@@ -40,6 +40,27 @@ describe('normalizeOptions', () => {
     expect(r.publicPath).toBe('https://cdn.example.com/x')
     expect(r.manifestKeyPrefix).toBe('build/')
   })
+
+  it('leaves stimulus undefined when not configured', () => {
+    const r = normalizeOptions(undefined, '/app')
+    expect(r.stimulus).toBeUndefined()
+  })
+
+  it('resolves the string shorthand to abs controllersJson + sibling controllers dir', () => {
+    const r = normalizeOptions({ stimulus: 'assets/controllers.json' }, '/app')
+    expect(r.stimulus).toEqual({
+      controllersJson: join('/app', 'assets/controllers.json'),
+      controllersDir: join('/app', 'assets/controllers'),
+    })
+  })
+
+  it('resolves the object form and honors an explicit controllersDir', () => {
+    const r = normalizeOptions({ stimulus: { controllersJson: 'assets/controllers.json', controllersDir: 'assets/stimulus' } }, '/app')
+    expect(r.stimulus).toEqual({
+      controllersJson: join('/app', 'assets/controllers.json'),
+      controllersDir: join('/app', 'assets/stimulus'),
+    })
+  })
 })
 
 describe('resolvePublicPath', () => {
