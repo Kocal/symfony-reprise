@@ -7,9 +7,14 @@ import { resolveDevOrigin } from './core/dev-server'
 import { writeSymfonyFiles } from './core/emit'
 import { buildEntrypoints, buildManifest } from './core/format'
 import { normalizeOptions, resolvePublicPath } from './core/options'
+import { generateControllersModule } from './core/stimulus'
+
+const VIRTUAL_ID = 'virtual:symfony/controllers'
+const RESOLVED_VIRTUAL_ID = `\0${VIRTUAL_ID}`
 
 export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _meta) => {
   const resolved = normalizeOptions(options, process.cwd())
+  let isDev = false
 
   return {
     name: 'unplugin-symfony',
@@ -36,6 +41,20 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
         }
         this.emitFile({ type: 'asset', fileName: 'entrypoints.json', source: `${JSON.stringify(buildEntrypoints(graph, ctx), null, 2)}\n` })
         this.emitFile({ type: 'asset', fileName: 'manifest.json', source: `${JSON.stringify(buildManifest(graph, ctx), null, 2)}\n` })
+      },
+
+      configResolved(config) {
+        isDev = config.command === 'serve'
+      },
+
+      resolveId(id) {
+        if (resolved.stimulus && id === VIRTUAL_ID)
+          return RESOLVED_VIRTUAL_ID
+      },
+
+      load(id) {
+        if (resolved.stimulus && id === RESOLVED_VIRTUAL_ID)
+          return generateControllersModule(resolved.stimulus, process.cwd(), isDev)
       },
 
       configureServer(server) {
