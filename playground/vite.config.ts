@@ -17,8 +17,6 @@ export default defineConfig({
   },
   plugins: [
     Inspect(),
-    Unplugin({
-      //publicPath: 'https://foo.bar',
-    }),
+    Unplugin({}),
   ],
 })

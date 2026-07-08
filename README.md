@@ -32,11 +32,12 @@ npm install @kocal/unplugin-symfony --save-dev
 
 ```ts
 // vite.config.ts
+import { defineConfig } from 'vite'
 import Symfony from '@kocal/unplugin-symfony/vite'
 
 export default defineConfig({
   plugins: [
-    Symfony({ /* options */ }),
+    Symfony({ /* options */}),
   ],
 })
 ```

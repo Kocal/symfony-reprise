@@ -8,10 +8,10 @@ export function buildEntrypoints(graph: NormalizedGraph, ctx: BuildContext): Ent
   const entryPoints: Record<string, EntryFiles> = {}
   for (const [name, files] of Object.entries(graph.entryPoints)) {
     entryPoints[name] = {
-      js: files.js.map(f => joinUrl(ctx.publicPath, f)),
-      css: files.css.map(f => joinUrl(ctx.publicPath, f)),
-      preload: files.preload.map(f => joinUrl(ctx.publicPath, f)),
-      dynamic: files.dynamic.map(f => joinUrl(ctx.publicPath, f)),
+      js: files.js.map(f => joinUrl(ctx.urlPrefix, f)),
+      css: files.css.map(f => joinUrl(ctx.urlPrefix, f)),
+      preload: files.preload.map(f => joinUrl(ctx.urlPrefix, f)),
+      dynamic: files.dynamic.map(f => joinUrl(ctx.urlPrefix, f)),
     }
   }
   return { isProd: ctx.isProd, devServer: ctx.devServer, publicPath: ctx.publicPath, entryPoints }
@@ -20,7 +20,7 @@ export function buildEntrypoints(graph: NormalizedGraph, ctx: BuildContext): Ent
 export function buildManifest(graph: NormalizedGraph, ctx: BuildContext): ManifestJson {
   const manifest: ManifestJson = {}
   for (const { logicalName, fileName } of graph.assets) {
-    manifest[ctx.manifestKeyPrefix + logicalName] = joinUrl(ctx.publicPath, fileName)
+    manifest[ctx.manifestKeyPrefix + logicalName] = joinUrl(ctx.urlPrefix, fileName)
   }
   return Object.fromEntries(Object.entries(manifest).sort(([a], [b]) => a.localeCompare(b, 'en')))
 }

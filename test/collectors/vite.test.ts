@@ -1,6 +1,6 @@
 import type { Rollup } from 'vite'
 import { describe, expect, it } from 'vitest'
-import { bundleToGraph } from '../../src/collectors/vite'
+import { bundleToGraph, configToDevGraph } from '../../src/collectors/vite'
 
 function chunk(partial: Partial<Rollup.OutputChunk> & { fileName: string, name: string, isEntry: boolean }): any {
   return {
@@ -60,5 +60,29 @@ describe('bundleToGraph', () => {
     const graph = bundleToGraph(bundle)
 
     expect(graph.assets).toContainEqual({ logicalName: 'noname-x.png', fileName: 'noname-x.png' })
+  })
+})
+
+describe('configToDevGraph', () => {
+  const config = {
+    root: '/app',
+    build: { rollupOptions: { input: { app: '/app/assets/app.js', theme: '/app/assets/theme.scss' } } },
+  }
+
+  it('maps object inputs to bare relative entry files, typed by extension', () => {
+    const graph = configToDevGraph(config as any)
+    expect(graph.entryPoints.app).toEqual({ js: ['assets/app.js'], css: [], preload: [], dynamic: [] })
+    expect(graph.entryPoints.theme).toEqual({ js: [], css: ['assets/theme.scss'], preload: [], dynamic: [] })
+    expect(graph.assets).toEqual([])
+  })
+
+  it('ignores array/undefined inputs (named entries only)', () => {
+    expect(configToDevGraph({ root: '/app', build: { rollupOptions: { input: ['/app/a.js'] } } } as any).entryPoints).toEqual({})
+    expect(configToDevGraph({ root: '/app', build: { rollupOptions: {} } } as any).entryPoints).toEqual({})
+  })
+
+  it('reads rolldownOptions.input when rollupOptions is absent (Vite 8)', () => {
+    const graph = configToDevGraph({ root: '/app', build: { rolldownOptions: { input: { app: '/app/assets/app.js' } } } } as any)
+    expect(graph.entryPoints.app).toEqual({ js: ['assets/app.js'], css: [], preload: [], dynamic: [] })
   })
 })

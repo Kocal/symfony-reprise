@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { build } from 'vite'
@@ -47,5 +47,26 @@ describe('vite build emits Symfony files', () => {
     for (const value of Object.values(manifest)) {
       expect(value).toMatch(/^\/build\//)
     }
+  }, 30_000)
+
+  it('sets Vite base to publicPath so emitted CSS references assets under /build/', async () => {
+    const out = mkdtempSync(join(tmpdir(), 'ups-'))
+    await build({
+      root: fixture,
+      logLevel: 'silent',
+      build: {
+        emptyOutDir: true,
+        assetsInlineLimit: 0, // force logo.svg to a file so the CSS keeps a url()
+        rollupOptions: {
+          input: { app: join(fixture, 'app.js'), admin: join(fixture, 'admin.js') },
+        },
+      },
+      plugins: [Symfony({ outputPath: out, publicPath: '/build/' })],
+    })
+
+    const cssFile = readdirSync(out).find(f => f.endsWith('.css'))!
+    const css = readFileSync(join(out, cssFile), 'utf8')
+    expect(css).toContain('/build/')
+    expect(css).not.toMatch(/url\(\/logo/) // must NOT reference /logo… at the root
   }, 30_000)
 })

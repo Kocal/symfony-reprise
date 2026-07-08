@@ -1,19 +1,29 @@
 import type { UnpluginFactory } from 'unplugin'
-import type { BuildContext, Options } from './types'
+import type { BuildContext, EntrypointsJson, Options } from './types'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import * as process from 'node:process'
 import { createUnplugin } from 'unplugin'
-import { bundleToGraph } from './collectors/vite'
+import { bundleToGraph, configToDevGraph } from './collectors/vite'
+import { resolveDevOrigin } from './core/dev-server'
 import { buildEntrypoints, buildManifest } from './core/format'
-import { normalizeOptions } from './core/options'
+import { normalizeOptions, resolvePublicPath } from './core/options'
 
 export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _meta) => {
   const resolved = normalizeOptions(options, process.cwd())
+
+  function writeDevFiles(entrypoints: EntrypointsJson): void {
+    mkdirSync(resolved.outputPath, { recursive: true })
+    writeFileSync(join(resolved.outputPath, 'entrypoints.json'), `${JSON.stringify(entrypoints, null, 2)}\n`)
+    writeFileSync(join(resolved.outputPath, 'manifest.json'), '{}\n')
+  }
 
   return {
     name: 'unplugin-symfony',
 
     vite: {
       config: () => ({
+        base: resolved.publicPath,
         build: {
           outDir: resolved.outputPath,
           copyPublicDir: false,
@@ -21,18 +31,49 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
           assetsDir: '.',
         },
       }),
+
       generateBundle(_outputOptions, bundle) {
         const graph = bundleToGraph(bundle)
         const ctx: BuildContext = {
           isProd: true,
           devServer: null,
           publicPath: resolved.publicPath,
+          urlPrefix: resolved.publicPath,
           manifestKeyPrefix: resolved.manifestKeyPrefix,
         }
-        const entrypoints = buildEntrypoints(graph, ctx)
-        const manifest = buildManifest(graph, ctx)
-        this.emitFile({ type: 'asset', fileName: 'entrypoints.json', source: `${JSON.stringify(entrypoints, null, 2)}\n` })
-        this.emitFile({ type: 'asset', fileName: 'manifest.json', source: `${JSON.stringify(manifest, null, 2)}\n` })
+        this.emitFile({ type: 'asset', fileName: 'entrypoints.json', source: `${JSON.stringify(buildEntrypoints(graph, ctx), null, 2)}\n` })
+        this.emitFile({ type: 'asset', fileName: 'manifest.json', source: `${JSON.stringify(buildManifest(graph, ctx), null, 2)}\n` })
+      },
+
+      configureServer(server) {
+        // In Vite middleware mode `server.httpServer` is null, so no dev entrypoints.json is
+        // written — the standalone Vite dev server is the supported Symfony workflow.
+        server.httpServer?.once('listening', () => {
+          const address = server.httpServer?.address()
+          if (!address || typeof address === 'string')
+            return
+
+          const origin = resolveDevOrigin(address, {
+            override: resolved.devServerOrigin,
+            serverOrigin: server.config.server.origin,
+            https: Boolean(server.config.server.https),
+          })
+          server.config.server.origin = origin // keep Vite's internal URL rewriting in sync
+
+          const ctx: BuildContext = {
+            isProd: false,
+            devServer: { origin, client: 'vite' },
+            publicPath: resolved.publicPath,
+            urlPrefix: resolvePublicPath(resolved.publicPath, origin),
+            manifestKeyPrefix: resolved.manifestKeyPrefix,
+          }
+          try {
+            writeDevFiles(buildEntrypoints(configToDevGraph(server.config), ctx))
+          }
+          catch (err) {
+            server.config.logger.error(`[unplugin-symfony] failed to write dev entrypoints.json: ${err instanceof Error ? err.message : String(err)}`)
+          }
+        })
       },
     },
 
