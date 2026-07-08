@@ -19,7 +19,11 @@ interface ControllersJson {
   controllers?: Record<string, Record<string, UserControllerConfig>>
 }
 
-const LAZY_COMMENT_RE = /\/\*\s*stimulusFetch:\s*'lazy'\s*\*\//i
+// A controller opts into lazy loading with a `stimulusFetch: 'lazy'` comment above its class,
+// as either a block comment (`/* stimulusFetch: 'lazy' */`) or a single-line one
+// (`// stimulusFetch: 'lazy'`). Symfony's own bridge accepts both (it parses every comment),
+// so we match either marker; quotes may be single or double.
+const LAZY_COMMENT_RE = /(?:\/\*|\/\/)\s*stimulusFetch:\s*['"]lazy['"]/i
 const LOCAL_CONTROLLER_RE = /[-_]controller\.[jt]s$/
 
 export function generateControllersModule(opts: ResolvedStimulusOptions, root: string, isDev: boolean): string {

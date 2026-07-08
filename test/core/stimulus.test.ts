@@ -49,6 +49,12 @@ describe('generateControllersModule — local', () => {
     expect(src).toContain(join(root, 'controllers/heavy_controller.js'))
   })
 
+  it('detects the lazy marker in a single-line comment too', () => {
+    const src = generateControllersModule(localOpts, root, false)
+    expect(src).toContain(`"single-line": () => import(`)
+    expect(src).toContain(join(root, 'controllers/single_line_controller.js'))
+  })
+
   it('maps nested controllers with a double-dash identifier', () => {
     const src = generateControllersModule(localOpts, root, false)
     expect(src).toMatch(/"admin--user": controller_\d+/)
