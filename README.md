@@ -12,11 +12,11 @@ Easily integrate the key features of Symfony's Webpack Encore into your Vite or 
 It only covers the Symfony-side integration that bundlers don't provide out of the box:
 
 - [x] Multiple entries
-- [ ] `entrypoints.json` generation (build + dev-server modes)
-- [ ] `manifest.json` generation
-- [ ] Asset versioning wired into the manifest
+- [x] `entrypoints.json` generation (build + dev-server modes)
+- [x] `manifest.json` generation
+- [x] Asset versioning wired into the manifest
 - [ ] CDN support (absolute `publicPath`)
-- [ ] Dev server & HMR integration
+- [x] Dev server & HMR integration
 - [ ] Subresource Integrity (SRI) hashes
 - [ ] Shared runtime chunk across entries
 - [ ] Symfony UX / Stimulus controllers (`controllers.json` + local `assets/controllers/`)
