@@ -19,7 +19,8 @@ export default function symfony(options?: Options): RsbuildPlugin {
         config.tools ??= {}
         config.tools.htmlPlugin = false
         config.output ??= {}
-        config.output.distPath = { ...config.output.distPath, root: resolved.outputPath }
+        const prevDistPath = typeof config.output.distPath === 'object' ? config.output.distPath : {}
+        config.output.distPath = { ...prevDistPath, root: resolved.outputPath }
         // `outputPath` (e.g. `public/build`) lives inside Rsbuild's default public dir
         // (`public`). On build, Rsbuild copies the public dir into the dist output, which
         // here means copying `public/` into `public/build/` — a subpath of itself — and
