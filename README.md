@@ -19,7 +19,7 @@ It only covers the Symfony-side integration that bundlers don't provide out of t
 - [x] Dev server & HMR integration
 - [ ] Subresource Integrity (SRI) hashes
 - [ ] Shared runtime chunk across entries
-- [ ] Symfony UX / Stimulus controllers (`controllers.json` + local `assets/controllers/`)
+- [x] Symfony UX / Stimulus controllers (`controllers.json` + local `assets/controllers/`)
 
 ## Install
 
@@ -60,3 +60,38 @@ export default defineConfig({
 ```
 
 <br></details>
+
+## Symfony UX / Stimulus controllers
+
+Enable it by pointing the plugin at your `controllers.json` (this is what turns the feature on):
+
+```ts
+Symfony({ stimulus: 'assets/controllers.json' })
+// or, to override the local controllers dir:
+Symfony({ stimulus: { controllersJson: 'assets/controllers.json', controllersDir: 'assets/controllers' } })
+```
+
+In your entry, swap the AssetMapper import for this plugin's — everything else stays the same:
+
+```diff
+- import { startStimulusApp } from '@symfony/stimulus-bundle'
++ import { startStimulusApp } from '@kocal/unplugin-symfony/stimulus'
+  const app = startStimulusApp()
+```
+
+**Local controllers.** Any `assets/controllers/*_controller.{js,ts}` is registered automatically. The filename becomes the identifier (`hello_controller.js` -> `hello`, `admin/user_controller.js` -> `admin--user`). Add a `stimulusFetch: 'lazy'` comment above the class to load it on demand — either a block or a single-line comment works:
+
+```js
+// stimulusFetch: 'lazy'
+import { Controller } from '@hotwired/stimulus'
+
+export default class extends Controller {}
+```
+
+(`/* stimulusFetch: 'lazy' */` works too.)
+
+**Third-party UX packages.** Controllers declared in `controllers.json` work too, but unlike AssetMapper (which vendors them via importmap) a bundler resolves them from `node_modules` — install them with your package manager, exactly like Webpack Encore did:
+
+```bash
+npm install @hotwired/stimulus @symfony/ux-turbo @symfony/ux-leaflet-map
+```
