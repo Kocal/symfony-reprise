@@ -68,8 +68,12 @@ export default function symfony(options?: Options): RsbuildPlugin {
               manifestKeyPrefix: resolved.manifestKeyPrefix,
             }
             const graph = statsToGraph(stats.toJson({ assets: true, entrypoints: true }) as RspackStats)
+            // In dev the manifest is empty: assets are served from the dev server, never looked
+            // up on disk by hash, so cache-busting is moot. entrypoints.json alone drives loading.
+            // Matches the Vite dev path (see `configureServer` in index.ts), which also writes `{}`.
+            const manifest = isDev ? {} : buildManifest(graph, ctx)
             try {
-              writeSymfonyFiles(resolved.outputPath, buildEntrypoints(graph, ctx), buildManifest(graph, ctx))
+              writeSymfonyFiles(resolved.outputPath, buildEntrypoints(graph, ctx), manifest)
             }
             catch (err) {
               c.getInfrastructureLogger('unplugin-symfony').error(`[unplugin-symfony] failed to write entrypoints.json: ${err instanceof Error ? err.message : String(err)}`)

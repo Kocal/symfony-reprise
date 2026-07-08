@@ -79,6 +79,11 @@ describe('rsbuild dev writes absolute dev-server URLs and no HTML', () => {
     expect(entry.devServer.origin).toMatch(/^https?:\/\//)
     expect(entry.entryPoints.app.js[0]).toMatch(/^https?:\/\/.*\/build\//)
 
+    // In dev the manifest is empty (assets come from the dev server, no on-disk hash lookups),
+    // matching the Vite dev path.
+    const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'))
+    expect(manifest).toEqual({})
+
     const htmlFiles = readdirSync(out, { recursive: true }).filter(f => String(f).endsWith('.html'))
     expect(htmlFiles).toEqual([])
   }, 60_000)
