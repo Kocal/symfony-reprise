@@ -69,7 +69,7 @@ describe('rsbuild dev writes absolute dev-server URLs and no HTML', () => {
     await server.server.close()
   })
 
-  it('points entries at the dev-server origin, client:null, no HTML', () => {
+  it('points entries at the dev-server origin, client:null, no HTML', async () => {
     const entry = JSON.parse(readFileSync(join(out, 'entrypoints.json'), 'utf8'))
 
     expect(entry.isProd).toBe(false)
@@ -78,6 +78,13 @@ describe('rsbuild dev writes absolute dev-server URLs and no HTML', () => {
     expect(entry.devServer.client).toBeNull()
     expect(entry.devServer.origin).toMatch(/^https?:\/\//)
     expect(entry.entryPoints.app.js[0]).toMatch(/^https?:\/\/.*\/build\//)
+
+    // The advertised URL must actually be served by the dev server — the whole point of the
+    // dev-flavoured entrypoints.json is that Symfony/Twig can load it as-is. A URL that 404s is
+    // worthless. This caught the `/build/` prefix mismatch: we advertised `origin/build/...` but
+    // the dev server served assets at `origin/...`.
+    const res = await fetch(entry.entryPoints.app.js[0])
+    expect(res.status).toBe(200)
 
     // In dev the manifest is empty (assets come from the dev server, no on-disk hash lookups),
     // matching the Vite dev path.

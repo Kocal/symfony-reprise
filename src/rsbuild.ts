@@ -29,12 +29,18 @@ export default function symfony(options?: Options): RsbuildPlugin {
         // it entirely (this is the Rspack analog of `copyPublicDir: false` in the Vite path).
         config.server ??= {}
         config.server.publicDir = false
+        // Serve the dev server under `publicPath` (e.g. `/build/`), so the in-memory assets live
+        // at the same URL path we advertise in the dev entrypoints.json. Rsbuild's `getPublicPath`
+        // joins `server.base` onto the dev-server origin when `dev.assetPrefix` is left at its
+        // default, yielding an absolute `http://host:port/build/` — matching production's
+        // `/build/` prefix and the Vite path (whose `base` is likewise the publicPath). Without
+        // this the dev server serves at the origin root (`/`) while we advertise `/build/`, so
+        // every advertised URL 404s.
+        config.server.base = resolved.publicPath
         // Rsbuild's own config defaults `output.assetPrefix` to `'/'` before this hook runs
         // (it is never left `undefined`), so `??=` would never apply ours — assign unconditionally.
-        // Note: this only takes effect for the production build. In dev, Rsbuild's own
-        // `getPublicPath()` ignores `output.assetPrefix` entirely and derives the dev-server
-        // origin from `dev.assetPrefix` instead (see the `done` hook below, which computes the
-        // dev urlPrefix itself rather than relying on that merge).
+        // This drives the production build's asset URLs; in dev the serving path comes from
+        // `server.base` above.
         config.output.assetPrefix = resolved.publicPath
       })
 
@@ -43,13 +49,14 @@ export default function symfony(options?: Options): RsbuildPlugin {
         for (const c of compilers) {
           c.hooks.done.tap('unplugin-symfony', (stats) => {
             const isDev = c.watchMode
-            // In dev, Rsbuild's own `getPublicPath()` (called before this hook, to compute
-            // `output.publicPath`) only ever returns EITHER the dev-server origin OR
-            // `output.assetPrefix` — never both — so `compiler.options.output.publicPath` can't
-            // be trusted to carry our `publicPath` (e.g. "/build/") once dev-server resolution
-            // kicks in. `api.context.devServer` (hostname/port/https) is populated by the time
-            // the compiler is created, independent of that merge, so derive the origin from it
-            // directly and join it with our own `publicPath` via `resolvePublicPath`.
+            // The dev URLs we advertise must be the dev-server origin joined with our `publicPath`
+            // (e.g. `http://127.0.0.1:3001/build/…`), which is exactly where `server.base` (set in
+            // `modifyRsbuildConfig`) makes the dev server serve the in-memory assets. Rather than
+            // read `compiler.options.output.publicPath` back (its dev value depends on how Rsbuild
+            // merged `server.base`/`dev.assetPrefix`), derive the origin ourselves from
+            // `api.context.devServer` (hostname/port/https — populated by the time the compiler is
+            // created) and join our own `publicPath` onto it via `resolvePublicPath`. Keeps this in
+            // lockstep with the `server.base` value above regardless of Rsbuild's internal merge.
             const devServer = api.context.devServer
             // Rsbuild's own equivalent (`getPublicPath()`) special-cases the "listen on all
             // interfaces" hostname the same way: a browser can't dial 0.0.0.0, so substitute
