@@ -1,6 +1,5 @@
-import type { AddressInfo } from 'node:net'
 import type { UnpluginFactory } from 'unplugin'
-import type { BuildContext, Options } from './types'
+import type { BuildContext, EntrypointsJson, Options } from './types'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import * as process from 'node:process'
@@ -13,7 +12,7 @@ import { normalizeOptions, resolvePublicPath } from './core/options'
 export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _meta) => {
   const resolved = normalizeOptions(options, process.cwd())
 
-  function writeDevFiles(entrypoints: unknown): void {
+  function writeDevFiles(entrypoints: EntrypointsJson): void {
     mkdirSync(resolved.outputPath, { recursive: true })
     writeFileSync(join(resolved.outputPath, 'entrypoints.json'), `${JSON.stringify(entrypoints, null, 2)}\n`)
     writeFileSync(join(resolved.outputPath, 'manifest.json'), '{}\n')
@@ -47,12 +46,14 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
       },
 
       configureServer(server) {
+        // In Vite middleware mode `server.httpServer` is null, so no dev entrypoints.json is
+        // written — the standalone Vite dev server is the supported Symfony workflow.
         server.httpServer?.once('listening', () => {
           const address = server.httpServer?.address()
           if (!address || typeof address === 'string')
             return
 
-          const origin = resolveDevOrigin(address as AddressInfo, {
+          const origin = resolveDevOrigin(address, {
             override: resolved.devServerOrigin,
             serverOrigin: server.config.server.origin,
             https: Boolean(server.config.server.https),
@@ -66,7 +67,12 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
             urlPrefix: resolvePublicPath(resolved.publicPath, origin),
             manifestKeyPrefix: resolved.manifestKeyPrefix,
           }
-          writeDevFiles(buildEntrypoints(configToDevGraph(server.config), ctx))
+          try {
+            writeDevFiles(buildEntrypoints(configToDevGraph(server.config), ctx))
+          }
+          catch (err) {
+            server.config.logger.error(`[unplugin-symfony] failed to write dev entrypoints.json: ${err instanceof Error ? err.message : String(err)}`)
+          }
         })
       },
     },
