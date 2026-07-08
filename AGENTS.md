@@ -30,13 +30,16 @@ Run from the playground dir (the root `pnpm play` script is broken — it calls 
 
 ## Architecture
 
-Standard unplugin factory layout:
+Bundler-agnostic core + per-bundler adapters:
 
-- `src/index.ts` — the `unpluginFactory` (single source of truth) plus `unplugin`/default export via `createUnplugin`. Normalizes options (resolves `outputPath` against `cwd`, derives `manifestKeyPrefix` from `publicPath`) and returns the hooks.
-- `src/vite.ts`, `src/rspack.ts` — thin per-bundler adapters (Vite, and Rspack which also backs Rsbuild), each just `createXxxPlugin(unpluginFactory)`. **All logic belongs in `index.ts`; adapters stay one-liners.** These map to the `exports` field (`unplugin-symfony/vite`, `unplugin-symfony/rspack`).
-- `src/types.ts` — the public `Options` interface (`outputPath`, `publicPath`, `manifestKeyPrefix`) and the `EntrypointsJson` shape. Note: `Entrypoint` currently models only `js`/`css`, but Encore's `entrypoints.json` keys are arbitrary asset extensions (`woff2`, `png`, …) — widen this when implementing generation.
+- `src/core/` — pure, no bundler imports: `options.ts` (`normalizeOptions` + CDN guard + `resolvePublicPath`), `dev-server.ts` (`resolveDevOrigin`), `format.ts` (`buildEntrypoints`/`buildManifest` in the frozen v1 format), `emit.ts` (`writeSymfonyFiles`).
+- `src/collectors/` — turn a bundler's output into the shared `NormalizedGraph`: `vite.ts` (`bundleToGraph` from the Rollup bundle in build, `configToDevGraph` from the resolved config in serve) and `rspack.ts` (`statsToGraph` from the Rspack stats JSON).
+- `src/index.ts` — the `unpluginFactory` (Vite only now) + `createUnplugin` default export. Its `vite` hooks call the collectors + core: `config()` sets `base`/`outDir` and disables Vite's own manifest/publicDir copy; `generateBundle` emits the two files on build; `configureServer` writes the dev-flavoured files pointing at the dev-server origin.
+- `src/vite.ts` — one-line unplugin adapter `createVitePlugin(unpluginFactory)` (`unplugin-symfony/vite`).
+- `src/rsbuild.ts` — a **hand-written native `RsbuildPlugin`** (default export, `unplugin-symfony/rsbuild`), **not** an unplugin adapter. unplugin has no `createRsbuildPlugin`, and the Symfony integration needs Rsbuild-config-level control a raw Rspack plugin can't reach: `api.modifyRsbuildConfig` forces `tools.htmlPlugin = false` (no per-entry HTML) and disables the public-dir copy (output lives under `public/build`), and sets the output paths + dev origin; `api.onAfterCreateCompiler` taps `compiler.hooks.done` to run `statsToGraph` + core. It reuses the same core as the Vite path.
+- `src/types.ts` — public `Options` (`outputPath`, `publicPath`, `manifestKeyPrefix`, `devServerOrigin`) + the frozen `EntrypointsJson`/`ManifestJson`/`EntryFiles` shapes (`js`/`css`/`preload`/`dynamic`).
 
-The factory uses cross-bundler hooks (`buildStart`/`buildEnd`) plus bundler-specific escape hatches: `vite.config()` sets `outDir`/`assetsDir` and disables Vite's own manifest/publicDir copy; `rspack(compiler)` sets output path/publicPath directly. `buildStart`/`buildEnd` are currently `console.log` stubs — this is where the two output files below must be generated.
+unplugin still earns its place for Vite and (upcoming) the Stimulus virtual module (universal `resolveId`/`load`, cross-bundler). Rspack is served exclusively through the native Rsbuild adapter — the raw Rspack unplugin adapter was dropped (Rsbuild is the supported Rspack layer).
 
 ## The Symfony integration contract (the core of this project)
 
