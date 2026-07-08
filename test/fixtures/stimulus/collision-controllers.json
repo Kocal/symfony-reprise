@@ -1,0 +1,8 @@
+{
+  "controllers": {
+    "@acme/ux-hello": {
+      "hello": { "enabled": true }
+    }
+  },
+  "entrypoints": []
+}

@@ -67,3 +67,20 @@ describe('generateControllersModule — local', () => {
     expect(src).toContain('export const lazyControllers = {}')
   })
 })
+
+describe('generateControllersModule — identifier collision', () => {
+  // A local controller whose filename yields the same identifier as a third-party one
+  // (contrived — local ids are short, third-party ids are long/scoped — but possible).
+  const collisionOpts = { controllersJson: join(root, 'collision-controllers.json'), controllersDir: join(root, 'collision') }
+
+  it('lets a local controller override a colliding third-party identifier (local wins, emitted once)', () => {
+    const src = generateControllersModule(collisionOpts, root, false)
+    // The local controller is lazy; the third-party "hello" is eager. Local wins:
+    expect(src).toContain(`"acme--ux-hello--hello": () => import(`)
+    expect(src).toContain(join(root, 'collision/acme--ux-hello--hello_controller.js'))
+    // The overridden third-party import is gone (no orphaned import, no double registration):
+    expect(src).not.toContain('@acme/ux-hello/dist/hello_controller.js')
+    // The identifier appears exactly once across both maps:
+    expect(src.split(`"acme--ux-hello--hello"`).length - 1).toBe(1)
+  })
+})

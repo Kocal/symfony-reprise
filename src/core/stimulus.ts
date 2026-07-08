@@ -19,6 +19,15 @@ interface ControllersJson {
   controllers?: Record<string, Record<string, UserControllerConfig>>
 }
 
+interface ResolvedController {
+  identifier: string
+  fetch: 'eager' | 'lazy'
+  /** Import specifier: a bare package path (third-party) or an absolute file path (local). */
+  main: string
+  /** Extra modules to import alongside the controller (third-party only). */
+  autoimports: string[]
+}
+
 // A controller opts into lazy loading with a `stimulusFetch: 'lazy'` comment above its class,
 // as either a block comment (`/* stimulusFetch: 'lazy' */`) or a single-line one
 // (`// stimulusFetch: 'lazy'`). Symfony's own bridge accepts both (it parses every comment),
@@ -27,10 +36,11 @@ const LAZY_COMMENT_RE = /(?:\/\*|\/\/)\s*stimulusFetch:\s*['"]lazy['"]/i
 const LOCAL_CONTROLLER_RE = /[-_]controller\.[jt]s$/
 
 export function generateControllersModule(opts: ResolvedStimulusOptions, root: string, isDev: boolean): string {
-  const imports: string[] = []
-  const eager: string[] = []
-  const lazy: string[] = []
-  let index = 0
+  // Collect controllers keyed by identifier. Third-party controllers are added first, local
+  // ones second, so a local controller sharing an identifier with a third-party one overrides
+  // it (last write wins) and each identifier ends up in exactly one of the two maps — never
+  // emitted twice, never registered twice.
+  const controllers = new Map<string, ResolvedController>()
 
   const require = createRequire(path.join(root, 'noop.js'))
   const json = JSON.parse(readFileSync(opts.controllersJson, 'utf8')) as ControllersJson
@@ -53,44 +63,28 @@ export function generateControllersModule(opts: ResolvedStimulusOptions, root: s
       if (!pkgCfg)
         throw new Error(`unplugin-symfony: controller "${packageName}/${controllerName}" is not declared in ${packageName}'s package.json "symfony.controllers".`)
 
-      const main = `${packageName}/${pkgCfg.main}`
-      const fetch = user.fetch ?? pkgCfg.fetch ?? 'eager'
       const identifier = thirdPartyIdentifier(packageName, controllerName, pkgCfg.name, user.name)
-      const autoimports = Object.entries(user.autoimport ?? pkgCfg.autoimport ?? {}).filter(([, v]) => v).map(([k]) => k)
-
-      if (fetch === 'lazy') {
-        if (autoimports.length) {
-          const all = [main, ...autoimports].map(m => `import(${JSON.stringify(m)})`).join(', ')
-          lazy.push(`  ${JSON.stringify(identifier)}: () => Promise.all([${all}]).then(r => r[0]),`)
-        }
-        else {
-          lazy.push(`  ${JSON.stringify(identifier)}: () => import(${JSON.stringify(main)}),`)
-        }
-      }
-      else {
-        const varName = `controller_${index++}`
-        imports.push(`import ${varName} from ${JSON.stringify(main)}`)
-        for (const a of autoimports)
-          imports.push(`import ${JSON.stringify(a)}`)
-        eager.push(`  ${JSON.stringify(identifier)}: ${varName},`)
-      }
+      controllers.set(identifier, {
+        identifier,
+        fetch: user.fetch ?? pkgCfg.fetch ?? 'eager',
+        main: `${packageName}/${pkgCfg.main}`,
+        autoimports: Object.entries(user.autoimport ?? pkgCfg.autoimport ?? {}).filter(([, v]) => v).map(([k]) => k),
+      })
     }
   }
 
   for (const rel of listLocalControllers(opts.controllersDir)) {
     const abs = path.join(opts.controllersDir, rel)
     const identifier = localIdentifier(rel)
-    if (LAZY_COMMENT_RE.test(readFileSync(abs, 'utf8'))) {
-      lazy.push(`  ${JSON.stringify(identifier)}: () => import(${JSON.stringify(abs)}),`)
-    }
-    else {
-      const varName = `controller_${index++}`
-      imports.push(`import ${varName} from ${JSON.stringify(abs)}`)
-      eager.push(`  ${JSON.stringify(identifier)}: ${varName},`)
-    }
+    controllers.set(identifier, {
+      identifier,
+      fetch: LAZY_COMMENT_RE.test(readFileSync(abs, 'utf8')) ? 'lazy' : 'eager',
+      main: abs,
+      autoimports: [],
+    })
   }
 
-  return render(imports, eager, lazy, isDev)
+  return render([...controllers.values()], isDev)
 }
 
 function thirdPartyIdentifier(packageName: string, controllerName: string, pkgName?: string, userName?: string): string {
@@ -104,7 +98,37 @@ function thirdPartyIdentifier(packageName: string, controllerName: string, pkgNa
   return id.replace(/_/g, '-').replace(/\//g, '--')
 }
 
-function render(imports: string[], eager: string[], lazy: string[], isDev: boolean): string {
+function render(controllers: ResolvedController[], isDev: boolean): string {
+  const imports: string[] = []
+  const seenAutoimports = new Set<string>()
+  const eager: string[] = []
+  const lazy: string[] = []
+  let index = 0
+
+  for (const c of controllers) {
+    if (c.fetch === 'lazy') {
+      if (c.autoimports.length) {
+        const all = [c.main, ...c.autoimports].map(m => `import(${JSON.stringify(m)})`).join(', ')
+        lazy.push(`  ${JSON.stringify(c.identifier)}: () => Promise.all([${all}]).then(r => r[0]),`)
+      }
+      else {
+        lazy.push(`  ${JSON.stringify(c.identifier)}: () => import(${JSON.stringify(c.main)}),`)
+      }
+    }
+    else {
+      const varName = `controller_${index++}`
+      imports.push(`import ${varName} from ${JSON.stringify(c.main)}`)
+      for (const a of c.autoimports) {
+        // Two eager controllers can declare the same autoimport; emit each import only once.
+        if (!seenAutoimports.has(a)) {
+          seenAutoimports.add(a)
+          imports.push(`import ${JSON.stringify(a)}`)
+        }
+      }
+      eager.push(`  ${JSON.stringify(c.identifier)}: ${varName},`)
+    }
+  }
+
   const lines = [...imports, '']
   lines.push(`export const eagerControllers = {${eager.length ? `\n${eager.join('\n')}\n` : ''}}`)
   lines.push(`export const lazyControllers = {${lazy.length ? `\n${lazy.join('\n')}\n` : ''}}`)
