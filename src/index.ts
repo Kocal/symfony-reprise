@@ -1,22 +1,15 @@
 import type { UnpluginFactory } from 'unplugin'
-import type { BuildContext, EntrypointsJson, Options } from './types'
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import type { BuildContext, Options } from './types'
 import * as process from 'node:process'
 import { createUnplugin } from 'unplugin'
 import { bundleToGraph, configToDevGraph } from './collectors/vite'
 import { resolveDevOrigin } from './core/dev-server'
+import { writeSymfonyFiles } from './core/emit'
 import { buildEntrypoints, buildManifest } from './core/format'
 import { normalizeOptions, resolvePublicPath } from './core/options'
 
 export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _meta) => {
   const resolved = normalizeOptions(options, process.cwd())
-
-  function writeDevFiles(entrypoints: EntrypointsJson): void {
-    mkdirSync(resolved.outputPath, { recursive: true })
-    writeFileSync(join(resolved.outputPath, 'entrypoints.json'), `${JSON.stringify(entrypoints, null, 2)}\n`)
-    writeFileSync(join(resolved.outputPath, 'manifest.json'), '{}\n')
-  }
 
   return {
     name: 'unplugin-symfony',
@@ -68,18 +61,13 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
             manifestKeyPrefix: resolved.manifestKeyPrefix,
           }
           try {
-            writeDevFiles(buildEntrypoints(configToDevGraph(server.config), ctx))
+            writeSymfonyFiles(resolved.outputPath, buildEntrypoints(configToDevGraph(server.config), ctx), {})
           }
           catch (err) {
             server.config.logger.error(`[unplugin-symfony] failed to write dev entrypoints.json: ${err instanceof Error ? err.message : String(err)}`)
           }
         })
       },
-    },
-
-    rspack(compiler) {
-      compiler.options.output.path = resolved.outputPath
-      compiler.options.output.publicPath = resolved.publicPath
     },
   }
 }
