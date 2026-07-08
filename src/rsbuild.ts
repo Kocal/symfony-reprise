@@ -20,7 +20,9 @@ export default function symfony(options?: Options): RsbuildPlugin {
         config.tools ??= {}
         config.tools.htmlPlugin = false
         config.dev ??= {}
-        config.dev.assetPrefix ??= true
+        // Rsbuild presets dev.assetPrefix to server.base ('/') before this hook, so `??=` no-ops;
+        // force `true` so Rsbuild resolves output.publicPath to the absolute dev-server origin.
+        config.dev.assetPrefix = true
         config.output ??= {}
         config.output.distPath = { ...config.output.distPath, root: resolved.outputPath }
         // Rsbuild's own config defaults `output.assetPrefix` to `'/'` before this hook runs
