@@ -174,6 +174,25 @@ export { loadControllers }
 A `virtual:symfony/controllers` module declaration ships in a `.d.ts` so the
 helper (and user TS) type-check.
 
+## User documentation (deliverable)
+
+A **Stimulus section in the README** (the project's only doc surface today — no
+docs site yet), kept short. It must cover:
+
+- Enabling the feature: the `stimulus` option, both the string shorthand and the
+  object form (with `controllersDir` default explained).
+- The one-line `app.js` import change from `@symfony/stimulus-bundle` to
+  `@kocal/unplugin-symfony/stimulus`, and `startStimulusApp()`.
+- The npm prerequisite: UX packages must be `npm install`-ed (unlike AssetMapper's
+  importmap vendoring), with a copy-pasteable example.
+- Local controllers: the `assets/controllers/` convention, the
+  `foo_bar_controller.js` → `foo-bar` naming, and lazy via
+  `/* stimulusFetch: 'lazy' */`.
+- Tick "Symfony UX / Stimulus controllers" in the README feature checklist.
+
+Scope it as a real user-facing quickstart, not a spec dump — enough for someone to
+migrate an existing Symfony UX app to Vite/Rsbuild without reading the source.
+
 ## Testing
 
 - **Unit — generator** (`test/`): fixtures = a `controllers.json`, fake package
