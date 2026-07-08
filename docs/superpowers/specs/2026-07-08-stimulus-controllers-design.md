@@ -139,8 +139,10 @@ For each `packageName` → `controllerName` in `controllers.json`'s `controllers
 2. Identifier: path relative to `controllersDir`, strip the `[-_]controller.<ext>`
    suffix, `_`→`-`, `/`→`--`. E.g. `code_highlight_controller.js` → `code-highlight`,
    `admin/user_controller.js` → `admin--user`.
-3. Read the file; lazy if it contains `/* stimulusFetch: 'lazy' */`
-   (regex `/\/\*\s*stimulusFetch:\s*'lazy'\s*\*\//i`), else eager.
+3. Read the file; lazy if a `stimulusFetch: 'lazy'` comment sits **directly above the class
+   declaration** (block `/* … */` or single-line `// …`, single or double quotes), matched
+   only when the next code token is the class (`[export [default]] class`). A marker above the
+   imports or elsewhere does not count. Otherwise eager.
 4. Import specifier = the controller's **absolute filesystem path** (a virtual
    module has no meaningful location for relative paths). eager → top-level import;
    lazy → `() => import('<abs path>')`.
