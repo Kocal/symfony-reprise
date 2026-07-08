@@ -79,16 +79,16 @@ In your entry, swap the AssetMapper import for this plugin's — everything else
   const app = startStimulusApp()
 ```
 
-**Local controllers.** Any `assets/controllers/*_controller.{js,ts}` is registered automatically. The filename becomes the identifier (`hello_controller.js` -> `hello`, `admin/user_controller.js` -> `admin--user`). Add a `stimulusFetch: 'lazy'` comment above the class to load it on demand — either a block or a single-line comment works:
+**Local controllers.** Any `assets/controllers/*_controller.{js,ts}` is registered automatically. The filename becomes the identifier (`hello_controller.js` -> `hello`, `admin/user_controller.js` -> `admin--user`). To load a controller on demand, put a `stimulusFetch: 'lazy'` comment directly above the class (after the imports) — a block or a single-line comment both work:
 
 ```js
-// stimulusFetch: 'lazy'
 import { Controller } from '@hotwired/stimulus'
 
+/* stimulusFetch: 'lazy' */
 export default class extends Controller {}
 ```
 
-(`/* stimulusFetch: 'lazy' */` works too.)
+(`// stimulusFetch: 'lazy'` on the line above the class works too. The marker only counts directly above the class — not above the imports.)
 
 **Third-party UX packages.** Controllers declared in `controllers.json` work too, but unlike AssetMapper (which vendors them via importmap) a bundler resolves them from `node_modules` — install them with your package manager, exactly like Webpack Encore did:
 

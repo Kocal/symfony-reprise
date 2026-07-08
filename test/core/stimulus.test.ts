@@ -55,6 +55,14 @@ describe('generateControllersModule — local', () => {
     expect(src).toContain(join(root, 'controllers/single_line_controller.js'))
   })
 
+  it('ignores a lazy marker that sits above the imports (it must be directly above the class)', () => {
+    const src = generateControllersModule(localOpts, root, false)
+    // The marker in `above_imports_controller.js` precedes the imports, not the class,
+    // so the controller stays eager rather than becoming a lazy dynamic import.
+    expect(src).toMatch(/"above-imports": controller_\d+/)
+    expect(src).not.toContain(`"above-imports": () => import(`)
+  })
+
   it('maps nested controllers with a double-dash identifier', () => {
     const src = generateControllersModule(localOpts, root, false)
     expect(src).toMatch(/"admin--user": controller_\d+/)

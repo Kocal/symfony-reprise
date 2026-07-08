@@ -28,11 +28,19 @@ interface ResolvedController {
   autoimports: string[]
 }
 
-// A controller opts into lazy loading with a `stimulusFetch: 'lazy'` comment above its class,
-// as either a block comment (`/* stimulusFetch: 'lazy' */`) or a single-line one
-// (`// stimulusFetch: 'lazy'`). Symfony's own bridge accepts both (it parses every comment),
-// so we match either marker; quotes may be single or double.
-const LAZY_COMMENT_RE = /(?:\/\*|\/\/)\s*stimulusFetch:\s*['"]lazy['"]/i
+// A controller opts into lazy loading with a `stimulusFetch: 'lazy'` comment placed *directly
+// above the class declaration* — after the imports, like a decorator:
+//
+//   import { Controller } from '@hotwired/stimulus'
+//
+//   /* stimulusFetch: 'lazy' */
+//   export default class extends Controller {}
+//
+// The marker is recognised only when the very next code is the class (`[export [default]] class`),
+// which is why a stray `stimulusFetch: 'lazy'` sitting above the imports (or anywhere else) does
+// NOT flip the controller to lazy. It may be a block comment or a single-line one, single or
+// double quotes; a block comment may sit on the class's own line, a line comment must precede it.
+const LAZY_COMMENT_RE = /(?:\/\*\s*stimulusFetch:\s*['"]lazy['"]\s*\*\/|\/\/\s*stimulusFetch:\s*['"]lazy['"])\s*(?:export\s+(?:default\s+)?)?(?:abstract\s+)?class\b/i
 const LOCAL_CONTROLLER_RE = /[-_]controller\.[jt]s$/
 
 export function generateControllersModule(opts: ResolvedStimulusOptions, root: string, isDev: boolean): string {
