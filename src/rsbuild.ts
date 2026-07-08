@@ -20,6 +20,14 @@ export default function symfony(options?: Options): RsbuildPlugin {
         config.tools.htmlPlugin = false
         config.output ??= {}
         config.output.distPath = { ...config.output.distPath, root: resolved.outputPath }
+        // `outputPath` (e.g. `public/build`) lives inside Rsbuild's default public dir
+        // (`public`). On build, Rsbuild copies the public dir into the dist output, which
+        // here means copying `public/` into `public/build/` — a subpath of itself — and
+        // Node's `fs.cp` rejects that with `ERR_FS_CP_EINVAL`. Symfony's public dir isn't a
+        // Rsbuild-managed static-assets folder anyway, so disable Rsbuild's own copy/serve of
+        // it entirely (this is the Rspack analog of `copyPublicDir: false` in the Vite path).
+        config.server ??= {}
+        config.server.publicDir = false
         // Rsbuild's own config defaults `output.assetPrefix` to `'/'` before this hook runs
         // (it is never left `undefined`), so `??=` would never apply ours — assign unconditionally.
         // Note: this only takes effect for the production build. In dev, Rsbuild's own
