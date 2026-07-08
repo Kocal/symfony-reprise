@@ -9,7 +9,7 @@ export interface RspackStats {
 }
 
 function fileExt(name: string): string {
-  return extname(name).slice(1).split('?')[0] ?? ''
+  return extname(name.split('?')[0]).slice(1)
 }
 
 function isHotUpdate(name: string): boolean {

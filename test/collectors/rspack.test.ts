@@ -27,4 +27,9 @@ describe('statsToGraph', () => {
   it('tolerates empty/absent stats sections', () => {
     expect(statsToGraph({})).toEqual({ entryPoints: {}, assets: [] })
   })
+
+  it('strips a query string before reading the extension', () => {
+    const graph = statsToGraph({ entrypoints: { app: { assets: [{ name: 'app.a1.js?v=1.2.3' }] } } })
+    expect(graph.entryPoints.app.js).toEqual(['app.a1.js?v=1.2.3'])
+  })
 })
