@@ -80,13 +80,21 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
     },
 
     rspack(compiler) {
-      // Build mode: our options drive Rspack's output so runtime asset URLs and our JSON agree.
-      // In Rsbuild dev (mode 'development'), Rsbuild has already resolved output.publicPath to the
-      // dev-server origin (from dev.assetPrefix); leave it and read it in the `done` hook below.
-      if (compiler.options.mode !== 'development') {
+      // Build mode (a one-shot `compiler.run()`): our options drive Rspack's output so runtime
+      // asset URLs and our JSON agree. In Rsbuild dev (`compiler.watch()`, i.e. `watchRun` instead
+      // of `run`), Rsbuild has already resolved output.publicPath to the dev-server origin (from
+      // dev.assetPrefix); leave it alone and read it back in the `done` hook below.
+      //
+      // We gate on `compiler.hooks.run` rather than `compiler.options.mode`: Rsbuild only derives
+      // its own config mode from `process.env.NODE_ENV`, and only sets NODE_ENV when starting the
+      // dev server if it isn't already set. Under a test runner (NODE_ENV=test) or any other
+      // ambient value, `compiler.options.mode` resolves to 'none' even during a real dev run,
+      // which would wrongly clobber the dev origin here. `run` vs `watchRun` instead reflects the
+      // actual one-shot-build-vs-watch invocation, and is unaffected by NODE_ENV.
+      compiler.hooks.run.tap('unplugin-symfony', () => {
         compiler.options.output.path = resolved.outputPath
         compiler.options.output.publicPath = resolved.publicPath
-      }
+      })
 
       compiler.hooks.done.tap('unplugin-symfony', (stats) => {
         const isDev = compiler.watchMode
