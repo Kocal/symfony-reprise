@@ -33,3 +33,31 @@ describe('generateControllersModule — third-party', () => {
     expect(() => generateControllersModule(bad, '/nonexistent-root', false)).toThrow(/npm install|could not/i)
   })
 })
+
+describe('generateControllersModule — local', () => {
+  const localOpts = { controllersJson: join(root, 'controllers.json'), controllersDir: join(root, 'controllers') }
+
+  it('emits an eager local controller by absolute path', () => {
+    const src = generateControllersModule(localOpts, root, false)
+    expect(src).toContain(join(root, 'controllers/greet_controller.js'))
+    expect(src).toMatch(/"greet": controller_\d+/)
+  })
+
+  it('emits a lazy local controller when the stimulusFetch comment is present', () => {
+    const src = generateControllersModule(localOpts, root, false)
+    expect(src).toContain(`"heavy": () => import(`)
+    expect(src).toContain(join(root, 'controllers/heavy_controller.js'))
+  })
+
+  it('maps nested controllers with a double-dash identifier', () => {
+    const src = generateControllersModule(localOpts, root, false)
+    expect(src).toMatch(/"admin--user": controller_\d+/)
+  })
+
+  it('returns valid empty maps when there are no controllers at all', () => {
+    const empty = { controllersJson: join(root, 'empty-controllers.json'), controllersDir: join(root, 'nope') }
+    const src = generateControllersModule(empty, root, false)
+    expect(src).toContain('export const eagerControllers = {}')
+    expect(src).toContain('export const lazyControllers = {}')
+  })
+})

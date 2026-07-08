@@ -1,5 +1,5 @@
 import type { ResolvedStimulusOptions } from '../types'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import * as path from 'node:path'
 
@@ -18,6 +18,9 @@ interface PackageControllerConfig {
 interface ControllersJson {
   controllers?: Record<string, Record<string, UserControllerConfig>>
 }
+
+const LAZY_COMMENT_RE = /\/\*\s*stimulusFetch:\s*'lazy'\s*\*\//i
+const LOCAL_CONTROLLER_RE = /[-_]controller\.[jt]s$/
 
 export function generateControllersModule(opts: ResolvedStimulusOptions, root: string, isDev: boolean): string {
   const imports: string[] = []
@@ -70,6 +73,19 @@ export function generateControllersModule(opts: ResolvedStimulusOptions, root: s
     }
   }
 
+  for (const rel of listLocalControllers(opts.controllersDir)) {
+    const abs = path.join(opts.controllersDir, rel)
+    const identifier = localIdentifier(rel)
+    if (LAZY_COMMENT_RE.test(readFileSync(abs, 'utf8'))) {
+      lazy.push(`  ${JSON.stringify(identifier)}: () => import(${JSON.stringify(abs)}),`)
+    }
+    else {
+      const varName = `controller_${index++}`
+      imports.push(`import ${varName} from ${JSON.stringify(abs)}`)
+      eager.push(`  ${JSON.stringify(identifier)}: ${varName},`)
+    }
+  }
+
   return render(imports, eager, lazy, isDev)
 }
 
@@ -91,4 +107,23 @@ function render(imports: string[], eager: string[], lazy: string[], isDev: boole
   lines.push(`export const isApplicationDebug = ${isDev ? 'true' : 'false'}`)
   lines.push('')
   return lines.join('\n')
+}
+
+function listLocalControllers(dir: string): string[] {
+  let entries: string[]
+  try {
+    entries = readdirSync(dir, { recursive: true }) as unknown as string[]
+  }
+  catch {
+    return [] // dir absent -> no local controllers
+  }
+  return entries
+    .map(e => String(e).replace(/\\/g, '/'))
+    .filter(e => LOCAL_CONTROLLER_RE.test(e))
+    .sort()
+}
+
+function localIdentifier(rel: string): string {
+  const base = rel.replace(/\\/g, '/').replace(/[-_]controller\.[jt]s$/, '')
+  return base.replace(/_/g, '-').replace(/\//g, '--')
 }
