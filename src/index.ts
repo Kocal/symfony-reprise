@@ -1,9 +1,11 @@
 import type { UnpluginFactory } from 'unplugin'
+import type { RspackStats } from './collectors/rspack'
 import type { BuildContext, EntrypointsJson, ManifestJson, Options } from './types'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import * as process from 'node:process'
 import { createUnplugin } from 'unplugin'
+import { statsToGraph } from './collectors/rspack'
 import { bundleToGraph, configToDevGraph } from './collectors/vite'
 import { resolveDevOrigin } from './core/dev-server'
 import { buildEntrypoints, buildManifest } from './core/format'
@@ -78,8 +80,30 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
     },
 
     rspack(compiler) {
-      compiler.options.output.path = resolved.outputPath
-      compiler.options.output.publicPath = resolved.publicPath
+      // Build mode: our options drive Rspack's output so runtime asset URLs and our JSON agree.
+      // In Rsbuild dev (mode 'development'), Rsbuild has already resolved output.publicPath to the
+      // dev-server origin (from dev.assetPrefix); leave it and read it in the `done` hook below.
+      if (compiler.options.mode !== 'development') {
+        compiler.options.output.path = resolved.outputPath
+        compiler.options.output.publicPath = resolved.publicPath
+      }
+
+      compiler.hooks.done.tap('unplugin-symfony', (stats) => {
+        const isDev = compiler.watchMode
+        const outputPublicPath = String(compiler.options.output.publicPath ?? resolved.publicPath)
+        const urlPrefix = isDev ? outputPublicPath : resolved.publicPath
+        const origin = isDev && urlPrefix.includes('://') ? new URL(urlPrefix).origin : null
+
+        const ctx: BuildContext = {
+          isProd: !isDev,
+          devServer: origin ? { origin, client: null } : null,
+          publicPath: resolved.publicPath,
+          urlPrefix,
+          manifestKeyPrefix: resolved.manifestKeyPrefix,
+        }
+        const graph = statsToGraph(stats.toJson({ assets: true, entrypoints: true }) as RspackStats)
+        writeFiles(buildEntrypoints(graph, ctx), buildManifest(graph, ctx))
+      })
     },
   }
 }
