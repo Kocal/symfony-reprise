@@ -145,8 +145,11 @@ For each `packageName` → `controllerName` in `controllers.json`'s `controllers
    module has no meaningful location for relative paths). eager → top-level import;
    lazy → `() => import('<abs path>')`.
 
-A local identifier collision with a third-party one: local wins (last-write), and
-we `log()` a warning. (Rare; matches "your controllers override" intuition.)
+Controllers are collected into a map keyed by identifier, local ones added after third-party
+ones. A local identifier that collides with a third-party one therefore wins (last write),
+appears in exactly one of the eager/lazy maps, and emits no orphaned import. No warning is
+logged (the generator is pure; collisions are near-impossible in practice — local identifiers
+are short, third-party ones long/scoped). Matches the "your controllers override" intuition.
 
 ## The runtime helper (`src/stimulus.ts`)
 
