@@ -110,7 +110,12 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
           manifestKeyPrefix: resolved.manifestKeyPrefix,
         }
         const graph = statsToGraph(stats.toJson({ assets: true, entrypoints: true }) as RspackStats)
-        writeFiles(buildEntrypoints(graph, ctx), buildManifest(graph, ctx))
+        try {
+          writeFiles(buildEntrypoints(graph, ctx), buildManifest(graph, ctx))
+        }
+        catch (err) {
+          compiler.getInfrastructureLogger('unplugin-symfony').error(`[unplugin-symfony] failed to write entrypoints.json: ${err instanceof Error ? err.message : String(err)}`)
+        }
       })
     },
   }
