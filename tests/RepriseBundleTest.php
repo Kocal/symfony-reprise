@@ -11,37 +11,28 @@
 
 namespace Symfony\Reprise\Tests;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Config\Loader\LoaderInterface;
-use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpKernel\Kernel;
-use Symfony\Reprise\RepriseBundle;
+use Symfony\Reprise\Tests\Kernel\EmptyAppKernel;
+use Symfony\Reprise\Tests\Kernel\FrameworkAppKernel;
 
 final class RepriseBundleTest extends TestCase
 {
-    public function testBundleBootsInAKernel(): void
+    /**
+     * @return iterable<string, array{Kernel}>
+     */
+    public static function provideKernels(): iterable
     {
-        $kernel = new class('test', true) extends Kernel {
-            public function registerBundles(): iterable
-            {
-                return [new RepriseBundle()];
-            }
+        yield 'empty' => [new EmptyAppKernel('test', true)];
+        yield 'framework' => [new FrameworkAppKernel('test', true)];
+    }
 
-            public function registerContainerConfiguration(LoaderInterface $loader): void
-            {
-            }
-
-            public function getProjectDir(): string
-            {
-                return sys_get_temp_dir().'/reprise-test';
-            }
-        };
-
+    #[DataProvider('provideKernels')]
+    public function testBundleBootsInAKernel(Kernel $kernel): void
+    {
         $kernel->boot();
 
-        self::assertArrayHasKey('RepriseBundle', $kernel->getBundles());
-
-        $kernel->shutdown();
-        new Filesystem()->remove($kernel->getProjectDir());
+        $this->assertArrayHasKey('RepriseBundle', $kernel->getBundles());
     }
 }
