@@ -17,7 +17,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
   let isDev = false
 
   return {
-    name: 'unplugin-symfony',
+    name: '@symfony/reprise',
 
     vite: {
       config: () => ({
@@ -89,7 +89,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
             writeSymfonyFiles(resolved.outputPath, buildEntrypoints(configToDevGraph(server.config), ctx), {})
           }
           catch (err) {
-            server.config.logger.error(`[unplugin-symfony] failed to write dev entrypoints.json: ${err instanceof Error ? err.message : String(err)}`)
+            server.config.logger.error(`[@symfony/reprise] failed to write dev entrypoints.json: ${err instanceof Error ? err.message : String(err)}`)
           }
         })
       },
