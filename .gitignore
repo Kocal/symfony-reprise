@@ -96,3 +96,7 @@ dist
 # Composer (PHP bundle)
 /vendor/
 /composer.lock
+
+# PHPUnit
+/.phpunit.cache/
+/.phpunit.result.cache

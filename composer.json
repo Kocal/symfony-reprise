@@ -1,0 +1,29 @@
+{
+    "name": "symfony/reprise",
+    "type": "symfony-bundle",
+    "description": "Integrate Vite and Rsbuild with Symfony, a reprise of Webpack Encore Bundle.",
+    "license": "MIT",
+    "keywords": ["symfony", "vite", "rsbuild", "assets", "encore"],
+    "authors": [
+        { "name": "Hugo Alliaume", "email": "hugo@alliau.me" }
+    ],
+    "require": {
+        "php": ">=8.4"
+    },
+    "require-dev": {
+        "symfony/framework-bundle": "^7.4|^8.0",
+        "symfony/http-kernel": "^7.4|^8.0",
+        "symfony/filesystem": "^7.4|^8.0",
+        "phpunit/phpunit": "^11.1|^12.0",
+        "phpstan/phpstan": "^2.1",
+        "friendsofphp/php-cs-fixer": "^3.60"
+    },
+    "autoload": {
+        "psr-4": { "Symfony\\Reprise\\": "src/" }
+    },
+    "autoload-dev": {
+        "psr-4": { "Symfony\\Reprise\\Tests\\": "tests/" }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
