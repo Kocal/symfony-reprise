@@ -19,12 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: npm i -g corepack && corepack enable
       - name: Set node
         uses: actions/setup-node@v4
         with:
-          node-version: lts/*
-      - name: Enable corepack
-        run: corepack enable
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - name: Install
         run: pnpm install --frozen-lockfile
       - name: Lint
@@ -33,18 +34,18 @@ jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
-      matrix:
-        node: [lts/*]
-        os: [ubuntu-latest, windows-latest, macos-latest]
       fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
-      - name: Set node ${{ matrix.node }}
+      - run: npm i -g corepack && corepack enable
+      - name: Set node
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
-      - name: Enable corepack
-        run: corepack enable
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - name: Install
         run: pnpm install --frozen-lockfile
       - name: Build
@@ -71,7 +72,7 @@ jobs:
             symfony: 8.0.*
     env:
       # symfony/flex (installed as a global tool below) reads SYMFONY_REQUIRE and forces every
-      # symfony/* package to this version during `composer update`.
+      # symfony/* package to this version during the Composer resolution.
       SYMFONY_REQUIRE: ${{ matrix.symfony }}
     steps:
       - uses: actions/checkout@v4
@@ -81,7 +82,11 @@ jobs:
           php-version: ${{ matrix.php }}
           tools: flex
       - name: Install dependencies
-        run: composer update --prefer-dist --no-progress ${{ matrix.deps == 'lowest' && '--prefer-lowest' || '' }}
+        uses: ramsey/composer-install@v3
+        with:
+          dependency-versions: ${{ matrix.deps == 'lowest' && 'lowest' || 'highest' }}
+          composer-options: --prefer-dist
+          custom-cache-suffix: ${{ matrix.symfony }}
       - name: PHPUnit
         run: vendor/bin/phpunit
 
@@ -96,8 +101,11 @@ jobs:
           tools: composer:v2
       - name: Validate composer.json
         run: composer validate --strict
-      - name: Install
-        run: composer install --prefer-dist --no-progress
+      - name: Install dependencies
+        uses: ramsey/composer-install@v3
+        with:
+          dependency-versions: highest
+          composer-options: --prefer-dist
       - name: PHPStan
         run: vendor/bin/phpstan analyse
       - name: PHP-CS-Fixer
