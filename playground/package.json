@@ -8,7 +8,12 @@
     "rsbuild:build": "nodemon -w '../src/**/*.ts' -e .ts -x rsbuild build"
   },
   "devDependencies": {
+    "@hotwired/stimulus": "^3.0.0",
+    "@kocal/unplugin-symfony": "link:..",
     "@rsbuild/core": "^2.1.5",
+    "@symfony/stimulus-bridge": "^3.2.0 || ^4.0.0",
+    "@symfony/ux-leaflet-map": "file:vendor/symfony/ux-leaflet-map/assets",
+    "leaflet": "^1.9.4",
     "vite": "^8.1.3",
     "vite-plugin-inspect": "^11.1.0"
   }

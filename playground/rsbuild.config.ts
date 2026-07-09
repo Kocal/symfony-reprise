@@ -13,6 +13,13 @@ export default defineConfig({
     },
   },
   plugins: [
-    Symfony(),
+    Symfony({
+        stimulus: './assets/controllers.json',
+    }),
   ],
+    resolve: {
+      alias: {
+          'leaflet/dist/leaflet.min.css': 'leaflet/dist/leaflet.css',
+      }
+    }
 })

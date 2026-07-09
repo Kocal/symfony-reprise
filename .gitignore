@@ -90,3 +90,5 @@ dist
 # the Stimulus generator resolves them via require(`<pkg>/package.json`).
 !test/fixtures/**/node_modules/
 !test/fixtures/**/node_modules/**
+
+!playground/.env

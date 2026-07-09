@@ -17,6 +17,13 @@ export default defineConfig({
   },
   plugins: [
     Inspect(),
-    Unplugin({}),
+    Unplugin({
+        stimulus: './assets/controllers.json',
+    }),
   ],
+    resolve: {
+      alias: {
+          'leaflet/dist/leaflet.min.css': 'leaflet/dist/leaflet.css',
+      }
+    }
 })
