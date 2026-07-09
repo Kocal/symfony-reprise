@@ -15,8 +15,12 @@ app on Vite or Rsbuild should be able to:
    (the file Flex maintains when a `symfony-ux` package is installed).
 3. Get lazy loading for any controller annotated `/* stimulusFetch: 'lazy' */`.
 
-The user-facing contract mirrors the modern AssetMapper/StimulusBundle one so
-migration is a single import line.
+For users this is the bundler-side integration — the Vite/Rsbuild counterpart of what
+`@symfony/stimulus-bridge` did for Webpack Encore: UX packages are npm dependencies and some
+need bundler-specific setup (e.g. a CSS alias), just like under Encore. The `startStimulusApp()`
+entry point is the same one `@symfony/stimulus-bundle`/`@symfony/stimulus-bridge` expose, so
+migration is a single import line. (Internally the module + loader it generates are a port of
+`@symfony/stimulus-bundle` — an implementation detail, not the user's mental model.)
 
 ## Non-goals (YAGNI for B1)
 
@@ -35,7 +39,8 @@ migration is a single import line.
 
 ## User-facing contract
 
-In the app entry (`app.js`), exactly one import line changes vs. AssetMapper:
+In the app entry (`app.js`), exactly one import line changes vs. a Symfony UX setup on Encore
+(`@symfony/stimulus-bridge`) or AssetMapper (`@symfony/stimulus-bundle`):
 
 ```diff
 - import { startStimulusApp } from '@symfony/stimulus-bundle'
