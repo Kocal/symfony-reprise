@@ -1,14 +1,14 @@
-# unplugin-symfony
+# Reprise
 
-[![npm version](https://img.shields.io/npm/v/@kocal%40unplugin-symfony?color=crimson&label=)](https://www.npmjs.com/package/@kocal/unplugin-symfony)
-[![npm downloads](https://img.shields.io/npm/dm/@kocal%40unplugin-symfony?color=crimson&label=)](https://www.npmjs.com/package/@kocal/unplugin-symfony)
-[![license](https://img.shields.io/npm/l/@kocal%40unplugin-symfony?color=crimson&label=)](https://www.npmjs.com/package/@kocal/unplugin-symfony)
+[![npm version](https://img.shields.io/npm/v/@symfony%2Freprise?color=crimson&label=)](https://www.npmjs.com/package/@symfony/reprise)
+[![npm downloads](https://img.shields.io/npm/dm/@symfony%2Freprise?color=crimson&label=)](https://www.npmjs.com/package/@symfony/reprise)
+[![license](https://img.shields.io/npm/l/@symfony%2Freprise?color=crimson&label=)](https://www.npmjs.com/package/@symfony/reprise)
 
-Easily integrate the key features of Symfony's Webpack Encore into your Vite or Rsbuild/Rspack setup using a single unplugin.
+Webpack Encore gave Symfony first-class asset integration for Webpack. Reprise gives you the same integration for **Vite** and **Rsbuild**.
 
 ## Features
 
-⚡️Vite and 🦀Rsbuild already handle **Sass/Less/PostCSS**, **TypeScript**, **JSX/Vue/Svelte**, **code splitting**, **content hashing**, **source maps**, **minification** and **HMR** on their own, so this plugin doesn't reimplement any of that.
+⚡️Vite and 🦀Rsbuild already handle **Sass/Less/PostCSS**, **TypeScript**, **JSX/Vue/Svelte**, **code splitting**, **content hashing**, **source maps**, **minification** and **HMR** on their own, so Reprise doesn't reimplement any of that.
 It only covers the Symfony-side integration that bundlers don't provide out of the box:
 
 - [x] Multiple entries
@@ -24,7 +24,7 @@ It only covers the Symfony-side integration that bundlers don't provide out of t
 ## Install
 
 ```bash
-npm install @kocal/unplugin-symfony --save-dev
+npm install @symfony/reprise --save-dev
 ```
 
 <details>
@@ -33,7 +33,7 @@ npm install @kocal/unplugin-symfony --save-dev
 ```ts
 // vite.config.ts
 import { defineConfig } from 'vite'
-import Symfony from '@kocal/unplugin-symfony/vite'
+import Symfony from '@symfony/reprise/vite'
 
 export default defineConfig({
   plugins: [
@@ -52,7 +52,7 @@ Example: [`playground/`](./playground/)
 ```ts
 // rsbuild.config.ts
 import { defineConfig } from '@rsbuild/core'
-import Symfony from '@kocal/unplugin-symfony/rsbuild'
+import Symfony from '@symfony/reprise/rsbuild'
 
 export default defineConfig({
   plugins: [Symfony({ /* options */ })],
@@ -76,7 +76,7 @@ Symfony({ stimulus: { controllersJson: 'assets/controllers.json', controllersDir
 Then start the app from your entry:
 
 ```ts
-import { startStimulusApp } from '@kocal/unplugin-symfony/stimulus'
+import { startStimulusApp } from '@symfony/reprise/stimulus'
 
 const app = startStimulusApp()
 ```
