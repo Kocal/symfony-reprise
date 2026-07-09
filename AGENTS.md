@@ -93,4 +93,5 @@ Read-only clones under `.references/` (git-ignored) show how mature unplugins ar
 
 - ESM only, strict TypeScript, ES2017 target. Use the `node:` prefix for Node builtins.
 - New public options go in `assets/src/types.ts` with JSDoc; keep bundler adapters trivial.
-- Releases: `pnpm release` (`bumpp` + `pnpm publish`); changelog via `changelogithub` on tag push.
+- Commit messages: Symfony style `[<Scope>] <Short description>` — PascalCase scope, imperative mood, capitalized first word, no trailing period; combine scopes as `[A][B]` when a change spans several. E.g. `[Stimulus] Emit forward-slash local controller paths`, `[Docs] Frame Stimulus usage as the Encore experience`, `[CI] Cancel superseded runs with a concurrency group`. This is the convention used across Symfony UX and WebpackEncoreBundle — **not** Conventional Commits (no `feat:`/`fix:`/`chore:` prefixes).
+- Releases: the published npm package lives in `assets/` (`@symfony/reprise`); its `prepublishOnly` runs the `tsdown` build before publish.

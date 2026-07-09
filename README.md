@@ -1,14 +1,14 @@
-# Reprise
+# Symfony Reprise
 
 [![npm version](https://img.shields.io/npm/v/@symfony%2Freprise?color=crimson&label=)](https://www.npmjs.com/package/@symfony/reprise)
 [![npm downloads](https://img.shields.io/npm/dm/@symfony%2Freprise?color=crimson&label=)](https://www.npmjs.com/package/@symfony/reprise)
 [![license](https://img.shields.io/npm/l/@symfony%2Freprise?color=crimson&label=)](https://www.npmjs.com/package/@symfony/reprise)
 
-Webpack Encore gave Symfony first-class asset integration for Webpack. Reprise gives you the same integration for **Vite** and **Rsbuild**.
+Webpack Encore gave Symfony first-class asset integration for Webpack. Symfony Reprise gives you the same integration for **Vite** and **Rsbuild**.
 
 ## Features
 
-⚡️Vite and 🦀Rsbuild already handle **Sass/Less/PostCSS**, **TypeScript**, **JSX/Vue/Svelte**, **code splitting**, **content hashing**, **source maps**, **minification** and **HMR** on their own, so Reprise doesn't reimplement any of that.
+⚡️Vite and 🦀Rsbuild already handle **Sass/Less/PostCSS**, **TypeScript**, **JSX/Vue/Svelte**, **code splitting**, **content hashing**, **source maps**, **minification** and **HMR** on their own, so Symfony Reprise doesn't reimplement any of that.
 It only covers the Symfony-side integration that bundlers don't provide out of the box:
 
 - [x] Multiple entries
