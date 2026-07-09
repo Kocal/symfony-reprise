@@ -93,7 +93,8 @@ git mv tsconfig.json assets/tsconfig.json
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown -w",
-    "test": "vitest",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prepublishOnly": "tsdown"
   },
   "peerDependencies": {
@@ -206,12 +207,12 @@ Expected: no output.
 Run: `pnpm install`
 Expected: succeeds; `assets` and `playground` are linked as workspace packages.
 
-- [ ] **Step 9: Verify the JS suite, lint and build are green from the new layout**
+- [ ] **Step 9: Verify the JS suite, lint and build are green from the new layout** (root scripts delegate to `assets`)
 
 ```bash
-pnpm -C assets exec vitest run
+pnpm test
 ```
-Expected: `Test Files 14 passed (14)`, `Tests 66 passed (66)`.
+Expected: `Test Files 14 passed (14)`, `Tests 66 passed (66)`. (Root `test` -> `pnpm -C assets run test` -> `vitest run`.)
 
 ```bash
 pnpm run lint
@@ -219,11 +220,11 @@ pnpm run lint
 Expected: clean (exit 0).
 
 ```bash
-pnpm -C assets exec tsdown
+pnpm build
 ```
-Expected: succeeds; `assets/dist/` contains `index.mjs`, `vite.mjs`, `rsbuild.mjs`, `stimulus.mjs`, `types.mjs` and their `.d.mts`.
+Expected: succeeds; `assets/dist/` contains `index.mjs`, `vite.mjs`, `rsbuild.mjs`, `stimulus.mjs`, `types.mjs` and their `.d.mts`. (Root `build` -> `pnpm -C assets run build` -> `tsdown`.)
 
-(`exec` bypasses pnpm's workspace deps pre-check, which can fail right after `package.json` changes even with a fresh lockfile.)
+(These root scripts work once Step 8's `pnpm install` has synced the lockfile. If pnpm's workspace deps pre-check ever trips on a stale lockfile, re-run `pnpm install`, not `--frozen-lockfile`.)
 
 - [ ] **Step 10: Commit**
 
@@ -514,9 +515,9 @@ jobs:
       - name: Install
         run: nci
       - name: Build
-        run: pnpm -C assets exec tsdown
+        run: pnpm build
       - name: Test
-        run: pnpm -C assets exec vitest run
+        run: pnpm test
 
   php:
     runs-on: ubuntu-latest
@@ -560,7 +561,7 @@ jobs:
 - [ ] **Step 2: Validate the workflow YAML locally**
 
 ```bash
-node -e "const s=require('node:fs').readFileSync('.github/workflows/ci.yml','utf8'); for (const k of ['cancel-in-progress','fail-fast: false','vendor/bin/phpunit','vendor/bin/phpstan','php-cs-fixer','pnpm -C assets']) if(!s.includes(k)) throw new Error('missing '+k); console.log('ci.yml OK')"
+node -e "const s=require('node:fs').readFileSync('.github/workflows/ci.yml','utf8'); for (const k of ['cancel-in-progress','fail-fast: false','vendor/bin/phpunit','vendor/bin/phpstan','php-cs-fixer','pnpm build','pnpm test']) if(!s.includes(k)) throw new Error('missing '+k); console.log('ci.yml OK')"
 ```
 Expected: `ci.yml OK`.
 
@@ -610,7 +611,7 @@ Claude-Session: https://claude.ai/code/session_0158bmAzeS25EouwusjkLMAc"
 ## Notes for the executor
 
 - **Atomicity of Task 1:** do not commit between the `git mv` and the config rewrites — the repo does not build in between. Task 1 is green only once all of steps 1-9 are done.
-- **pnpm frozen-lockfile:** the workspace pre-check can fail after `package.json` changes; Task 1 Step 8 uses plain `pnpm install` (regenerates the lockfile). If a `pnpm run` wrapper still trips it, call the binary via `pnpm -C assets exec <tool>`.
+- **pnpm frozen-lockfile:** the workspace pre-check can fail after `package.json` changes; Task 1 Step 8 uses plain `pnpm install` (regenerates the lockfile), after which the root `pnpm build`/`pnpm test`/`pnpm run lint` scripts work. If the pre-check still trips, re-run `pnpm install` (never `--frozen-lockfile`) rather than reaching for `exec`.
 - **`sed -i ''`** is the BSD/macOS form (empty backup suffix). On Linux CI/agents use `sed -i` (no `''`). Adjust per platform.
 - **PHP availability:** Tasks 2-4 need PHP 8.4 + Composer on the machine running them. If unavailable, implement the files and note that `composer install`/`phpunit`/`phpstan`/`php-cs-fixer` must be run where PHP 8.4 exists; do not fake green output.
-- After the last task, the full gate is: `pnpm install` + `pnpm -C assets exec vitest run` + `pnpm run lint` + `pnpm -C assets run build` (JS) and `composer install` + `vendor/bin/phpunit` + `vendor/bin/phpstan analyse` + `vendor/bin/php-cs-fixer fix --dry-run` (PHP), all green.
+- After the last task, the full gate is: `pnpm install` + `pnpm test` + `pnpm run lint` + `pnpm build` (JS) and `composer install` + `vendor/bin/phpunit` + `vendor/bin/phpstan analyse` + `vendor/bin/php-cs-fixer fix --dry-run` (PHP), all green.
