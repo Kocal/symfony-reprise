@@ -67,8 +67,10 @@ jobs:
           tools: composer:v2
       - name: Validate composer.json
         run: composer validate --strict
+      # Pin every Symfony require-dev package to the matrix version so the matrix genuinely
+      # exercises 7.4 and 8.0 (the composer update below then resolves against these floors).
       - name: Restrict Symfony version
-        run: composer require --no-update --dev "symfony/framework-bundle:${{ matrix.symfony }}" "symfony/http-kernel:${{ matrix.symfony }}"
+        run: composer require --no-update --dev "symfony/framework-bundle:${{ matrix.symfony }}" "symfony/http-kernel:${{ matrix.symfony }}" "symfony/filesystem:${{ matrix.symfony }}"
       - name: Install
         run: composer update --prefer-dist --no-progress
       - name: PHPUnit
