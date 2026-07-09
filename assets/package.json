@@ -19,10 +19,10 @@
   },
   "keywords": [
     "symfony",
+    "assets",
     "vite",
     "rsbuild",
-    "encore",
-    "assets"
+    "encore"
   ],
   "exports": {
     ".": "./dist/index.mjs",
