@@ -29,7 +29,7 @@ export const VIRTUAL_CONTROLLERS_ID = 'virtual:symfony/controllers'
  */
 export const STIMULUS_NOT_ENABLED_MESSAGE
   = `[unplugin-symfony] "${VIRTUAL_CONTROLLERS_ID}" was imported (this is what startStimulusApp() `
-    + `from "@kocal/unplugin-symfony/stimulus" pulls in), but the Stimulus integration is not enabled. `
+    + `from "@symfony/reprise/stimulus" pulls in), but the Stimulus integration is not enabled. `
     + `Add \`stimulus: './assets/controllers.json'\` (or your own controllers.json path) to the `
     + `unplugin-symfony plugin options.`
 

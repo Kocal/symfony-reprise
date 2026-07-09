@@ -50,7 +50,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
       resolveId(id) {
         if (id !== VIRTUAL_ID)
           return
-        // The helper (`@kocal/unplugin-symfony/stimulus`) imports this unconditionally, so if a
+        // The helper (`@symfony/reprise/stimulus`) imports this unconditionally, so if a
         // user pulls in `startStimulusApp()` without turning the feature on, fail with a clear,
         // actionable message rather than Rollup's generic "failed to resolve".
         if (!resolved.stimulus)

@@ -88,7 +88,11 @@ dist
 
 # Test fixtures ship fake node_modules packages on purpose:
 # the Stimulus generator resolves them via require(`<pkg>/package.json`).
-!test/fixtures/**/node_modules/
-!test/fixtures/**/node_modules/**
+!assets/test/fixtures/**/node_modules/
+!assets/test/fixtures/**/node_modules/**
 
 !playground/.env
+
+# Composer (PHP bundle)
+/vendor/
+/composer.lock

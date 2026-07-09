@@ -2,14 +2,14 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "vite:dev": "nodemon -w '../src/**/*.ts' -e .ts -x vite",
-    "vite:build": "nodemon -w '../src/**/*.ts' -e .ts -x vite build",
-    "rsbuild:dev": "nodemon -w '../src/**/*.ts' -e .ts -x rsbuild dev",
-    "rsbuild:build": "nodemon -w '../src/**/*.ts' -e .ts -x rsbuild build"
+    "vite:dev": "nodemon -w '../assets/src/**/*.ts' -e .ts -x vite",
+    "vite:build": "nodemon -w '../assets/src/**/*.ts' -e .ts -x vite build",
+    "rsbuild:dev": "nodemon -w '../assets/src/**/*.ts' -e .ts -x rsbuild dev",
+    "rsbuild:build": "nodemon -w '../assets/src/**/*.ts' -e .ts -x rsbuild build"
   },
   "devDependencies": {
     "@hotwired/stimulus": "^3.0.0",
-    "@kocal/unplugin-symfony": "link:..",
+    "@symfony/reprise": "link:../assets",
     "@rsbuild/core": "^2.1.5",
     "@symfony/stimulus-bridge": "^3.2.0 || ^4.0.0",
     "@symfony/ux-leaflet-map": "^3.2.0",
