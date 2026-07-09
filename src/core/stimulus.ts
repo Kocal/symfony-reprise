@@ -101,7 +101,9 @@ export function generateControllersModule(opts: ResolvedStimulusOptions, root: s
     controllers.set(identifier, {
       identifier,
       fetch: LAZY_COMMENT_RE.test(readFileSync(abs, 'utf8')) ? 'lazy' : 'eager',
-      main: abs,
+      // Emit a forward-slash path: a valid ESM import specifier on every OS (a Windows
+      // backslash path would be escaped in the generated string and is not a portable specifier).
+      main: abs.replace(/\\/g, '/'),
       autoimports: [],
     })
   }

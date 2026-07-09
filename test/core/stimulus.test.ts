@@ -5,6 +5,10 @@ import { generateControllersModule } from '../../src/core/stimulus'
 const root = join(import.meta.dirname, '../fixtures/stimulus')
 const opts = { controllersJson: join(root, 'controllers.json'), controllersDir: join(root, 'does-not-exist') }
 
+// Local import paths are emitted with forward slashes (a portable ESM specifier), so compare
+// expected filesystem paths in the same shape — otherwise the assertions fail on Windows.
+const posix = (p: string): string => p.replace(/\\/g, '/')
+
 describe('generateControllersModule — third-party', () => {
   it('emits an eager third-party controller with a static import and autoimport', () => {
     const src = generateControllersModule(opts, root, false)
@@ -39,20 +43,20 @@ describe('generateControllersModule — local', () => {
 
   it('emits an eager local controller by absolute path', () => {
     const src = generateControllersModule(localOpts, root, false)
-    expect(src).toContain(join(root, 'controllers/greet_controller.js'))
+    expect(src).toContain(posix(join(root, 'controllers/greet_controller.js')))
     expect(src).toMatch(/"greet": controller_\d+/)
   })
 
   it('emits a lazy local controller when the stimulusFetch comment is present', () => {
     const src = generateControllersModule(localOpts, root, false)
     expect(src).toContain(`"heavy": () => import(`)
-    expect(src).toContain(join(root, 'controllers/heavy_controller.js'))
+    expect(src).toContain(posix(join(root, 'controllers/heavy_controller.js')))
   })
 
   it('detects the lazy marker in a single-line comment too', () => {
     const src = generateControllersModule(localOpts, root, false)
     expect(src).toContain(`"single-line": () => import(`)
-    expect(src).toContain(join(root, 'controllers/single_line_controller.js'))
+    expect(src).toContain(posix(join(root, 'controllers/single_line_controller.js')))
   })
 
   it('ignores a lazy marker that sits above the imports (it must be directly above the class)', () => {
@@ -85,7 +89,7 @@ describe('generateControllersModule — identifier collision', () => {
     const src = generateControllersModule(collisionOpts, root, false)
     // The local controller is lazy; the third-party "hello" is eager. Local wins:
     expect(src).toContain(`"acme--ux-hello--hello": () => import(`)
-    expect(src).toContain(join(root, 'collision/acme--ux-hello--hello_controller.js'))
+    expect(src).toContain(posix(join(root, 'collision/acme--ux-hello--hello_controller.js')))
     // The overridden third-party import is gone (no orphaned import, no double registration):
     expect(src).not.toContain('@acme/ux-hello/dist/hello_controller.js')
     // The identifier appears exactly once across both maps:
