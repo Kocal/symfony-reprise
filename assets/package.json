@@ -4,6 +4,10 @@
   "version": "0.1.0",
   "description": "Symfony asset integration for Vite and Rsbuild, a reprise of Webpack Encore.",
   "license": "MIT",
+  "author": {
+    "name": "Symfony Community",
+    "url": "https://symfony.com/contributors"
+  },
   "homepage": "https://github.com/symfony/reprise#readme",
   "repository": {
     "type": "git",

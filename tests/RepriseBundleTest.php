@@ -1,5 +1,14 @@
 <?php
 
+/*
+ * This file is part of the Symfony package.
+ *
+ * (c) Fabien Potencier <fabien@symfony.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace Symfony\Reprise\Tests;
 
 use PHPUnit\Framework\TestCase;
@@ -33,6 +42,6 @@ final class RepriseBundleTest extends TestCase
         self::assertArrayHasKey('RepriseBundle', $kernel->getBundles());
 
         $kernel->shutdown();
-        (new Filesystem())->remove($kernel->getProjectDir());
+        new Filesystem()->remove($kernel->getProjectDir());
     }
 }

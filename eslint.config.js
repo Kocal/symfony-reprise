@@ -12,6 +12,10 @@ export default antfu(
       'docs/**',
       // vendor/ is Composer's PHP dependencies.
       'vendor/**',
+      // Don't run ESLint on composer.json or any package.json: they follow their own
+      // ecosystem conventions (composer 4-space, npm key order), not the JS linter's.
+      'composer.json',
+      '**/package.json',
     ],
   },
   {
