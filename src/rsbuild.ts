@@ -1,19 +1,40 @@
 import type { RsbuildPlugin } from '@rsbuild/core'
 import type { RspackStats } from './collectors/rspack'
 import type { BuildContext, Options } from './types'
+import * as path from 'node:path'
 import * as process from 'node:process'
+import { rspack } from '@rsbuild/core'
 import { statsToGraph } from './collectors/rspack'
 import { writeSymfonyFiles } from './core/emit'
 import { buildEntrypoints, buildManifest } from './core/format'
 import { normalizeOptions, resolvePublicPath } from './core/options'
+import { generateControllersModule, STIMULUS_NOT_ENABLED_MESSAGE, VIRTUAL_CONTROLLERS_ID } from './core/stimulus'
+
+const VIRTUAL_ID = VIRTUAL_CONTROLLERS_ID
 
 export default function symfony(options?: Options): RsbuildPlugin {
   const resolved = normalizeOptions(options, process.cwd())
+  const stimulus = resolved.stimulus
+  const virtualPath = path.join(process.cwd(), 'node_modules/.unplugin-symfony/controllers.mjs')
 
   return {
     name: 'unplugin-symfony',
 
     setup(api) {
+      // Symfony UX / Stimulus: provision `virtual:symfony/controllers` via Rspack's own
+      // virtual-module mechanism (unplugin has no `resolveId`/`load` hook for Rsbuild — see
+      // AGENTS.md). `VirtualModulesPlugin`'s constructor content is what Rspack's native
+      // compiler snapshots when its instance is created (`writeModule` only updates a store
+      // that exists post-instantiation, so it cannot seed the very first build) — generate the
+      // real module content up front, using `api.context.action` (available synchronously here)
+      // to tell dev from build.
+      const isDev = api.context.action === 'dev'
+      const vmPlugin = stimulus
+        ? new rspack.experiments.VirtualModulesPlugin({
+            [virtualPath]: generateControllersModule(stimulus, process.cwd(), isDev),
+          })
+        : null
+
       // Rsbuild-level config: Symfony renders the HTML, so no per-entry HTML pages.
       api.modifyRsbuildConfig((config) => {
         config.tools ??= {}
@@ -42,6 +63,37 @@ export default function symfony(options?: Options): RsbuildPlugin {
         // This drives the production build's asset URLs; in dev the serving path comes from
         // `server.base` above.
         config.output.assetPrefix = resolved.publicPath
+
+        // Handle the bare virtual specifier. `resolve.alias` cannot: Rspack's resolver
+        // (enhanced-resolve) treats any request matching a URI-scheme pattern
+        // (`^[a-z][a-z0-9+.-]*:`) — which `virtual:...` does — as a URI to hand to a scheme plugin
+        // *before* alias lookup ever runs, so aliasing `virtual:symfony/controllers` throws
+        // "Unhandled scheme" regardless of the alias map. `NormalModuleReplacementPlugin` instead
+        // rewrites `resolveData.request` in the `beforeResolve` factory hook, ahead of the resolver
+        // entirely, sidestepping scheme detection. Registered unconditionally so that when Stimulus
+        // is off we can still turn an accidental helper import into a clear message rather than that
+        // cryptic scheme error (the callback only fires if something actually imports the id).
+        const prev = config.tools.rspack
+        const prevList = Array.isArray(prev) ? prev : prev ? [prev] : []
+        config.tools.rspack = [
+          ...prevList,
+          (_rspackConfig, { appendPlugins }) => {
+            if (vmPlugin) {
+              // Stimulus enabled: redirect to the absolute path backed by `vmPlugin` (see above).
+              appendPlugins([
+                vmPlugin,
+                new rspack.NormalModuleReplacementPlugin(new RegExp(`^${VIRTUAL_ID}$`), virtualPath),
+              ])
+            }
+            else {
+              appendPlugins([
+                new rspack.NormalModuleReplacementPlugin(new RegExp(`^${VIRTUAL_ID}$`), () => {
+                  throw new Error(STIMULUS_NOT_ENABLED_MESSAGE)
+                }),
+              ])
+            }
+          },
+        ]
       })
 
       api.onAfterCreateCompiler(({ compiler }) => {

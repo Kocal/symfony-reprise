@@ -1,5 +1,16 @@
-import type { Options, ResolvedOptions } from '../types'
+import type { Options, ResolvedOptions, ResolvedStimulusOptions } from '../types'
 import * as path from 'node:path'
+
+function normalizeStimulus(stimulus: Options['stimulus'], cwd: string): ResolvedStimulusOptions | undefined {
+  if (!stimulus)
+    return undefined
+  const raw = typeof stimulus === 'string' ? { controllersJson: stimulus } : stimulus
+  const controllersJson = path.isAbsolute(raw.controllersJson) ? raw.controllersJson : path.join(cwd, raw.controllersJson)
+  const controllersDir = raw.controllersDir
+    ? (path.isAbsolute(raw.controllersDir) ? raw.controllersDir : path.join(cwd, raw.controllersDir))
+    : path.join(path.dirname(controllersJson), 'controllers')
+  return { controllersJson, controllersDir }
+}
 
 export function normalizeOptions(options: Options | undefined, cwd: string): ResolvedOptions {
   let outputPath = options?.outputPath ?? 'public/build'
@@ -23,6 +34,7 @@ export function normalizeOptions(options: Options | undefined, cwd: string): Res
     publicPath,
     manifestKeyPrefix,
     devServerOrigin: options?.devServerOrigin,
+    stimulus: normalizeStimulus(options?.stimulus, cwd),
   }
 }
 

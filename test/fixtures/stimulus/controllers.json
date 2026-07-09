@@ -1,0 +1,12 @@
+{
+  "controllers": {
+    "@acme/ux-hello": {
+      "hello": { "enabled": true, "fetch": "eager", "autoimport": { "@acme/ux-hello/dist/hello.css": true } }
+    },
+    "@acme/ux-map": {
+      "map": { "enabled": true },
+      "mini-map": { "enabled": false }
+    }
+  },
+  "entrypoints": []
+}

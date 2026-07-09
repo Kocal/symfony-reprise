@@ -1,3 +1,5 @@
+import type { ControllerConstructor } from '@hotwired/stimulus'
+
 export interface Options {
   /**
    * The directory where your files should be output.
@@ -69,15 +71,47 @@ export interface Options {
    */
   devServerOrigin?: string
 
+  /**
+   * Enable Symfony UX / Stimulus controller registration.
+   *
+   * Pass the path to your `controllers.json` (relative to the package.json dir)
+   * to enable the feature, or an object to also override the local controllers
+   * directory.
+   *
+   * ```js
+   * Symfony({ stimulus: 'assets/controllers.json' })
+   * ```
+   */
+  stimulus?: string | StimulusOptions
+
   // singleRuntimeChunk?: boolean
-  // stimulusBridge?: object
 }
+
+export interface StimulusOptions {
+  /** Path to `controllers.json`, e.g. `assets/controllers.json`. */
+  controllersJson: string
+  /** Local controllers dir. Default: `<dir of controllersJson>/controllers`. */
+  controllersDir?: string
+}
+
+export interface ResolvedStimulusOptions {
+  /** Absolute path to controllers.json. */
+  controllersJson: string
+  /** Absolute path to the local controllers directory. */
+  controllersDir: string
+}
+
+/** Map of Stimulus identifier -> controller class (registered eagerly). */
+export type EagerControllersCollection = Record<string, ControllerConstructor>
+/** Map of Stimulus identifier -> dynamic-import factory (registered lazily). */
+export type LazyControllersCollection = Record<string, () => Promise<{ default: ControllerConstructor }>>
 
 export interface ResolvedOptions {
   outputPath: string
   publicPath: string
   manifestKeyPrefix: string
   devServerOrigin?: string
+  stimulus?: ResolvedStimulusOptions
 }
 
 export interface EntryFiles {

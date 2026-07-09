@@ -19,7 +19,7 @@ It only covers the Symfony-side integration that bundlers don't provide out of t
 - [x] Dev server & HMR integration
 - [ ] Subresource Integrity (SRI) hashes
 - [ ] Shared runtime chunk across entries
-- [ ] Symfony UX / Stimulus controllers (`controllers.json` + local `assets/controllers/`)
+- [x] Symfony UX / Stimulus controllers (`controllers.json` + local `assets/controllers/`)
 
 ## Install
 
@@ -60,3 +60,55 @@ export default defineConfig({
 ```
 
 <br></details>
+
+## Symfony UX / Stimulus controllers
+
+This is the Vite/Rsbuild counterpart of what `@symfony/stimulus-bridge` did for Webpack Encore: it turns your `controllers.json` into a Stimulus application, with the same enable step, same helper, same local-controllers convention.
+
+Enable it by pointing the plugin at your `controllers.json` (this is what turns the feature on):
+
+```ts
+Symfony({ stimulus: 'assets/controllers.json' })
+// or, to override the local controllers dir:
+Symfony({ stimulus: { controllersJson: 'assets/controllers.json', controllersDir: 'assets/controllers' } })
+```
+
+Then start the app from your entry:
+
+```ts
+import { startStimulusApp } from '@kocal/unplugin-symfony/stimulus'
+
+const app = startStimulusApp()
+```
+
+**Local controllers.** Any `assets/controllers/*_controller.{js,ts}` is registered automatically. The filename becomes the identifier (`hello_controller.js` -> `hello`, `admin/user_controller.js` -> `admin--user`). To load a controller on demand, put a `stimulusFetch: 'lazy'` comment directly above the class (after the imports) — a block or a single-line comment both work:
+
+```js
+import { Controller } from '@hotwired/stimulus'
+
+/* stimulusFetch: 'lazy' */
+export default class extends Controller {}
+```
+
+(`// stimulusFetch: 'lazy'` on the line above the class works too. The marker only counts directly above the class — not above the imports.)
+
+**Third-party UX packages.** Controllers declared in `controllers.json` are resolved from `node_modules`, so install them with your package manager, same as you would with Webpack Encore (AssetMapper instead vendors them via importmap):
+
+```bash
+npm install @hotwired/stimulus @symfony/ux-turbo @symfony/ux-leaflet-map
+```
+
+Some packages need a bit of bundler-specific setup on top, the same way they did under Webpack Encore. UX Leaflet Map, for instance, ships a CSS file meant for Webpack's loader and needs an alias to the plain CSS build:
+
+```ts
+// vite.config.ts
+export default defineConfig({
+  resolve: {
+    alias: {
+      'leaflet/dist/leaflet.min.css': 'leaflet/dist/leaflet.css',
+    },
+  },
+})
+```
+
+Check each package's own docs for this kind of tweak.

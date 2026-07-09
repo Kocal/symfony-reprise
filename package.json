@@ -22,6 +22,7 @@
   "exports": {
     ".": "./dist/index.mjs",
     "./rsbuild": "./dist/rsbuild.mjs",
+    "./stimulus": "./dist/stimulus.mjs",
     "./types": "./dist/types.mjs",
     "./vite": "./dist/vite.mjs",
     "./package.json": "./package.json"
@@ -51,10 +52,14 @@
     "test": "vitest"
   },
   "peerDependencies": {
+    "@hotwired/stimulus": ">=3",
     "@rsbuild/core": ">=1",
     "vite": ">=3"
   },
   "peerDependenciesMeta": {
+    "@hotwired/stimulus": {
+      "optional": true
+    },
     "@rsbuild/core": {
       "optional": true
     },
@@ -67,10 +72,12 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^9.1.0",
+    "@hotwired/stimulus": "^3.2.2",
     "@rsbuild/core": "^2.1.5",
     "@rspack/core": "~2.1.3",
     "@types/node": "^26.1.0",
     "eslint": "^10.6.0",
+    "jsdom": "^29.1.1",
     "nodemon": "^3.1.14",
     "tsdown": "^0.22.3",
     "tsx": "^4.23.0",
