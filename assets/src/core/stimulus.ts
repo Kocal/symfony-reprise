@@ -28,10 +28,10 @@ export const VIRTUAL_CONTROLLERS_ID = 'virtual:symfony/controllers'
  * "failed to resolve" / "Unhandled scheme" error.
  */
 export const STIMULUS_NOT_ENABLED_MESSAGE
-  = `[unplugin-symfony] "${VIRTUAL_CONTROLLERS_ID}" was imported (this is what startStimulusApp() `
-    + `from "@kocal/unplugin-symfony/stimulus" pulls in), but the Stimulus integration is not enabled. `
+  = `[@symfony/reprise] "${VIRTUAL_CONTROLLERS_ID}" was imported (this is what startStimulusApp() `
+    + `from "@symfony/reprise/stimulus" pulls in), but the Stimulus integration is not enabled. `
     + `Add \`stimulus: './assets/controllers.json'\` (or your own controllers.json path) to the `
-    + `unplugin-symfony plugin options.`
+    + `@symfony/reprise plugin options.`
 
 interface ResolvedController {
   identifier: string
@@ -73,7 +73,7 @@ export function generateControllersModule(opts: ResolvedStimulusOptions, root: s
       pkg = require(`${packageName}/package.json`)
     }
     catch {
-      throw new Error(`unplugin-symfony: cannot find "${packageName}/package.json". Install the package (e.g. "npm install ${packageName}").`)
+      throw new Error(`@symfony/reprise: cannot find "${packageName}/package.json". Install the package (e.g. "npm install ${packageName}").`)
     }
     const pkgControllers = pkg.symfony?.controllers ?? {}
 
@@ -83,7 +83,7 @@ export function generateControllersModule(opts: ResolvedStimulusOptions, root: s
         continue
       const pkgCfg = pkgControllers[controllerName]
       if (!pkgCfg)
-        throw new Error(`unplugin-symfony: controller "${packageName}/${controllerName}" is not declared in ${packageName}'s package.json "symfony.controllers".`)
+        throw new Error(`@symfony/reprise: controller "${packageName}/${controllerName}" is not declared in ${packageName}'s package.json "symfony.controllers".`)
 
       const identifier = thirdPartyIdentifier(packageName, controllerName, pkgCfg.name, user.name)
       controllers.set(identifier, {

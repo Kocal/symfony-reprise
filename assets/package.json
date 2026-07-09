@@ -1,0 +1,88 @@
+{
+  "name": "@symfony/reprise",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Symfony asset integration for Vite and Rsbuild, a reprise of Webpack Encore.",
+  "license": "MIT",
+  "author": {
+    "name": "Symfony Community",
+    "url": "https://symfony.com/contributors"
+  },
+  "homepage": "https://github.com/symfony/reprise#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/symfony/reprise.git",
+    "directory": "assets"
+  },
+  "bugs": {
+    "url": "https://github.com/symfony/reprise/issues"
+  },
+  "keywords": [
+    "symfony",
+    "assets",
+    "vite",
+    "rsbuild",
+    "encore"
+  ],
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./rsbuild": "./dist/rsbuild.mjs",
+    "./stimulus": "./dist/stimulus.mjs",
+    "./types": "./dist/types.mjs",
+    "./vite": "./dist/vite.mjs",
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./dist/*",
+        "./*"
+      ]
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown -w",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "tsdown"
+  },
+  "peerDependencies": {
+    "@hotwired/stimulus": ">=3",
+    "@rsbuild/core": ">=1",
+    "vite": ">=3"
+  },
+  "peerDependenciesMeta": {
+    "@hotwired/stimulus": {
+      "optional": true
+    },
+    "@rsbuild/core": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "unplugin": "^2.3.4"
+  },
+  "devDependencies": {
+    "@hotwired/stimulus": "^3.2.2",
+    "@rsbuild/core": "^2.1.5",
+    "@rspack/core": "~2.1.3",
+    "@types/node": "^26.1.0",
+    "jsdom": "^29.1.1",
+    "nodemon": "^3.1.14",
+    "tsdown": "^0.22.3",
+    "tsx": "^4.23.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.3",
+    "vitest": "^4.1.10"
+  }
+}

@@ -18,44 +18,102 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - name: Set node
         uses: actions/setup-node@v4
         with:
-          node-version: lts/*
-
-      - name: Setup
-        run: npm i -g @antfu/ni
-
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - name: Install
-        run: nci
-
+        run: pnpm install --frozen-lockfile
       - name: Lint
-        run: nr lint
+        run: pnpm run lint
 
   test:
     runs-on: ${{ matrix.os }}
-
     strategy:
-      matrix:
-        node: [lts/*]
-        os: [ubuntu-latest, windows-latest, macos-latest]
       fail-fast: false
-
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
-      - name: Set node ${{ matrix.node }}
+      - uses: pnpm/action-setup@v4
+      - name: Set node
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
-
-      - name: Setup
-        run: npm i -g @antfu/ni
-
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - name: Install
-        run: nci
-
+        run: pnpm install --frozen-lockfile
       - name: Build
-        run: nr build
-
+        run: pnpm build
       - name: Test
-        run: nr test
+        run: pnpm test
+
+  php:
+    name: PHP ${{ matrix.php-version }} + Symfony ${{ matrix.symfony-version }}${{ matrix.dependency-version == 'lowest' && ' lowest' || '' }} on ${{ matrix.os || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Symfony 7.4 LTS on the lowest supported PHP, resolving the lowest allowed dependencies.
+          - php-version: '8.4'
+            symfony-version: 7.4.*
+            dependency-version: lowest
+          - php-version: '8.4'
+            symfony-version: 8.0.*
+          - php-version: '8.5'
+            symfony-version: 7.4.*
+          - php-version: '8.5'
+            symfony-version: 8.0.*
+
+          # Windows
+          - php-version: '8.4'
+            symfony-version: 7.4.*
+            os: windows-latest
+          - php-version: '8.5'
+            symfony-version: 8.1.*
+            os: windows-latest
+    env:
+      # symfony/flex (installed as a global tool below) reads SYMFONY_REQUIRE and forces every
+      # symfony/* package to this version during the Composer resolution.
+      SYMFONY_REQUIRE: ${{ matrix.symfony-version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          tools: flex
+      - name: Install dependencies
+        uses: ramsey/composer-install@v3
+        with:
+          dependency-versions: ${{ matrix.dependency-version == 'lowest' && 'lowest' || 'highest' }}
+          composer-options: --prefer-dist
+          custom-cache-suffix: ${{ matrix.symfony-version }}
+      - name: PHPUnit
+        run: vendor/bin/phpunit
+
+  php-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+      - name: Validate composer.json
+        run: composer validate --strict
+      - name: Install dependencies
+        uses: ramsey/composer-install@v3
+        with:
+          dependency-versions: highest
+          composer-options: --prefer-dist
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse
+      - name: PHP-CS-Fixer
+        run: vendor/bin/php-cs-fixer fix --dry-run --diff

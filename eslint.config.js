@@ -6,10 +6,16 @@ export default antfu(
     ignores: [
       // playground/ is a fixture Symfony app (vendored + generated files); not library source.
       'playground/**',
-      // test/fixtures/ holds sample app code built by integration tests; not library source.
-      'test/fixtures/**',
+      // assets/test/fixtures/ holds sample app code built by integration tests; not library source.
+      'assets/test/fixtures/**',
       // docs/ holds design specs + implementation plans; their fenced code blocks are illustrative, not source.
       'docs/**',
+      // vendor/ is Composer's PHP dependencies.
+      'vendor/**',
+      // Don't run ESLint on composer.json or any package.json: they follow their own
+      // ecosystem conventions (composer 4-space, npm key order), not the JS linter's.
+      'composer.json',
+      '**/package.json',
     ],
   },
   {

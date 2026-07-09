@@ -1,7 +1,7 @@
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from '@rsbuild/core'
-import Symfony from '../src/rsbuild'
+import Symfony from '../assets/src/rsbuild'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 

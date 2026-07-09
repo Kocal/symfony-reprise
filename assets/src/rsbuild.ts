@@ -15,10 +15,10 @@ const VIRTUAL_ID = VIRTUAL_CONTROLLERS_ID
 export default function symfony(options?: Options): RsbuildPlugin {
   const resolved = normalizeOptions(options, process.cwd())
   const stimulus = resolved.stimulus
-  const virtualPath = path.join(process.cwd(), 'node_modules/.unplugin-symfony/controllers.mjs')
+  const virtualPath = path.join(process.cwd(), 'node_modules/.reprise/controllers.mjs')
 
   return {
-    name: 'unplugin-symfony',
+    name: '@symfony/reprise',
 
     setup(api) {
       // Symfony UX / Stimulus: provision `virtual:symfony/controllers` via Rspack's own
@@ -99,7 +99,7 @@ export default function symfony(options?: Options): RsbuildPlugin {
       api.onAfterCreateCompiler(({ compiler }) => {
         const compilers = 'compilers' in compiler ? compiler.compilers : [compiler]
         for (const c of compilers) {
-          c.hooks.done.tap('unplugin-symfony', (stats) => {
+          c.hooks.done.tap('@symfony/reprise', (stats) => {
             const isDev = c.watchMode
             // The dev URLs we advertise must be the dev-server origin joined with our `publicPath`
             // (e.g. `http://127.0.0.1:3001/build/…`), which is exactly where `server.base` (set in
@@ -135,7 +135,7 @@ export default function symfony(options?: Options): RsbuildPlugin {
               writeSymfonyFiles(resolved.outputPath, buildEntrypoints(graph, ctx), manifest)
             }
             catch (err) {
-              c.getInfrastructureLogger('unplugin-symfony').error(`[unplugin-symfony] failed to write entrypoints.json: ${err instanceof Error ? err.message : String(err)}`)
+              c.getInfrastructureLogger('@symfony/reprise').error(`[@symfony/reprise] failed to write entrypoints.json: ${err instanceof Error ? err.message : String(err)}`)
             }
           })
         }

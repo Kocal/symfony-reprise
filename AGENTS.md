@@ -4,24 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`@kocal/unplugin-symfony` — an [unplugin](https://github.com/unjs/unplugin) that brings Symfony Webpack Encore's key features to modern bundlers: **Vite** and **Rsbuild/Rspack**. Full ESM, greenfield (early stage, most features are stubs).
+**Reprise** (`symfony/reprise`) — a Symfony bundle that brings Webpack Encore's key features to modern bundlers: **Vite** and **Rsbuild/Rspack**. The bundle is a Composer package (PHP `src/`/`tests/` at the repo root); its JS side is the `@symfony/reprise` npm package, an [unplugin](https://github.com/unjs/unplugin) living under `assets/`. Full ESM, greenfield (early stage, most features are stubs).
 
 **Design principle — do NOT re-implement what the bundler already does.** Vite and Rsbuild natively handle Sass/Less/PostCSS, TypeScript, code splitting, content hashing, source maps, minification, HMR, and the dev server. This plugin does NOT wrap or re-expose any of those (so no `enableSassLoader()`-style API from Encore). Its job is the **Symfony integration glue** that the bundlers do not provide — see below.
 
+## Monorepo layout
+
+The repo is a **Composer bundle** (`symfony/reprise`, PHP `src/`/`tests/` at the root) plus the **`assets/` npm package** (`@symfony/reprise`, the JS plugin and its tests), tied together by a pnpm workspace at the repo root.
+
 ## Commands
 
-Package manager is **pnpm** (enforced via `packageManager` field). Node 22 (`.nvmrc`).
+Package manager is **pnpm** (enforced via `packageManager` field). Node 22 (`.nvmrc`). The root `pnpm build`/`dev`/`test`/`lint` scripts run from the workspace root; `build`/`dev`/`test` delegate to the `assets` package, while `lint` runs at the root over `assets/**`.
 
-- `pnpm build` — build via `tsdown` (bundles every `src/*.ts` to `dist/`)
-- `pnpm dev` — `tsdown -w`, watch/rebuild
-- `pnpm lint` — `eslint .` (@antfu/eslint-config, flat config); `playground/` is ignored (fixture app, not library source)
-- `pnpm test` — run tests (vitest, scoped to `test/` via `vitest.config.ts` so it never picks up `.references/` clones)
-- `pnpm vitest run test/index.test.ts` — run a single test file
+- `pnpm build` — delegates to `assets`, build via `tsdown` (bundles every `assets/src/*.ts` to `assets/dist/`)
+- `pnpm dev` — delegates to `assets`, `tsdown -w`, watch/rebuild
+- `pnpm lint` — `eslint .` at the root (@antfu/eslint-config, flat config), scoped to `assets/**`; `playground/` is ignored (fixture app, not library source)
+- `pnpm test` — delegates to `assets`, run tests (vitest, scoped to `assets/test/` via `vitest.config.ts` so it never picks up `.references/` clones)
+- `pnpm vitest run assets/test/index.test.ts` — run a single test file
 - `pnpm vitest run -t "hi vitest"` — run a single test by name
 
 ### Playground (manual end-to-end verification)
 
-`playground/` is a **full Symfony 7 PHP app** used to exercise the plugin against a real backend. It defines two entries (`app`, `admin`) and imports the plugin directly from `../src` (Vite via `playground/vite.config.ts`, Rsbuild via `playground/rsbuild.config.ts`). `nodemon` rebuilds on `src/**/*.ts` changes.
+`playground/` is a **full Symfony 7 PHP app** used to exercise the plugin against a real backend. It defines two entries (`app`, `admin`) and imports the plugin directly from `../assets/src` (Vite via `playground/vite.config.ts`, Rsbuild via `playground/rsbuild.config.ts`). `nodemon` rebuilds on `assets/src/**/*.ts` changes.
 
 Run from the playground dir (the root `pnpm play` script is broken — it calls a nonexistent `dev` script):
 
@@ -30,14 +34,14 @@ Run from the playground dir (the root `pnpm play` script is broken — it calls 
 
 ## Architecture
 
-Bundler-agnostic core + per-bundler adapters:
+Bundler-agnostic core + per-bundler adapters, all under `assets/src/`:
 
-- `src/core/` — pure, no bundler imports: `options.ts` (`normalizeOptions` + CDN guard + `resolvePublicPath`), `dev-server.ts` (`resolveDevOrigin`), `format.ts` (`buildEntrypoints`/`buildManifest` in the frozen v1 format), `emit.ts` (`writeSymfonyFiles`).
-- `src/collectors/` — turn a bundler's output into the shared `NormalizedGraph`: `vite.ts` (`bundleToGraph` from the Rollup bundle in build, `configToDevGraph` from the resolved config in serve) and `rspack.ts` (`statsToGraph` from the Rspack stats JSON).
-- `src/index.ts` — the `unpluginFactory` (Vite only now) + `createUnplugin` default export. Its `vite` hooks call the collectors + core: `config()` sets `base`/`outDir` and disables Vite's own manifest/publicDir copy; `generateBundle` emits the two files on build; `configureServer` writes the dev-flavoured files pointing at the dev-server origin.
-- `src/vite.ts` — one-line unplugin adapter `createVitePlugin(unpluginFactory)` (`unplugin-symfony/vite`).
-- `src/rsbuild.ts` — a **hand-written native `RsbuildPlugin`** (default export, `unplugin-symfony/rsbuild`), **not** an unplugin adapter. unplugin has no `createRsbuildPlugin`, and the Symfony integration needs Rsbuild-config-level control a raw Rspack plugin can't reach: `api.modifyRsbuildConfig` forces `tools.htmlPlugin = false` (no per-entry HTML) and disables the public-dir copy (output lives under `public/build`), and sets the output paths + dev origin; `api.onAfterCreateCompiler` taps `compiler.hooks.done` to run `statsToGraph` + core. It reuses the same core as the Vite path.
-- `src/types.ts` — public `Options` (`outputPath`, `publicPath`, `manifestKeyPrefix`, `devServerOrigin`) + the frozen `EntrypointsJson`/`ManifestJson`/`EntryFiles` shapes (`js`/`css`/`preload`/`dynamic`).
+- `assets/src/core/` — pure, no bundler imports: `options.ts` (`normalizeOptions` + CDN guard + `resolvePublicPath`), `dev-server.ts` (`resolveDevOrigin`), `format.ts` (`buildEntrypoints`/`buildManifest` in the frozen v1 format), `emit.ts` (`writeSymfonyFiles`).
+- `assets/src/collectors/` — turn a bundler's output into the shared `NormalizedGraph`: `vite.ts` (`bundleToGraph` from the Rollup bundle in build, `configToDevGraph` from the resolved config in serve) and `rspack.ts` (`statsToGraph` from the Rspack stats JSON).
+- `assets/src/index.ts` — the `unpluginFactory` (Vite only now) + `createUnplugin` default export. Its `vite` hooks call the collectors + core: `config()` sets `base`/`outDir` and disables Vite's own manifest/publicDir copy; `generateBundle` emits the two files on build; `configureServer` writes the dev-flavoured files pointing at the dev-server origin.
+- `assets/src/vite.ts` — one-line unplugin adapter `createVitePlugin(unpluginFactory)` (`@symfony/reprise/vite`).
+- `assets/src/rsbuild.ts` — a **hand-written native `RsbuildPlugin`** (default export, `@symfony/reprise/rsbuild`), **not** an unplugin adapter. unplugin has no `createRsbuildPlugin`, and the Symfony integration needs Rsbuild-config-level control a raw Rspack plugin can't reach: `api.modifyRsbuildConfig` forces `tools.htmlPlugin = false` (no per-entry HTML) and disables the public-dir copy (output lives under `public/build`), and sets the output paths + dev origin; `api.onAfterCreateCompiler` taps `compiler.hooks.done` to run `statsToGraph` + core. It reuses the same core as the Vite path.
+- `assets/src/types.ts` — public `Options` (`outputPath`, `publicPath`, `manifestKeyPrefix`, `devServerOrigin`) + the frozen `EntrypointsJson`/`ManifestJson`/`EntryFiles` shapes (`js`/`css`/`preload`/`dynamic`).
 
 unplugin still earns its place for Vite and (upcoming) the Stimulus virtual module (universal `resolveId`/`load`, cross-bundler). Rspack is served exclusively through the native Rsbuild adapter — the raw Rspack unplugin adapter was dropped (Rsbuild is the supported Rspack layer).
 
@@ -49,7 +53,7 @@ Encore's real value to Symfony is two JSON files written into `outputPath`, cons
   ```json
   { "entrypoints": { "app": { "js": ["/build/runtime.js", "/build/app.js"], "css": ["/build/app.css"] } } }
   ```
-- **`manifest.json`** — maps logical filename -> versioned/hashed URL, for cache-busting. Keys are prefixed with `manifestKeyPrefix` (defaults to `publicPath` minus leading slash). When `publicPath` is an absolute CDN URL (contains `://`), `manifestKeyPrefix` must be set explicitly. Encore enforces this by throwing (`../webpack-encore/lib/config/path-util.ts`, `validatePublicPathAndManifestKeyPrefix`); **porting that guard is still TODO** — the current factory does not throw and would use the absolute URL as the key prefix. The `publicPath === null` branch in `src/index.ts` is likewise dead (`publicPath` always defaults to `build/`).
+- **`manifest.json`** — maps logical filename -> versioned/hashed URL, for cache-busting. Keys are prefixed with `manifestKeyPrefix` (defaults to `publicPath` minus leading slash). When `publicPath` is an absolute CDN URL (contains `://`), `manifestKeyPrefix` must be set explicitly. Encore enforces this by throwing (`../webpack-encore/lib/config/path-util.ts`, `validatePublicPathAndManifestKeyPrefix`); **porting that guard is still TODO** — the current factory does not throw and would use the absolute URL as the key prefix. The `publicPath === null` branch in `assets/src/index.ts` is likewise dead (`publicPath` always defaults to `build/`).
 
 ### Dev server (build mode vs serve mode)
 
@@ -88,5 +92,5 @@ Read-only clones under `.references/` (git-ignored) show how mature unplugins ar
 ## Conventions
 
 - ESM only, strict TypeScript, ES2017 target. Use the `node:` prefix for Node builtins.
-- New public options go in `src/types.ts` with JSDoc; keep bundler adapters trivial.
+- New public options go in `assets/src/types.ts` with JSDoc; keep bundler adapters trivial.
 - Releases: `pnpm release` (`bumpp` + `pnpm publish`); changelog via `changelogithub` on tag push.

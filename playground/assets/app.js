@@ -1,5 +1,5 @@
 import './stimulus_bootstrap.js';
-import { startStimulusApp } from '@kocal/unplugin-symfony/stimulus'
+import { startStimulusApp } from '@symfony/reprise/stimulus'
 import './styles/app.css'
 import { add, subtract } from './calc'
 import krkr from './images/krkr.webp';

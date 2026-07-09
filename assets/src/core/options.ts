@@ -22,7 +22,7 @@ export function normalizeOptions(options: Options | undefined, cwd: string): Res
   if (manifestKeyPrefix === null) {
     if (publicPath.includes('://')) {
       throw new Error(
-        `unplugin-symfony: cannot derive "manifestKeyPrefix" from an absolute "publicPath" (${publicPath}). `
+        `@symfony/reprise: cannot derive "manifestKeyPrefix" from an absolute "publicPath" (${publicPath}). `
         + 'Set "manifestKeyPrefix" explicitly (e.g. "build/").',
       )
     }
