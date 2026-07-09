@@ -27,4 +27,15 @@ describe('vite build resolves virtual:symfony/controllers', () => {
     // the lazy controller is code-split into its own chunk
     expect(files.some(f => f.endsWith('.js') && f !== appJs)).toBe(true)
   }, 30_000)
+
+  it('fails with a clear message when the virtual module is imported but stimulus is off', async () => {
+    const out = mkdtempSync(join(tmpdir(), 'ups-stim-off-'))
+    await expect(build({
+      root: fixture,
+      logLevel: 'silent',
+      build: { emptyOutDir: true, rollupOptions: { input: { app: join(fixture, 'app.js') } } },
+      // no `stimulus` option, yet app.js imports virtual:symfony/controllers
+      plugins: [Symfony({ outputPath: out, publicPath: '/build/' })],
+    })).rejects.toThrow(/Stimulus integration is not enabled/)
+  }, 30_000)
 })

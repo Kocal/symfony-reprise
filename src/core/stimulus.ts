@@ -19,6 +19,20 @@ interface ControllersJson {
   controllers?: Record<string, Record<string, UserControllerConfig>>
 }
 
+/** The virtual module the runtime helper imports; provided by each bundler adapter. */
+export const VIRTUAL_CONTROLLERS_ID = 'virtual:symfony/controllers'
+
+/**
+ * Shown when `virtual:symfony/controllers` is imported (typically via `startStimulusApp()`)
+ * while the `stimulus` option is unset — instead of the bundler's cryptic
+ * "failed to resolve" / "Unhandled scheme" error.
+ */
+export const STIMULUS_NOT_ENABLED_MESSAGE
+  = `[unplugin-symfony] "${VIRTUAL_CONTROLLERS_ID}" was imported (this is what startStimulusApp() `
+    + `from "@kocal/unplugin-symfony/stimulus" pulls in), but the Stimulus integration is not enabled. `
+    + `Add \`stimulus: './assets/controllers.json'\` (or your own controllers.json path) to the `
+    + `unplugin-symfony plugin options.`
+
 interface ResolvedController {
   identifier: string
   fetch: 'eager' | 'lazy'

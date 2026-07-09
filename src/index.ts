@@ -7,9 +7,9 @@ import { resolveDevOrigin } from './core/dev-server'
 import { writeSymfonyFiles } from './core/emit'
 import { buildEntrypoints, buildManifest } from './core/format'
 import { normalizeOptions, resolvePublicPath } from './core/options'
-import { generateControllersModule } from './core/stimulus'
+import { generateControllersModule, STIMULUS_NOT_ENABLED_MESSAGE, VIRTUAL_CONTROLLERS_ID } from './core/stimulus'
 
-const VIRTUAL_ID = 'virtual:symfony/controllers'
+const VIRTUAL_ID = VIRTUAL_CONTROLLERS_ID
 const RESOLVED_VIRTUAL_ID = `\0${VIRTUAL_ID}`
 
 export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _meta) => {
@@ -48,8 +48,14 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
       },
 
       resolveId(id) {
-        if (resolved.stimulus && id === VIRTUAL_ID)
-          return RESOLVED_VIRTUAL_ID
+        if (id !== VIRTUAL_ID)
+          return
+        // The helper (`@kocal/unplugin-symfony/stimulus`) imports this unconditionally, so if a
+        // user pulls in `startStimulusApp()` without turning the feature on, fail with a clear,
+        // actionable message rather than Rollup's generic "failed to resolve".
+        if (!resolved.stimulus)
+          throw new Error(STIMULUS_NOT_ENABLED_MESSAGE)
+        return RESOLVED_VIRTUAL_ID
       },
 
       load(id) {

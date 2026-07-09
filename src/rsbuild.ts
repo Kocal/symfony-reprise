@@ -8,9 +8,9 @@ import { statsToGraph } from './collectors/rspack'
 import { writeSymfonyFiles } from './core/emit'
 import { buildEntrypoints, buildManifest } from './core/format'
 import { normalizeOptions, resolvePublicPath } from './core/options'
-import { generateControllersModule } from './core/stimulus'
+import { generateControllersModule, STIMULUS_NOT_ENABLED_MESSAGE, VIRTUAL_CONTROLLERS_ID } from './core/stimulus'
 
-const VIRTUAL_ID = 'virtual:symfony/controllers'
+const VIRTUAL_ID = VIRTUAL_CONTROLLERS_ID
 
 export default function symfony(options?: Options): RsbuildPlugin {
   const resolved = normalizeOptions(options, process.cwd())
@@ -64,31 +64,36 @@ export default function symfony(options?: Options): RsbuildPlugin {
         // `server.base` above.
         config.output.assetPrefix = resolved.publicPath
 
-        // Redirect the bare virtual specifier to the absolute path backed by `vmPlugin` (see
-        // above). `resolve.alias` cannot do this: Rspack's resolver (enhanced-resolve) treats any
-        // request matching a URI-scheme pattern (`^[a-z][a-z0-9+.-]*:`) — which `virtual:...`
-        // does — as a URI to hand to a scheme plugin *before* alias lookup ever runs, so aliasing
-        // `virtual:symfony/controllers` there throws "Unhandled scheme" regardless of the alias
-        // map. `NormalModuleReplacementPlugin` instead rewrites `resolveData.request` in the
-        // `beforeResolve` factory hook, ahead of the resolver entirely, sidestepping scheme
-        // detection.
-        if (vmPlugin) {
-          config.tools ??= {}
-          const prev = config.tools.rspack
-          const prevList = Array.isArray(prev) ? prev : prev ? [prev] : []
-          config.tools.rspack = [
-            ...prevList,
-            (_rspackConfig, { appendPlugins }) => {
+        // Handle the bare virtual specifier. `resolve.alias` cannot: Rspack's resolver
+        // (enhanced-resolve) treats any request matching a URI-scheme pattern
+        // (`^[a-z][a-z0-9+.-]*:`) — which `virtual:...` does — as a URI to hand to a scheme plugin
+        // *before* alias lookup ever runs, so aliasing `virtual:symfony/controllers` throws
+        // "Unhandled scheme" regardless of the alias map. `NormalModuleReplacementPlugin` instead
+        // rewrites `resolveData.request` in the `beforeResolve` factory hook, ahead of the resolver
+        // entirely, sidestepping scheme detection. Registered unconditionally so that when Stimulus
+        // is off we can still turn an accidental helper import into a clear message rather than that
+        // cryptic scheme error (the callback only fires if something actually imports the id).
+        const prev = config.tools.rspack
+        const prevList = Array.isArray(prev) ? prev : prev ? [prev] : []
+        config.tools.rspack = [
+          ...prevList,
+          (_rspackConfig, { appendPlugins }) => {
+            if (vmPlugin) {
+              // Stimulus enabled: redirect to the absolute path backed by `vmPlugin` (see above).
               appendPlugins([
                 vmPlugin,
-                new rspack.NormalModuleReplacementPlugin(
-                  new RegExp(`^${VIRTUAL_ID}$`),
-                  virtualPath,
-                ),
+                new rspack.NormalModuleReplacementPlugin(new RegExp(`^${VIRTUAL_ID}$`), virtualPath),
               ])
-            },
-          ]
-        }
+            }
+            else {
+              appendPlugins([
+                new rspack.NormalModuleReplacementPlugin(new RegExp(`^${VIRTUAL_ID}$`), () => {
+                  throw new Error(STIMULUS_NOT_ENABLED_MESSAGE)
+                }),
+              ])
+            }
+          },
+        ]
       })
 
       api.onAfterCreateCompiler(({ compiler }) => {
