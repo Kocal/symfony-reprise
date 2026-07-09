@@ -59,9 +59,15 @@
     "vite": ">=3"
   },
   "peerDependenciesMeta": {
-    "@hotwired/stimulus": { "optional": true },
-    "@rsbuild/core": { "optional": true },
-    "vite": { "optional": true }
+    "@hotwired/stimulus": {
+      "optional": true
+    },
+    "@rsbuild/core": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
   },
   "dependencies": {
     "unplugin": "^2.3.4"
