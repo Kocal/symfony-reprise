@@ -53,27 +53,35 @@ jobs:
         run: pnpm test
 
   php:
+    name: PHP ${{ matrix.php }} + Symfony ${{ matrix.symfony }}${{ matrix.deps == 'lowest' && ' (lowest)' || '' }}
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        symfony: ['7.4.*', '8.0.*']
       fail-fast: false
+      matrix:
+        include:
+          # Symfony 7.4 LTS on the lowest supported PHP, resolving the lowest allowed dependencies.
+          - php: '8.4'
+            symfony: 7.4.*
+            deps: lowest
+          - php: '8.4'
+            symfony: 8.0.*
+          - php: '8.5'
+            symfony: 7.4.*
+          - php: '8.5'
+            symfony: 8.0.*
+    env:
+      # symfony/flex (installed as a global tool below) reads SYMFONY_REQUIRE and forces every
+      # symfony/* package to this version during `composer update`.
+      SYMFONY_REQUIRE: ${{ matrix.symfony }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
-          tools: composer:v2
-      - name: Validate composer.json
-        run: composer validate --strict
-      # Pin the only Symfony require-dev package (framework-bundle) to the matrix version so the
-      # matrix genuinely exercises 7.4 and 8.0 — it transitively constrains http-kernel, config,
-      # filesystem, etc. to the same major. The composer update below resolves against this floor.
-      - name: Restrict Symfony version
-        run: composer require --no-update --dev "symfony/framework-bundle:${{ matrix.symfony }}"
-      - name: Install
-        run: composer update --prefer-dist --no-progress
+          php-version: ${{ matrix.php }}
+          tools: flex
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-progress ${{ matrix.deps == 'lowest' && '--prefer-lowest' || '' }}
       - name: PHPUnit
         run: vendor/bin/phpunit
 
@@ -86,6 +94,8 @@ jobs:
         with:
           php-version: '8.4'
           tools: composer:v2
+      - name: Validate composer.json
+        run: composer validate --strict
       - name: Install
         run: composer install --prefer-dist --no-progress
       - name: PHPStan
