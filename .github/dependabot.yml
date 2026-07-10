@@ -1,0 +1,42 @@
+# https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference
+
+version: 2
+updates:
+    # GitHub Actions
+    - package-ecosystem: 'github-actions'
+      directory: '/'
+      schedule:
+          interval: 'weekly'
+      groups:
+          github-actions:
+              patterns:
+                  - '*'
+      cooldown:
+          default-days: 7
+
+    # npm, but only Reprise's internal dev/build tooling. The runtime dependency
+    # (unplugin) and the peer dependencies (vite, @rsbuild/core, @hotwired/stimulus)
+    # are semver-meaningful for consumers and bumped by hand, so they are excluded.
+    - package-ecosystem: 'npm'
+      directories:
+          - '/'
+          - '/assets'
+      schedule:
+          interval: 'weekly'
+      allow:
+          - dependency-name: '@antfu/eslint-config'
+          - dependency-name: 'eslint'
+          - dependency-name: '@rspack/core'
+          - dependency-name: '@types/node'
+          - dependency-name: 'jsdom'
+          - dependency-name: 'nodemon'
+          - dependency-name: 'tsdown'
+          - dependency-name: 'tsx'
+          - dependency-name: 'typescript'
+          - dependency-name: 'vitest'
+      groups:
+          npm-dev-dependencies:
+              patterns:
+                  - '*'
+      cooldown:
+          default-days: 7
