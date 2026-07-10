@@ -30,6 +30,11 @@ describe('normalizeOptions', () => {
         expect(r.manifestKeyPrefix).toBe('build/');
     });
 
+    it('honors an explicit empty manifestKeyPrefix', () => {
+        const r = normalizeOptions({ publicPath: '/build/', manifestKeyPrefix: '' }, '/app');
+        expect(r.manifestKeyPrefix).toBe('');
+    });
+
     it('throws for an absolute publicPath without manifestKeyPrefix', () => {
         expect(() => normalizeOptions({ publicPath: 'https://cdn.example.com/x' }, '/app')).toThrow(
             /manifestKeyPrefix/

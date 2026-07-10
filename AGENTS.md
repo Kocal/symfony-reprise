@@ -54,7 +54,7 @@ Encore's real value to Symfony is two JSON files written into `outputPath`, cons
     ```json
     { "entrypoints": { "app": { "js": ["/build/runtime.js", "/build/app.js"], "css": ["/build/app.css"] } } }
     ```
-- **`manifest.json`** — maps logical filename -> versioned/hashed URL, for cache-busting. Keys are prefixed with `manifestKeyPrefix` (defaults to `publicPath` minus leading slash). When `publicPath` is an absolute CDN URL (contains `://`), `manifestKeyPrefix` must be set explicitly. Encore enforces this by throwing (`../webpack-encore/lib/config/path-util.ts`, `validatePublicPathAndManifestKeyPrefix`); **porting that guard is still TODO** — the current factory does not throw and would use the absolute URL as the key prefix. The `publicPath === null` branch in `assets/src/index.ts` is likewise dead (`publicPath` always defaults to `build/`).
+- **`manifest.json`** — maps logical filename -> versioned/hashed URL, for cache-busting. Keys are prefixed with `manifestKeyPrefix` (defaults to `publicPath` minus leading slash). When `publicPath` is an absolute CDN URL (contains `://`), `manifestKeyPrefix` must be set explicitly. Reprise ports the relevant half of Encore's `validatePublicPathAndManifestKeyPrefix` (`../webpack-encore/lib/config/path-util.js`) in `normalizeOptions`: an absolute `publicPath` without an explicit `manifestKeyPrefix` throws. Encore's second branch — rejecting a `publicPath` not contained in `outputPath` — is intentionally not ported: Reprise's `outputPath` (a filesystem dir) and `publicPath` (a URL prefix) are decoupled, so that heuristic would reject valid configs. CDN URLs in `entrypoints.json`/`manifest.json` are covered end-to-end by `assets/test/integration/cdn.test.ts`.
 
 ### Dev server (build mode vs serve mode)
 
@@ -94,5 +94,6 @@ Read-only clones under `.references/` (git-ignored) show how mature unplugins ar
 
 - ESM only, strict TypeScript, ES2017 target. Use the `node:` prefix for Node builtins.
 - New public options go in `assets/src/types.ts` with JSDoc; keep bundler adapters trivial.
+- Documentation: any user-facing feature ships with a short section in `doc/index.rst`, and that section shows **both** a Vite and an Rsbuild example (the two supported bundlers) — never document one without the other. Flip the matching `*(planned)*` marker in the feature lists (`doc/index.rst` and `README.md`) when the feature lands. Match the existing sections' natural voice; draft/polish the prose with the `natural-writing-editor` agent.
 - Commit messages: Symfony style `[<Scope>] <Short description>` — PascalCase scope, imperative mood, capitalized first word, no trailing period; combine scopes as `[A][B]` when a change spans several. E.g. `[Stimulus] Emit forward-slash local controller paths`, `[Docs] Frame Stimulus usage as the Encore experience`, `[CI] Cancel superseded runs with a concurrency group`. This is the convention used across Symfony UX and WebpackEncoreBundle — **not** Conventional Commits (no `feat:`/`fix:`/`chore:` prefixes).
 - Releases: the published npm package lives in `assets/` (`@symfony/reprise`); its `prepublishOnly` runs the `tsdown` build before publish.
