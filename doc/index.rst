@@ -119,7 +119,9 @@ imports) — a block or a single-line comment both work:
     /* stimulusFetch: 'lazy' */
     export default class extends Controller {}
 
-(``// stimulusFetch: 'lazy'`` on the line above the class works too.)
+(``// stimulusFetch: 'lazy'`` on the line above the class works too, as does a
+preserved ``/*! stimulusFetch: 'lazy' */`` comment — the form tsc and esbuild keep
+through minification.)
 
 **Third-party UX packages.** Controllers declared in ``controllers.json`` are
 resolved from ``node_modules``, so install them with your package manager, the

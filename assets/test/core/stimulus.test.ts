@@ -59,6 +59,13 @@ describe('generateControllersModule — local', () => {
         expect(src).toContain(posix(join(root, 'controllers/single_line_controller.js')));
     });
 
+    it('detects the lazy marker inside a preserved /*! ... */ comment', () => {
+        const src = generateControllersModule(localOpts, root, false);
+        // tsc/esbuild keep `/*! ... */` comments through minification, so the marker survives.
+        expect(src).toContain(`"preserved-comment": () => import(`);
+        expect(src).toContain(posix(join(root, 'controllers/preserved_comment_controller.js')));
+    });
+
     it('ignores a lazy marker that sits above the imports (it must be directly above the class)', () => {
         const src = generateControllersModule(localOpts, root, false);
         // The marker in `above_imports_controller.js` precedes the imports, not the class,
@@ -77,6 +84,26 @@ describe('generateControllersModule — local', () => {
         const src = generateControllersModule(empty, root, false);
         expect(src).toContain('export const eagerControllers = {}');
         expect(src).toContain('export const lazyControllers = {}');
+    });
+
+    it('emits controllers in a stable, name-sorted order (deterministic output/hash)', () => {
+        // Local controllers are sorted by filename so the generated module -- and thus its
+        // content hash -- stays stable regardless of the order the filesystem returns the files
+        // in (symfony/ux#3703). Assert the exact identifier order the module is rendered in.
+        const src = generateControllersModule(localOpts, root, false);
+        const identifiers = [...src.matchAll(/^ {2}"([^"]+)":/gm)].map((m) => m[1]);
+        expect(identifiers).toEqual([
+            // eagerControllers: third-party first, then local controllers sorted by filename
+            'acme--ux-hello--hello',
+            'above-imports',
+            'admin--user',
+            'greet',
+            // lazyControllers: third-party first, then local controllers sorted by filename
+            'acme--ux-map--map',
+            'heavy',
+            'preserved-comment',
+            'single-line',
+        ]);
     });
 });
 
