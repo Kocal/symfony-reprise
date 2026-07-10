@@ -54,8 +54,10 @@ interface ResolvedController {
 // which is why a stray `stimulusFetch: 'lazy'` sitting above the imports (or anywhere else) does
 // NOT flip the controller to lazy. It may be a block comment or a single-line one, single or
 // double quotes; a block comment may sit on the class's own line, a line comment must precede it.
+// A preserved block comment (`/*! ... */`, the form tsc/esbuild keep so the marker survives
+// minification) is recognised too.
 const LAZY_COMMENT_RE =
-    /(?:\/\*\s*stimulusFetch:\s*['"]lazy['"]\s*\*\/|\/\/\s*stimulusFetch:\s*['"]lazy['"])\s*(?:export\s+(?:default\s+)?)?(?:abstract\s+)?class\b/i;
+    /(?:\/\*!?\s*stimulusFetch:\s*['"]lazy['"]\s*\*\/|\/\/\s*stimulusFetch:\s*['"]lazy['"])\s*(?:export\s+(?:default\s+)?)?(?:abstract\s+)?class\b/i;
 const LOCAL_CONTROLLER_RE = /[-_]controller\.[jt]s$/;
 
 export function generateControllersModule(opts: ResolvedStimulusOptions, root: string, isDev: boolean): string {
@@ -173,10 +175,14 @@ function listLocalControllers(dir: string): string[] {
     } catch {
         return []; // dir absent -> no local controllers
     }
-    return entries
-        .map((e) => String(e).replace(/\\/g, '/'))
-        .filter((e) => LOCAL_CONTROLLER_RE.test(e))
-        .sort();
+    return (
+        entries
+            .map((e) => String(e).replace(/\\/g, '/'))
+            .filter((e) => LOCAL_CONTROLLER_RE.test(e))
+            // Sort so the generated module -- and therefore its content hash -- stays stable
+            // regardless of the filesystem's iteration order. See symfony/ux#3703.
+            .sort()
+    );
 }
 
 function localIdentifier(rel: string): string {
