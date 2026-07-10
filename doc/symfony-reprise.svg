@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="Symfony Reprise">
+  <style>.r{fill:#000}@media (prefers-color-scheme:dark){.r{fill:#fff}}</style>
+  <rect class="r" x="29" y="16" width="10" height="64" rx="2.5"/>
+  <rect class="r" x="45" y="16" width="4" height="64" rx="2"/>
+  <circle class="r" cx="61" cy="40" r="5.5"/>
+  <circle class="r" cx="61" cy="56" r="5.5"/>
+</svg>

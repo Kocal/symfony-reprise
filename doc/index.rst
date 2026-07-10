@@ -5,24 +5,30 @@ Symfony Reprise
 or even change drastically.
 
 Webpack Encore gave Symfony first-class asset integration for Webpack.
-Symfony Reprise gives you the same integration for `Vite`_ and `Rsbuild`_.
+Symfony Reprise brings the same to `Vite`_ and `Rsbuild`_.
 
 Vite and Rsbuild already handle **Sass/Less/PostCSS**, **TypeScript**,
 **JSX/Vue/Svelte**, **code splitting**, **content hashing**, **source maps**,
 **minification** and **HMR** on their own, so Symfony Reprise does not
-reimplement any of that. It only covers the Symfony-side integration that
-bundlers do not provide out of the box:
+reimplement any of that. It covers only the Symfony-side glue the bundlers
+leave out:
 
-- Multiple entries
-- ``entrypoints.json`` generation (build and dev-server modes)
-- ``manifest.json`` generation
-- Asset versioning wired into the manifest
-- CDN support (absolute ``publicPath``) *(planned)*
-- Dev server and HMR integration
-- Subresource Integrity (SRI) hashes *(planned)*
-- Shared runtime chunk across entries *(planned)*
-- Symfony UX / Stimulus controllers (``controllers.json`` and local
-  ``assets/controllers/``)
+- **Multiple entries**: build several independent entry points from one
+  config
+- ``entrypoints.json``: generated in both build and dev-server modes
+- ``manifest.json``: maps each logical filename to its hashed URL
+- **Asset versioning**: content-hash cache busting, wired into the manifest
+- **Dev server and HMR**: points Twig at the running Vite/Rsbuild server
+- **Symfony UX / Stimulus**: registers ``controllers.json`` and local
+  controllers, eager or lazy
+- **CDN support**: absolute ``publicPath`` *(planned)*
+- **Subresource Integrity**: SRI hashes in ``entrypoints.json`` *(planned)*
+- **Shared runtime chunk**: one runtime shared across entries *(planned)*
+
+It generates the Encore-compatible ``entrypoints.json`` and ``manifest.json``
+that WebpackEncoreBundle's Twig helpers (``encore_entry_script_tags()``,
+``encore_entry_link_tags()``) read, wires up the native dev server, and turns
+your Stimulus controllers into a running application.
 
 Installation
 ------------
