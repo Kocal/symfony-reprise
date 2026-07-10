@@ -1,27 +1,27 @@
 allowBuilds:
-  core-js: true
-  esbuild: true
-  unrs-resolver: true
+    core-js: true
+    esbuild: true
+    unrs-resolver: true
 minimumReleaseAgeExclude:
-  - '@rsbuild/core@2.1.5'
-  - '@rspack/binding-darwin-arm64@2.1.3'
-  - '@rspack/binding-darwin-x64@2.1.3'
-  - '@rspack/binding-linux-arm64-gnu@2.1.3'
-  - '@rspack/binding-linux-arm64-musl@2.1.3'
-  - '@rspack/binding-linux-riscv64-gnu@2.1.3'
-  - '@rspack/binding-linux-riscv64-musl@2.1.3'
-  - '@rspack/binding-linux-x64-gnu@2.1.3'
-  - '@rspack/binding-linux-x64-musl@2.1.3'
-  - '@rspack/binding-wasm32-wasi@2.1.3'
-  - '@rspack/binding-win32-arm64-msvc@2.1.3'
-  - '@rspack/binding-win32-ia32-msvc@2.1.3'
-  - '@rspack/binding-win32-x64-msvc@2.1.3'
-  - '@rspack/binding@2.1.3'
-  - '@rspack/core@2.1.3'
+    - '@rsbuild/core@2.1.5'
+    - '@rspack/binding-darwin-arm64@2.1.3'
+    - '@rspack/binding-darwin-x64@2.1.3'
+    - '@rspack/binding-linux-arm64-gnu@2.1.3'
+    - '@rspack/binding-linux-arm64-musl@2.1.3'
+    - '@rspack/binding-linux-riscv64-gnu@2.1.3'
+    - '@rspack/binding-linux-riscv64-musl@2.1.3'
+    - '@rspack/binding-linux-x64-gnu@2.1.3'
+    - '@rspack/binding-linux-x64-musl@2.1.3'
+    - '@rspack/binding-wasm32-wasi@2.1.3'
+    - '@rspack/binding-win32-arm64-msvc@2.1.3'
+    - '@rspack/binding-win32-ia32-msvc@2.1.3'
+    - '@rspack/binding-win32-x64-msvc@2.1.3'
+    - '@rspack/binding@2.1.3'
+    - '@rspack/core@2.1.3'
 packages:
-  - assets
-  - playground
+    - assets
+    - playground
 onlyBuiltDependencies:
-  - core-js
-  - esbuild
-  - unrs-resolver
+    - core-js
+    - esbuild
+    - unrs-resolver

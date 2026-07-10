@@ -14,11 +14,12 @@ The repo is a **Composer bundle** (`symfony/reprise`, PHP `src/`/`tests/` at the
 
 ## Commands
 
-Package manager is **pnpm** (enforced via `packageManager` field). Node 22 (`.nvmrc`). The root `pnpm build`/`dev`/`test`/`lint` scripts run from the workspace root; `build`/`dev`/`test` delegate to the `assets` package, while `lint` runs at the root over `assets/**`.
+Package manager is **pnpm** (enforced via `packageManager` field). Node 22 (`.nvmrc`). The root `pnpm build`/`dev`/`test`/`lint`/`fmt` scripts run from the workspace root; `build`/`dev`/`test` delegate to the `assets` package, while `lint` (Oxlint) and `fmt` (Oxfmt) run at the root over the whole repo.
 
 - `pnpm build` — delegates to `assets`, build via `tsdown` (bundles every `assets/src/*.ts` to `assets/dist/`)
 - `pnpm dev` — delegates to `assets`, `tsdown -w`, watch/rebuild
-- `pnpm lint` — `eslint .` at the root (@antfu/eslint-config, flat config), scoped to `assets/**`; `playground/` is ignored (fixture app, not library source)
+- `pnpm lint` — `oxlint` at the root (config in `.oxlintrc.json`); `pnpm lint:fix` auto-fixes. `playground/`, `assets/test/fixtures/` and `docs/` are ignored (not library source)
+- `pnpm fmt` / `pnpm fmt:check` — `oxfmt` at the root (config in `.oxfmtrc.json`); `fmt:check` is the read-only variant CI runs
 - `pnpm test` — delegates to `assets`, run tests (vitest, scoped to `assets/test/` via `vitest.config.ts` so it never picks up `.references/` clones)
 - `pnpm vitest run assets/test/index.test.ts` — run a single test file
 - `pnpm vitest run -t "hi vitest"` — run a single test by name
@@ -50,9 +51,9 @@ unplugin still earns its place for Vite and (upcoming) the Stimulus virtual modu
 Encore's real value to Symfony is two JSON files written into `outputPath`, consumed by WebpackEncoreBundle's Twig helpers (`encore_entry_script_tags()`, `encore_entry_link_tags()`, `asset()`). Generating these in Encore-compatible format is the primary work:
 
 - **`entrypoints.json`** — maps each entry name to its asset URLs grouped by type, in load order (runtime chunks before app chunks). Optional `integrity` section for SRI hashes.
-  ```json
-  { "entrypoints": { "app": { "js": ["/build/runtime.js", "/build/app.js"], "css": ["/build/app.css"] } } }
-  ```
+    ```json
+    { "entrypoints": { "app": { "js": ["/build/runtime.js", "/build/app.js"], "css": ["/build/app.css"] } } }
+    ```
 - **`manifest.json`** — maps logical filename -> versioned/hashed URL, for cache-busting. Keys are prefixed with `manifestKeyPrefix` (defaults to `publicPath` minus leading slash). When `publicPath` is an absolute CDN URL (contains `://`), `manifestKeyPrefix` must be set explicitly. Encore enforces this by throwing (`../webpack-encore/lib/config/path-util.ts`, `validatePublicPathAndManifestKeyPrefix`); **porting that guard is still TODO** — the current factory does not throw and would use the absolute URL as the key prefix. The `publicPath === null` branch in `assets/src/index.ts` is likewise dead (`publicPath` always defaults to `build/`).
 
 ### Dev server (build mode vs serve mode)

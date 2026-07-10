@@ -24,8 +24,8 @@ updates:
       schedule:
           interval: 'weekly'
       allow:
-          - dependency-name: '@antfu/eslint-config'
-          - dependency-name: 'eslint'
+          - dependency-name: 'oxlint'
+          - dependency-name: 'oxfmt'
           - dependency-name: '@rspack/core'
           - dependency-name: '@types/node'
           - dependency-name: 'jsdom'
