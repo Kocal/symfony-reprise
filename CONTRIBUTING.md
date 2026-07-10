@@ -76,6 +76,9 @@ $ pnpm test
 
 # Lint
 $ pnpm lint
+
+# Format (use `pnpm fmt:check` to only check, without writing)
+$ pnpm fmt
 ```
 
 For manual end-to-end verification against a real Symfony backend, use the `playground/` app (a full Symfony 7 project that imports the plugin directly from `assets/`):

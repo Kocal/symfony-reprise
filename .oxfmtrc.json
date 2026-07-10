@@ -1,0 +1,20 @@
+{
+    "$schema": "./node_modules/oxfmt/configuration_schema.json",
+    "ignorePatterns": [
+        "**/composer.json",
+        "**/vendor",
+        "**/package.json",
+        "**/node_modules",
+        ".agents/skills",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        "playground/**",
+        "assets/dist/**",
+        "assets/test/fixtures/**",
+        "docs/**"
+    ],
+    "printWidth": 120,
+    "tabWidth": 4,
+    "trailingComma": "es5",
+    "bracketSameLine": true,
+    "singleQuote": true
+}
