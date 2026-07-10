@@ -57,7 +57,11 @@ export default function symfony(options?: Options): RsbuildPlugin {
                 // `/build/` prefix and the Vite path (whose `base` is likewise the publicPath). Without
                 // this the dev server serves at the origin root (`/`) while we advertise `/build/`, so
                 // every advertised URL 404s.
-                config.server.base = resolved.publicPath;
+                // `server.base` must be a slash-path (Rsbuild rejects anything else). An absolute
+                // (CDN) publicPath cannot be served by the local dev server, so fall back to the root;
+                // in dev the advertised URLs come from `resolvePublicPath` (which keeps an absolute
+                // publicPath as-is), so nothing is served under the CDN prefix locally anyway.
+                config.server.base = resolved.publicPath.includes('://') ? '/' : resolved.publicPath;
                 // Rsbuild's own config defaults `output.assetPrefix` to `'/'` before this hook runs
                 // (it is never left `undefined`), so `??=` would never apply ours — assign unconditionally.
                 // This drives the production build's asset URLs; in dev the serving path comes from

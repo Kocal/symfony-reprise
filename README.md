@@ -30,7 +30,7 @@ Symfony Reprise covers only the Symfony-side glue the bundlers leave out:
 - 🔖 **Asset versioning**: content-hash cache busting, wired into the manifest
 - 🔥 **Dev server & HMR**: points Twig at the running Vite/Rsbuild server
 - 🧩 **Symfony UX / Stimulus**: registers `controllers.json` and local controllers, eager or lazy
-- 🌐 **CDN support**: absolute `publicPath` _(planned)_
+- 🌐 **CDN support**: serve built assets from an absolute `publicPath`
 - 🛡️ **Subresource Integrity**: SRI hashes in `entrypoints.json` _(planned)_
 - 📦 **Shared runtime chunk**: one runtime shared across entries _(planned)_
 

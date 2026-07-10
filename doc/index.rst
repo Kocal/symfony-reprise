@@ -21,7 +21,7 @@ leave out:
 - **Dev server and HMR**: points Twig at the running Vite/Rsbuild server
 - **Symfony UX / Stimulus**: registers ``controllers.json`` and local
   controllers, eager or lazy
-- **CDN support**: absolute ``publicPath`` *(planned)*
+- **CDN support**: serve built assets from an absolute ``publicPath``
 - **Subresource Integrity**: SRI hashes in ``entrypoints.json`` *(planned)*
 - **Shared runtime chunk**: one runtime shared across entries *(planned)*
 
@@ -145,6 +145,67 @@ for Webpack's loader and needs an alias to the plain CSS build:
     })
 
 Check each package's own docs for this kind of tweak.
+
+Using a CDN
+-----------
+
+To serve your built assets from a CDN, set ``publicPath`` to the absolute CDN
+URL, for the production build only. In dev, the dev server serves assets
+directly, so keep the local ``/build/`` path there. Both bundlers expose the
+mode through the function form of their config, so switch on
+``command === 'build'``:
+
+.. code-block:: javascript
+
+    // vite.config.ts  (command is 'serve' or 'build')
+    import { defineConfig } from 'vite'
+    import Symfony from '@symfony/reprise/vite'
+
+    export default defineConfig(({ command }) => ({
+      plugins: [
+        Symfony({
+          publicPath:
+            command === 'build'
+              ? 'https://my-cool-app.com.global.prod.fastly.net/build/'
+              : '/build/',
+          manifestKeyPrefix: 'build/',
+        }),
+      ],
+    }))
+
+.. code-block:: javascript
+
+    // rsbuild.config.ts  (command is 'dev' or 'build')
+    import { defineConfig } from '@rsbuild/core'
+    import Symfony from '@symfony/reprise/rsbuild'
+
+    export default defineConfig(({ command }) => ({
+      plugins: [
+        Symfony({
+          publicPath:
+            command === 'build'
+              ? 'https://my-cool-app.com.global.prod.fastly.net/build/'
+              : '/build/',
+          manifestKeyPrefix: 'build/',
+        }),
+      ],
+    }))
+
+With an absolute ``publicPath``, ``manifestKeyPrefix`` is **required**: Reprise
+has no way to guess the right prefix for the ``manifest.json`` keys, and
+throws a clear error if it's missing. Keys stay logical, values point at the
+CDN:
+
+.. code-block:: json
+
+    {
+      "build/app.js": "https://my-cool-app.com.global.prod.fastly.net/build/app-1a2b3c.js"
+    }
+
+``entrypoints.json`` is rewritten the same way, so the ``<script>`` and
+``<link>`` tags render with CDN URLs. You still have to upload the built files
+to the CDN yourself, or set up origin pull. For a CDN subdirectory, include it
+in the URL (``https://my-cool-app.com.global.prod.fastly.net/awesome-website/build/``).
 
 .. _Vite: https://vite.dev/
 .. _Rsbuild: https://rsbuild.dev/
