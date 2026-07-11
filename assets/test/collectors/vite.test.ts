@@ -109,17 +109,27 @@ describe('bundleToGraph', () => {
         expect(graph.assets.some((a) => a.logicalName === 'assets/app.js')).toBe(false);
     });
 
-    it('keeps async (non-entry) chunk CSS keyed by name, not its importing module path', () => {
+    it('drops async (non-entry) chunk CSS from the manifest (byproduct; avoids same-name collisions)', () => {
         const bundle = {
             'app-a1b2.js': chunk({ fileName: 'app-a1b2.js', name: 'app', isEntry: true }),
-            // A lazily-imported controller: its chunk is not an entry, but it still pulls in CSS whose
-            // originalFileNames points at the importing JS (here inside node_modules).
-            'map-x.js': {
-                ...chunk({ fileName: 'map-x.js', name: 'map_controller', isEntry: false }),
-                viteMetadata: { importedCss: new Set(['map-c.css']), importedAssets: new Set() },
+            // Two lazily-imported controllers sharing a name (a local one and a package one) both emit
+            // CSS named `map_controller.css`. Keeping them would collide on a single manifest key; they
+            // load at runtime with their chunk, never via asset(), so drop them entirely.
+            'localMap.js': {
+                ...chunk({ fileName: 'localMap.js', name: 'map_controller', isEntry: false }),
+                viteMetadata: { importedCss: new Set(['localMap.css']), importedAssets: new Set() },
             },
-            'map-c.css': asset(
-                'map-c.css',
+            'pkgMap.js': {
+                ...chunk({ fileName: 'pkgMap.js', name: 'map_controller', isEntry: false }),
+                viteMetadata: { importedCss: new Set(['pkgMap.css']), importedAssets: new Set() },
+            },
+            'localMap.css': asset(
+                'localMap.css',
+                ['map_controller.css'],
+                ['/app/assets/controllers/map_controller.js']
+            ),
+            'pkgMap.css': asset(
+                'pkgMap.css',
                 ['map_controller.css'],
                 ['/app/node_modules/@x/ux-map/dist/map_controller.js']
             ),
@@ -127,8 +137,8 @@ describe('bundleToGraph', () => {
 
         const graph = bundleToGraph(bundle, '/app');
 
-        expect(graph.assets).toContainEqual({ logicalName: 'map_controller.css', fileName: 'map-c.css' });
-        expect(graph.assets.some((a) => a.logicalName.includes('node_modules'))).toBe(false);
+        expect(graph.assets.some((a) => a.fileName === 'localMap.css' || a.fileName === 'pkgMap.css')).toBe(false);
+        expect(graph.assets.some((a) => a.logicalName === 'map_controller.css')).toBe(false);
     });
 });
 
