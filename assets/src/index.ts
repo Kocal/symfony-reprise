@@ -1,11 +1,14 @@
 import type { UnpluginFactory } from 'unplugin';
-import type { BuildContext, Options } from './types';
+import type { BuildContext, NormalizedGraph, Options } from './types';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import * as process from 'node:process';
 import { createUnplugin } from 'unplugin';
 import { bundleToGraph, configToDevGraph } from './collectors/vite';
 import { resolveDevOrigin } from './core/dev-server';
 import { writeSymfonyFiles } from './core/emit';
 import { buildEntrypoints, buildManifest } from './core/format';
+import { integrityFromDisk, referencedFileNames } from './core/integrity';
 import { normalizeOptions, resolvePublicPath } from './core/options';
 import { generateControllersModule, STIMULUS_NOT_ENABLED_MESSAGE, VIRTUAL_CONTROLLERS_ID } from './core/stimulus';
 
@@ -15,6 +18,8 @@ const RESOLVED_VIRTUAL_ID = `\0${VIRTUAL_ID}`;
 export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _meta) => {
     const resolved = normalizeOptions(options, process.cwd());
     let isDev = false;
+    // When SRI is on, entrypoints.json is finished in `writeBundle` (see below); stash what it needs.
+    let pendingIntegrity: { graph: NormalizedGraph; ctx: BuildContext } | null = null;
 
     return {
         name: '@symfony/reprise',
@@ -49,6 +54,25 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                     fileName: 'manifest.json',
                     source: `${JSON.stringify(buildManifest(graph, ctx), null, 2)}\n`,
                 });
+                // SRI must hash the bytes that ship: Vite only finalizes chunks (replacing markers like
+                // `__VITE_PRELOAD__`) when writing to disk, so the in-memory bundle differs from the file.
+                // Defer to writeBundle (files on disk) and rewrite entrypoints.json with the integrity map.
+                if (resolved.integrity) pendingIntegrity = { graph, ctx };
+            },
+
+            writeBundle() {
+                if (!pendingIntegrity || !resolved.integrity) return;
+                const { graph, ctx } = pendingIntegrity;
+                pendingIntegrity = null;
+                graph.integrity = integrityFromDisk(
+                    referencedFileNames(graph.entryPoints),
+                    resolved.outputPath,
+                    resolved.integrity.algorithms
+                );
+                writeFileSync(
+                    join(resolved.outputPath, 'entrypoints.json'),
+                    `${JSON.stringify(buildEntrypoints(graph, ctx), null, 2)}\n`
+                );
             },
 
             configResolved(config) {

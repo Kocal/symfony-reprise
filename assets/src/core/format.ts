@@ -14,7 +14,20 @@ export function buildEntrypoints(graph: NormalizedGraph, ctx: BuildContext): Ent
             dynamic: files.dynamic.map((f) => joinUrl(ctx.urlPrefix, f)),
         };
     }
-    return { isProd: ctx.isProd, devServer: ctx.devServer, publicPath: ctx.publicPath, entryPoints };
+    const out: EntrypointsJson = {
+        isProd: ctx.isProd,
+        devServer: ctx.devServer,
+        publicPath: ctx.publicPath,
+        entryPoints,
+    };
+    if (graph.integrity) {
+        // Re-key the per-file-name hashes by the same URLs that appear in the entry lists,
+        // so the Symfony side can look each one up by asset URL.
+        out.integrity = Object.fromEntries(
+            Object.entries(graph.integrity).map(([fileName, sri]) => [joinUrl(ctx.urlPrefix, fileName), sri])
+        );
+    }
+    return out;
 }
 
 export function buildManifest(graph: NormalizedGraph, ctx: BuildContext): ManifestJson {

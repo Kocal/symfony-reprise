@@ -70,6 +70,32 @@ describe('normalizeOptions', () => {
             controllersDir: join('/app', 'assets/stimulus'),
         });
     });
+
+    it('leaves integrity undefined when not configured', () => {
+        expect(normalizeOptions(undefined, '/app').integrity).toBeUndefined();
+    });
+
+    it('leaves integrity undefined when explicitly disabled', () => {
+        expect(normalizeOptions({ integrity: { enabled: false } }, '/app').integrity).toBeUndefined();
+    });
+
+    it('defaults enabled integrity to the sha384 algorithm', () => {
+        expect(normalizeOptions({ integrity: { enabled: true } }, '/app').integrity).toEqual({
+            algorithms: ['sha384'],
+        });
+    });
+
+    it('honors explicit algorithms', () => {
+        expect(
+            normalizeOptions({ integrity: { enabled: true, algorithms: ['sha256', 'sha512'] } }, '/app').integrity
+        ).toEqual({ algorithms: ['sha256', 'sha512'] });
+    });
+
+    it('falls back to sha384 when enabled with an empty algorithm list', () => {
+        expect(normalizeOptions({ integrity: { enabled: true, algorithms: [] } }, '/app').integrity).toEqual({
+            algorithms: ['sha384'],
+        });
+    });
 });
 
 describe('resolvePublicPath', () => {

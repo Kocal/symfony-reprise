@@ -84,7 +84,32 @@ export interface Options {
      */
     stimulus?: string | StimulusOptions;
 
+    /**
+     * Emit Subresource Integrity (SRI) hashes for the built assets.
+     *
+     * When enabled, `entrypoints.json` gains an `integrity` map (asset URL -> hash),
+     * which Reprise's Symfony bundle renders as `integrity="..."` on the script/link tags.
+     * Only applies to build mode; the dev server serves changing in-memory assets, so
+     * no hashes are emitted there.
+     *
+     * ```js
+     * // enable only for the production build (Vite exposes `command`)
+     * Symfony({ integrity: { enabled: command === 'build', algorithms: ['sha384'] } })
+     * ```
+     */
+    integrity?: IntegrityOptions;
+
     // singleRuntimeChunk?: boolean
+}
+
+/** Hash algorithm used for Subresource Integrity. */
+export type IntegrityAlgorithm = 'sha256' | 'sha384' | 'sha512';
+
+export interface IntegrityOptions {
+    /** Turn SRI on or off. Off by default. */
+    enabled: boolean;
+    /** Algorithms to hash each asset with. Default: `['sha384']`. */
+    algorithms?: IntegrityAlgorithm[];
 }
 
 export interface StimulusOptions {
@@ -112,6 +137,8 @@ export interface ResolvedOptions {
     manifestKeyPrefix: string;
     devServerOrigin?: string;
     stimulus?: ResolvedStimulusOptions;
+    /** Present (with a non-empty algorithm list) only when SRI is enabled. */
+    integrity?: { algorithms: string[] };
 }
 
 export interface EntryFiles {
@@ -134,6 +161,8 @@ export interface AssetEntry {
 export interface NormalizedGraph {
     entryPoints: Record<string, EntryFiles>;
     assets: AssetEntry[];
+    /** SRI hash per emitted file name; set by the collectors only when SRI is enabled. */
+    integrity?: Record<string, string>;
 }
 
 export interface BuildContext {
@@ -152,6 +181,8 @@ export interface EntrypointsJson {
     devServer: DevServer | null;
     publicPath: string;
     entryPoints: Record<string, EntryFiles>;
+    /** SRI hash per asset URL; present only in build mode with SRI enabled. */
+    integrity?: Record<string, string>;
 }
 
 export type ManifestJson = Record<string, string>;

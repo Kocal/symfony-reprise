@@ -46,6 +46,21 @@ describe('buildEntrypoints', () => {
         expect(out.entryPoints.app.js).toEqual(['/build/app-a1b2.js']);
     });
 
+    it('emits a top-level integrity map keyed by URL when the graph carries hashes', () => {
+        const out = buildEntrypoints(
+            { ...graph, integrity: { 'app-a1b2.js': 'sha384-JS', 'app-c3d4.css': 'sha384-CSS' } },
+            ctx
+        );
+        expect(out.integrity).toEqual({
+            '/build/app-a1b2.js': 'sha384-JS',
+            '/build/app-c3d4.css': 'sha384-CSS',
+        });
+    });
+
+    it('omits integrity when the graph carries no hashes', () => {
+        expect(buildEntrypoints(graph, ctx).integrity).toBeUndefined();
+    });
+
     it('builds URLs from urlPrefix but emits the original publicPath field', () => {
         const devCtx: BuildContext = {
             isProd: false,

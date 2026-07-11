@@ -19,6 +19,9 @@ export default defineConfig({
     Inspect(),
     Unplugin({
         stimulus: './assets/controllers.json',
+        integrity: {
+            enabled: true,
+        }
     }),
   ],
     resolve: {

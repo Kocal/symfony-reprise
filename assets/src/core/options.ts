@@ -1,6 +1,11 @@
 import type { Options, ResolvedOptions, ResolvedStimulusOptions } from '../types';
 import * as path from 'node:path';
 
+function normalizeIntegrity(integrity: Options['integrity']): ResolvedOptions['integrity'] {
+    if (!integrity?.enabled) return undefined;
+    return { algorithms: integrity.algorithms?.length ? [...integrity.algorithms] : ['sha384'] };
+}
+
 function normalizeStimulus(stimulus: Options['stimulus'], cwd: string): ResolvedStimulusOptions | undefined {
     if (!stimulus) return undefined;
     const raw = typeof stimulus === 'string' ? { controllersJson: stimulus } : stimulus;
@@ -38,6 +43,7 @@ export function normalizeOptions(options: Options | undefined, cwd: string): Res
         manifestKeyPrefix,
         devServerOrigin: options?.devServerOrigin,
         stimulus: normalizeStimulus(options?.stimulus, cwd),
+        integrity: normalizeIntegrity(options?.integrity),
     };
 }
 
