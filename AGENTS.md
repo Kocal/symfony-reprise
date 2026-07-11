@@ -73,7 +73,7 @@ Encore wires this with `enableStimulusBridge(controllerJsonPath)` (reference `li
 
 That loader is webpack-only, so it must be reimplemented here as a bundler-agnostic **virtual module** (unplugin `resolveId`/`load`): parse `controllers.json`, resolve each third-party controller from its npm package (honoring enabled + eager/lazy + `autoimport`), glob the local `assets/controllers/` dir, and emit the code that registers them on the Stimulus app. Prior art: `vite-plugin-symfony`'s `virtual:symfony/controllers` module.
 
-Feature roadmap (see README): `entrypoints.json` (build + dev), `manifest.json`, asset versioning wired into the manifest, absolute/CDN `publicPath`, dev-server + HMR, SRI hashes, shared runtime chunk across entries, Symfony UX / Stimulus controllers.
+Feature roadmap (see README): `entrypoints.json` (build + dev), `manifest.json`, asset versioning wired into the manifest, absolute/CDN `publicPath`, dev-server + HMR, SRI hashes, Symfony UX / Stimulus controllers.
 
 ## Reference: the project being replaced
 

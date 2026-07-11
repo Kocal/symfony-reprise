@@ -98,8 +98,6 @@ export interface Options {
      * ```
      */
     integrity?: IntegrityOptions;
-
-    // singleRuntimeChunk?: boolean
 }
 
 /** Hash algorithm used for Subresource Integrity. */

@@ -32,7 +32,6 @@ Symfony Reprise covers only the Symfony-side glue the bundlers leave out:
 - 🧩 **Symfony UX / Stimulus**: registers `controllers.json` and local controllers, eager or lazy
 - 🌐 **CDN support**: serve built assets from an absolute `publicPath`
 - 🛡️ **Subresource Integrity**: SRI hashes in `entrypoints.json`
-- 📦 **Shared runtime chunk**: one runtime shared across entries _(planned)_
 
 Vite and Rsbuild already handle **Sass/Less/PostCSS**, **TypeScript**, **JSX/Vue/Svelte**, **code splitting**, **content hashing**, **source maps**, **minification** and **HMR** on their own, so Symfony Reprise does not reimplement any of that.
 
