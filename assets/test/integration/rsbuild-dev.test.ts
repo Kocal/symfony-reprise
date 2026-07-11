@@ -34,9 +34,12 @@ describe('rsbuild dev writes absolute dev-server URLs and no HTML', () => {
 
         // The `done` hook writes entrypoints.json synchronously as part of Rspack's `done` tap
         // chain, but `startDevServer()` resolves once the HTTP server is listening — which races
-        // ahead of that first compilation finishing. `onAfterDevCompile` is Rsbuild's own first-build
-        // signal (fires after all `compiler.hooks.done` taps, including the adapter's, have run), so
-        // awaiting it removes the race without polling or sleeping.
+        // ahead of that first compilation finishing. `onAfterDevCompile` fires after the first dev
+        // compile, but does NOT reliably postdate the adapter's own `compiler.hooks.done` tap that
+        // writes the Symfony files (see `copy.test.ts`'s rsbuild dev test, which taps
+        // `compiler.hooks.done` directly instead to get a guaranteed-ordered signal). This test only
+        // asserts on `entrypoints.json`/`manifest.json` contents that don't depend on that ordering
+        // in practice, but it is not a guarantee — just an empirical observation for this branch.
         let resolveFirstCompile: () => void;
         const firstCompileDone = new Promise<void>((resolve) => {
             resolveFirstCompile = resolve;

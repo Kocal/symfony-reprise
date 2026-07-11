@@ -1,6 +1,6 @@
 import type { BuildContext, EntryFiles, EntrypointsJson, ManifestJson, NormalizedGraph } from '../types';
 
-function joinUrl(prefix: string, name: string): string {
+export function joinUrl(prefix: string, name: string): string {
     return prefix.endsWith('/') ? prefix + name : `${prefix}/${name}`;
 }
 

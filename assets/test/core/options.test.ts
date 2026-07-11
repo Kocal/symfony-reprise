@@ -96,6 +96,43 @@ describe('normalizeOptions', () => {
             algorithms: ['sha384'],
         });
     });
+
+    it('defaults copy to an empty array', () => {
+        const r = normalizeOptions(undefined, '/app');
+        expect(r.copy).toEqual([]);
+    });
+
+    it('resolves a relative copy `from` against cwd and applies defaults', () => {
+        const r = normalizeOptions({ copy: [{ from: 'assets/images', to: 'images' }] }, '/app');
+        expect(r.copy).toEqual([
+            { from: join('/app', 'assets/images'), to: 'images', pattern: /.*/, includeSubdirectories: true },
+        ]);
+    });
+
+    it('keeps an absolute copy `from`, strips slashes from `to`, honors pattern/includeSubdirectories', () => {
+        const r = normalizeOptions(
+            { copy: [{ from: '/src/img', to: '/images/', pattern: /\.svg$/, includeSubdirectories: false }] },
+            '/app'
+        );
+        expect(r.copy[0].from).toBe('/src/img');
+        expect(r.copy[0].to).toBe('images');
+        expect(r.copy[0].pattern).toEqual(/\.svg$/);
+        expect(r.copy[0].includeSubdirectories).toBe(false);
+    });
+
+    it('normalizes a `to` with a leading "./" and trailing slash to a clean prefix', () => {
+        // A leading "./" would leak into the manifest key ("build/./to-copy/…") and, in Vite,
+        // Rollup rejects an emitted fileName that looks like a relative path ("./to-copy/…").
+        const r = normalizeOptions({ copy: [{ from: 'assets/to-copy', to: './to-copy/' }] }, '/app');
+        expect(r.copy[0].to).toBe('to-copy');
+    });
+
+    it('collapses "." segments and redundant slashes in `to`', () => {
+        expect(normalizeOptions({ copy: [{ from: 'a', to: './images//icons/' }] }, '/app').copy[0].to).toBe(
+            'images/icons'
+        );
+        expect(normalizeOptions({ copy: [{ from: 'a', to: '.' }] }, '/app').copy[0].to).toBe('');
+    });
 });
 
 describe('resolvePublicPath', () => {

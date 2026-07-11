@@ -8,6 +8,7 @@ import SymfonyRsbuild from '../../src/rsbuild';
 import SymfonyVite from '../../src/vite';
 
 const fixture = join(import.meta.dirname, '../fixtures/basic');
+const copySrc = join(import.meta.dirname, '../fixtures/copy-src');
 const CDN = 'https://cdn.example.com/assets/';
 const CDN_URL_RE = /^https:\/\/cdn\.example\.com\/assets\//;
 
@@ -21,7 +22,14 @@ describe('absolute (CDN) publicPath', () => {
                 emptyOutDir: true,
                 rollupOptions: { input: { app: join(fixture, 'app.js'), admin: join(fixture, 'admin.js') } },
             },
-            plugins: [SymfonyVite({ outputPath: out, publicPath: CDN, manifestKeyPrefix: 'assets/' })],
+            plugins: [
+                SymfonyVite({
+                    outputPath: out,
+                    publicPath: CDN,
+                    manifestKeyPrefix: 'assets/',
+                    copy: [{ from: copySrc, to: 'images' }],
+                }),
+            ],
         });
 
         const entry = JSON.parse(readFileSync(join(out, 'entrypoints.json'), 'utf8'));
@@ -30,6 +38,9 @@ describe('absolute (CDN) publicPath', () => {
 
         const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
         expect(manifest['assets/app.js']).toMatch(/^https:\/\/cdn\.example\.com\/assets\/app-.*\.js$/);
+        expect(manifest['assets/images/logo.svg']).toMatch(
+            /^https:\/\/cdn\.example\.com\/assets\/images\/logo\.[0-9a-f]{8}\.svg$/
+        );
         for (const value of Object.values(manifest)) {
             expect(value).toMatch(CDN_URL_RE);
         }
@@ -42,7 +53,14 @@ describe('absolute (CDN) publicPath', () => {
             rsbuildConfig: {
                 mode: 'production',
                 source: { entry: { app: join(fixture, 'app.js'), admin: join(fixture, 'admin.js') } },
-                plugins: [SymfonyRsbuild({ outputPath: out, publicPath: CDN, manifestKeyPrefix: 'assets/' })],
+                plugins: [
+                    SymfonyRsbuild({
+                        outputPath: out,
+                        publicPath: CDN,
+                        manifestKeyPrefix: 'assets/',
+                        copy: [{ from: copySrc, to: 'images' }],
+                    }),
+                ],
             },
         });
         await rsbuild.build();
@@ -53,6 +71,9 @@ describe('absolute (CDN) publicPath', () => {
 
         const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
         expect(Object.keys(manifest).length).toBeGreaterThan(0);
+        expect(manifest['assets/images/logo.svg']).toMatch(
+            /^https:\/\/cdn\.example\.com\/assets\/images\/logo\.[0-9a-f]{8}\.svg$/
+        );
         for (const value of Object.values(manifest)) {
             expect(value).toMatch(CDN_URL_RE);
         }

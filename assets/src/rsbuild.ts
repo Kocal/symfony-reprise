@@ -1,10 +1,11 @@
 import type { RsbuildPlugin } from '@rsbuild/core';
 import type { RspackStats } from './collectors/rspack';
-import type { BuildContext, Options } from './types';
+import type { BuildContext, ManifestJson, Options } from './types';
 import * as path from 'node:path';
 import * as process from 'node:process';
 import { rspack } from '@rsbuild/core';
 import { statsToGraph } from './collectors/rspack';
+import { copyManifest, resolveCopyFiles, writeCopyFiles } from './core/copy';
 import { writeSymfonyFiles } from './core/emit';
 import { integrityFromDisk, referencedFileNames } from './core/integrity';
 import { buildEntrypoints, buildManifest } from './core/format';
@@ -103,6 +104,32 @@ export default function symfony(options?: Options): RsbuildPlugin {
             api.onAfterCreateCompiler(({ compiler }) => {
                 const compilers = 'compilers' in compiler ? compiler.compilers : [compiler];
                 for (const c of compilers) {
+                    // Build: emit the copied files into the compilation, so Rspack writes them, lists
+                    // them in the build output, and cleans them like any other asset. `sourceFilename`
+                    // lets the existing statsToGraph collector key them in manifest.json (no manual
+                    // merge — see the `done` tap). Dev instead writes them to disk in `done`: there they
+                    // are served by the Symfony web server from `public/build`, not by the dev server,
+                    // so they must not become in-memory compilation assets.
+                    if (!isDev) {
+                        c.hooks.thisCompilation.tap('@symfony/reprise:copy', (compilation) => {
+                            compilation.hooks.processAssets.tap(
+                                {
+                                    name: '@symfony/reprise:copy',
+                                    stage: rspack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
+                                },
+                                () => {
+                                    for (const file of resolveCopyFiles(resolved.copy, true)) {
+                                        compilation.emitAsset(
+                                            file.physicalName,
+                                            new rspack.sources.RawSource(file.source),
+                                            { sourceFilename: file.logicalName }
+                                        );
+                                    }
+                                }
+                            );
+                        });
+                    }
+
                     c.hooks.done.tap('@symfony/reprise', (stats) => {
                         const isDev = c.watchMode;
                         // The dev URLs we advertise must be the dev-server origin joined with our `publicPath`
@@ -141,10 +168,22 @@ export default function symfony(options?: Options): RsbuildPlugin {
                                 resolved.integrity.algorithms
                             );
                         }
-                        // In dev the manifest is empty: assets are served from the dev server, never looked
-                        // up on disk by hash, so cache-busting is moot. entrypoints.json alone drives loading.
-                        // Matches the Vite dev path (see `configureServer` in index.ts), which also writes `{}`.
-                        const manifest = isDev ? {} : buildManifest(graph, ctx);
+                        // Copied static files: in build they were emitted into the compilation (see the
+                        // processAssets tap above), so statsToGraph already carries them in `graph.assets`
+                        // and `buildManifest` keys them. In dev they are not emitted (served by the Symfony
+                        // web server from disk, not the dev server), so write them out here and key them by
+                        // their relative publicPath URL.
+                        let manifest: ManifestJson;
+                        if (isDev) {
+                            const copyFiles = resolveCopyFiles(resolved.copy, false);
+                            writeCopyFiles(copyFiles, resolved.outputPath);
+                            manifest = copyManifest(copyFiles, {
+                                publicPath: resolved.publicPath,
+                                manifestKeyPrefix: resolved.manifestKeyPrefix,
+                            });
+                        } else {
+                            manifest = buildManifest(graph, ctx);
+                        }
                         try {
                             writeSymfonyFiles(resolved.outputPath, buildEntrypoints(graph, ctx), manifest);
                         } catch (err) {

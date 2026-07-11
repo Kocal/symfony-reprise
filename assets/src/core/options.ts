@@ -1,9 +1,30 @@
-import type { Options, ResolvedOptions, ResolvedStimulusOptions } from '../types';
+import type { CopyEntry, Options, ResolvedCopyEntry, ResolvedOptions, ResolvedStimulusOptions } from '../types';
 import * as path from 'node:path';
 
 function normalizeIntegrity(integrity: Options['integrity']): ResolvedOptions['integrity'] {
     if (!integrity?.enabled) return undefined;
     return { algorithms: integrity.algorithms?.length ? [...integrity.algorithms] : ['sha384'] };
+}
+
+function normalizeCopyTo(to: string): string {
+    // Collapse "." segments and redundant slashes, then drop any leading "./" or "/" and trailing
+    // "/". A leading "./" or "/" would corrupt the manifest key ("build/./to-copy/…") and, in the
+    // Vite path, make Rollup reject the emitted asset fileName (it forbids relative-looking paths).
+    const normalized = path.posix.normalize(to.replace(/\\/g, '/'));
+    return normalized
+        .replace(/^\.?\/+/, '')
+        .replace(/^\.$/, '')
+        .replace(/\/+$/, '');
+}
+
+function normalizeCopy(copy: CopyEntry[] | undefined, cwd: string): ResolvedCopyEntry[] {
+    if (!copy) return [];
+    return copy.map((entry) => ({
+        from: path.isAbsolute(entry.from) ? entry.from : path.join(cwd, entry.from),
+        to: normalizeCopyTo(entry.to),
+        pattern: entry.pattern ?? /.*/,
+        includeSubdirectories: entry.includeSubdirectories ?? true,
+    }));
 }
 
 function normalizeStimulus(stimulus: Options['stimulus'], cwd: string): ResolvedStimulusOptions | undefined {
@@ -44,6 +65,7 @@ export function normalizeOptions(options: Options | undefined, cwd: string): Res
         devServerOrigin: options?.devServerOrigin,
         stimulus: normalizeStimulus(options?.stimulus, cwd),
         integrity: normalizeIntegrity(options?.integrity),
+        copy: normalizeCopy(options?.copy, cwd),
     };
 }
 
