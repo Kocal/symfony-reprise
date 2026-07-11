@@ -98,6 +98,18 @@ export interface Options {
      * ```
      */
     integrity?: IntegrityOptions;
+
+    /**
+     * Copy static files (images, fonts…) into the build output and register them
+     * in manifest.json, so Twig's `asset('<to>/<path>')` resolves to the file URL.
+     * Works in both build (content-hashed names) and dev (verbatim names). Files are
+     * written under `outputPath` and served by the Symfony web server from `public/`.
+     *
+     * ```js
+     * Symfony({ copy: [{ from: 'assets/images', to: 'images' }] })
+     * ```
+     */
+    copy?: CopyEntry[];
 }
 
 /** Hash algorithm used for Subresource Integrity. */
@@ -124,6 +136,24 @@ export interface ResolvedStimulusOptions {
     controllersDir: string;
 }
 
+export interface CopyEntry {
+    /** Source directory, relative to the project root (cwd) or absolute. */
+    from: string;
+    /** Logical destination prefix used for the manifest key (e.g. `images`). */
+    to: string;
+    /** Only files whose path relative to `from` matches this regex are copied. Default: every file. */
+    pattern?: RegExp;
+    /** Recurse into subdirectories of `from`. Default: true. */
+    includeSubdirectories?: boolean;
+}
+
+export interface ResolvedCopyEntry {
+    from: string;
+    to: string;
+    pattern: RegExp;
+    includeSubdirectories: boolean;
+}
+
 /** Map of Stimulus identifier -> controller class (registered eagerly). */
 export type EagerControllersCollection = Record<string, ControllerConstructor>;
 /** Map of Stimulus identifier -> dynamic-import factory (registered lazily). */
@@ -137,6 +167,7 @@ export interface ResolvedOptions {
     stimulus?: ResolvedStimulusOptions;
     /** Present (with a non-empty algorithm list) only when SRI is enabled. */
     integrity?: { algorithms: string[] };
+    copy: ResolvedCopyEntry[];
 }
 
 export interface EntryFiles {

@@ -18,6 +18,7 @@ leave out:
 - ``entrypoints.json``: generated in both build and dev-server modes
 - ``manifest.json``: maps each logical filename to its hashed URL
 - **Asset versioning**: content-hash cache busting, wired into the manifest
+- **File copy**: copy static files into the build, keyed in the manifest
 - **Dev server and HMR**: points Twig at the running Vite/Rsbuild server
 - **Symfony UX / Stimulus**: registers ``controllers.json`` and local
   controllers, eager or lazy
@@ -146,6 +147,55 @@ for Webpack's loader and needs an alias to the plain CSS build:
     })
 
 Check each package's own docs for this kind of tweak.
+
+File copy
+---------
+
+Some assets are referenced by a stable path straight from your templates,
+like ``{{ asset('build/images/logo.svg') }}``, rather than imported from
+JavaScript or CSS. Point ``copy`` at the directories that hold them and
+Reprise copies each file into the build and records it in ``manifest.json``,
+so the ``asset()`` helper resolves it to the hashed URL:
+
+.. code-block:: javascript
+
+    // vite.config.ts
+    import { defineConfig } from 'vite'
+    import Symfony from '@symfony/reprise/vite'
+
+    export default defineConfig({
+      plugins: [
+        Symfony({
+          copy: [{ from: 'assets/images', to: 'images' }],
+        }),
+      ],
+    })
+
+.. code-block:: javascript
+
+    // rsbuild.config.ts
+    import { defineConfig } from '@rsbuild/core'
+    import Symfony from '@symfony/reprise/rsbuild'
+
+    export default defineConfig({
+      plugins: [
+        Symfony({
+          copy: [{ from: 'assets/images', to: 'images' }],
+        }),
+      ],
+    })
+
+``from`` and ``to`` are both required: ``from`` is the source directory (relative
+to your project root), ``to`` is the destination prefix used for the manifest key.
+Restrict which files are copied with ``pattern``, a regular expression tested
+against each file's path relative to ``from`` (by default every file is copied).
+``includeSubdirectories`` defaults to ``true``; set it to ``false`` to turn off
+recursion.
+
+In build mode, copied files get a content hash in their filename for cache
+busting. In dev mode, they're copied verbatim, no hash. Either way, they land in
+``public/build`` and are served by the Symfony web server, not by the Vite/Rsbuild
+dev server, so they're available whether or not the dev server is running.
 
 Using a CDN
 -----------

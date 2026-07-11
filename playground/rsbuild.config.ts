@@ -18,7 +18,11 @@ export default defineConfig({
         integrity: {
             enabled: true,
             algorithms: ['sha256', 'sha384']
-        }
+        },
+        copy: [
+            { from: './assets/to-copy/', to: './to-copy/' },
+            { from: './assets/to-copy/', to: './to-copy-5/', pattern: /me_5\d+\.jpeg/ },
+        ]
     }),
   ],
     resolve: {

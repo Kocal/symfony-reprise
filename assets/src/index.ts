@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import * as process from 'node:process';
 import { createUnplugin } from 'unplugin';
 import { bundleToGraph, configToDevGraph } from './collectors/vite';
+import { copyManifest, resolveCopyFiles, writeCopyFiles } from './core/copy';
 import { resolveDevOrigin } from './core/dev-server';
 import { writeSymfonyFiles } from './core/emit';
 import { buildEntrypoints, buildManifest } from './core/format';
@@ -49,10 +50,21 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                     fileName: 'entrypoints.json',
                     source: `${JSON.stringify(buildEntrypoints(graph, ctx), null, 2)}\n`,
                 });
+                const copyFiles = resolveCopyFiles(resolved.copy, true);
+                for (const file of copyFiles) {
+                    this.emitFile({ type: 'asset', fileName: file.physicalName, source: file.source });
+                }
+                const manifest = {
+                    ...buildManifest(graph, ctx),
+                    ...copyManifest(copyFiles, {
+                        publicPath: resolved.publicPath,
+                        manifestKeyPrefix: resolved.manifestKeyPrefix,
+                    }),
+                };
                 this.emitFile({
                     type: 'asset',
                     fileName: 'manifest.json',
-                    source: `${JSON.stringify(buildManifest(graph, ctx), null, 2)}\n`,
+                    source: `${JSON.stringify(manifest, null, 2)}\n`,
                 });
                 // SRI must hash the bytes that ship: Vite only finalizes chunks (replacing markers like
                 // `__VITE_PRELOAD__`) when writing to disk, so the in-memory bundle differs from the file.
@@ -115,10 +127,15 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                         manifestKeyPrefix: resolved.manifestKeyPrefix,
                     };
                     try {
+                        const copyFiles = resolveCopyFiles(resolved.copy, false);
+                        writeCopyFiles(copyFiles, resolved.outputPath);
                         writeSymfonyFiles(
                             resolved.outputPath,
                             buildEntrypoints(configToDevGraph(server.config), ctx),
-                            {}
+                            copyManifest(copyFiles, {
+                                publicPath: resolved.publicPath,
+                                manifestKeyPrefix: resolved.manifestKeyPrefix,
+                            })
                         );
                     } catch (err) {
                         server.config.logger.error(

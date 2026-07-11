@@ -21,7 +21,11 @@ export default defineConfig({
         stimulus: './assets/controllers.json',
         integrity: {
             enabled: true,
-        }
+        },
+        copy: [
+            { from: './assets/to-copy/', to: './to-copy/' },
+            { from: './assets/to-copy/', to: './to-copy-5/', pattern: /me_5\d+\.jpeg/ },
+        ]
     }),
   ],
     resolve: {
