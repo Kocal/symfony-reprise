@@ -23,7 +23,6 @@ leave out:
   controllers, eager or lazy
 - **CDN support**: serve built assets from an absolute ``publicPath``
 - **Subresource Integrity**: SRI hashes in ``entrypoints.json``
-- **Shared runtime chunk**: one runtime shared across entries *(planned)*
 
 It generates the Encore-compatible ``entrypoints.json`` and ``manifest.json``
 that Reprise's own Symfony bundle (``RepriseBundle``, still a stub) reads to
