@@ -17,11 +17,6 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Reprise\RepriseBundle;
 
-/**
- * @author Hugo Alliaume <hugo@alliau.me>
- *
- * @internal
- */
 class FrameworkAppKernel extends Kernel
 {
     use AppKernelTrait;

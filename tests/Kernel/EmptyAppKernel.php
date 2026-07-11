@@ -15,11 +15,6 @@ use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Reprise\RepriseBundle;
 
-/**
- * @author Hugo Alliaume <hugo@alliau.me>
- *
- * @internal
- */
 class EmptyAppKernel extends Kernel
 {
     use AppKernelTrait;
