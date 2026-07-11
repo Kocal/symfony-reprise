@@ -6,6 +6,7 @@ import * as process from 'node:process';
 import { rspack } from '@rsbuild/core';
 import { statsToGraph } from './collectors/rspack';
 import { writeSymfonyFiles } from './core/emit';
+import { integrityFromDisk, referencedFileNames } from './core/integrity';
 import { buildEntrypoints, buildManifest } from './core/format';
 import { normalizeOptions, resolvePublicPath } from './core/options';
 import { generateControllersModule, STIMULUS_NOT_ENABLED_MESSAGE, VIRTUAL_CONTROLLERS_ID } from './core/stimulus';
@@ -131,6 +132,15 @@ export default function symfony(options?: Options): RsbuildPlugin {
                             manifestKeyPrefix: resolved.manifestKeyPrefix,
                         };
                         const graph = statsToGraph(stats.toJson({ assets: true, entrypoints: true }) as RspackStats);
+                        // SRI (build only): `done` fires after emit, so hash the files back off disk
+                        // (the same approach Encore takes). Dev serves changing in-memory assets, no hashes.
+                        if (!isDev && resolved.integrity) {
+                            graph.integrity = integrityFromDisk(
+                                referencedFileNames(graph.entryPoints),
+                                resolved.outputPath,
+                                resolved.integrity.algorithms
+                            );
+                        }
                         // In dev the manifest is empty: assets are served from the dev server, never looked
                         // up on disk by hash, so cache-busting is moot. entrypoints.json alone drives loading.
                         // Matches the Vite dev path (see `configureServer` in index.ts), which also writes `{}`.

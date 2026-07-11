@@ -2,10 +2,10 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "vite:dev": "nodemon -w '../assets/src/**/*.ts' -e .ts -x vite",
-    "vite:build": "nodemon -w '../assets/src/**/*.ts' -e .ts -x vite build",
-    "rsbuild:dev": "nodemon -w '../assets/src/**/*.ts' -e .ts -x rsbuild dev",
-    "rsbuild:build": "nodemon -w '../assets/src/**/*.ts' -e .ts -x rsbuild build"
+    "vite:dev": "vite",
+    "vite:build": "vite build",
+    "rsbuild:dev": "rsbuild dev",
+    "rsbuild:build": "rsbuild build"
   },
   "devDependencies": {
     "@hotwired/stimulus": "^3.0.0",

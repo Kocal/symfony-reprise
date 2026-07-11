@@ -15,6 +15,10 @@ export default defineConfig({
   plugins: [
     Symfony({
         stimulus: './assets/controllers.json',
+        integrity: {
+            enabled: true,
+            algorithms: ['sha256', 'sha384']
+        }
     }),
   ],
     resolve: {

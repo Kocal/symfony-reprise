@@ -22,13 +22,13 @@ leave out:
 - **Symfony UX / Stimulus**: registers ``controllers.json`` and local
   controllers, eager or lazy
 - **CDN support**: serve built assets from an absolute ``publicPath``
-- **Subresource Integrity**: SRI hashes in ``entrypoints.json`` *(planned)*
+- **Subresource Integrity**: SRI hashes in ``entrypoints.json``
 - **Shared runtime chunk**: one runtime shared across entries *(planned)*
 
 It generates the Encore-compatible ``entrypoints.json`` and ``manifest.json``
-that WebpackEncoreBundle's Twig helpers (``encore_entry_script_tags()``,
-``encore_entry_link_tags()``) read, wires up the native dev server, and turns
-your Stimulus controllers into a running application.
+that Reprise's own Symfony bundle (``RepriseBundle``, still a stub) reads to
+render the ``<script>`` and ``<link>`` tags, wires up the native dev server,
+and turns your Stimulus controllers into a running application.
 
 Installation
 ------------
@@ -208,6 +208,67 @@ CDN:
 ``<link>`` tags render with CDN URLs. You still have to upload the built files
 to the CDN yourself, or set up origin pull. For a CDN subdirectory, include it
 in the URL (``https://my-cool-app.com.global.prod.fastly.net/awesome-website/build/``).
+
+Subresource Integrity
+---------------------
+
+When enabled, Reprise adds an ``integrity`` map to ``entrypoints.json`` (asset
+URL -> SRI hash). Reprise's Symfony bundle reads that map and renders
+``integrity="..."`` on the generated ``<script>`` and ``<link>`` tags, so the
+browser refuses any asset whose bytes were tampered with.
+
+The ``integrity`` option takes an object ``{ enabled, algorithms? }``. It only
+makes sense for the production build: the dev server serves changing
+in-memory assets, so no hashes are emitted in dev. As with the CDN example,
+toggle it with ``command === 'build'``:
+
+.. code-block:: javascript
+
+    // vite.config.ts  (command is 'serve' or 'build')
+    import { defineConfig } from 'vite'
+    import Symfony from '@symfony/reprise/vite'
+
+    export default defineConfig(({ command }) => ({
+      plugins: [
+        Symfony({
+          integrity: { enabled: command === 'build', algorithms: ['sha384'] },
+        }),
+      ],
+    }))
+
+.. code-block:: javascript
+
+    // rsbuild.config.ts  (command is 'dev' or 'build')
+    import { defineConfig } from '@rsbuild/core'
+    import Symfony from '@symfony/reprise/rsbuild'
+
+    export default defineConfig(({ command }) => ({
+      plugins: [
+        Symfony({
+          integrity: { enabled: command === 'build', algorithms: ['sha384'] },
+        }),
+      ],
+    }))
+
+``algorithms`` is optional and defaults to ``['sha384']``. Accepted values are
+``'sha256'``, ``'sha384'`` and ``'sha512'``. Passing several (e.g.
+``['sha256', 'sha512']``) writes multiple space-separated hashes per file,
+which the browser treats as "any one of these must match".
+
+The resulting ``entrypoints.json`` gets an extra ``integrity`` section:
+
+.. code-block:: json
+
+    {
+      "integrity": {
+        "/build/app-1a2b3c.js": "sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K...",
+        "/build/app-4d5e6f.css": "sha384-9ehJ4G8v3aQ2p1o0..."
+      }
+    }
+
+Hashes cover every referenced file in each entry (js, css, and
+preloaded/dynamic chunks), and since they're computed from the files actually
+written to disk, they stay correct through minification and hashing.
 
 .. _Vite: https://vite.dev/
 .. _Rsbuild: https://rsbuild.dev/

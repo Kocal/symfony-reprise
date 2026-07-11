@@ -48,7 +48,7 @@ unplugin still earns its place for Vite and (upcoming) the Stimulus virtual modu
 
 ## The Symfony integration contract (the core of this project)
 
-Encore's real value to Symfony is two JSON files written into `outputPath`, consumed by WebpackEncoreBundle's Twig helpers (`encore_entry_script_tags()`, `encore_entry_link_tags()`, `asset()`). Generating these in Encore-compatible format is the primary work:
+Encore's real value to Symfony is two JSON files written into `outputPath`, consumed by Reprise's **own** Symfony bundle (`RepriseBundle`, the PHP side under `src/` — still a stub) via its Twig helpers that render the `<script>`/`<link>`/`asset()` tags. Reprise does **not** use `symfony/webpack-encore-bundle`. Generating these two files in Encore-compatible format is the primary work:
 
 - **`entrypoints.json`** — maps each entry name to its asset URLs grouped by type, in load order (runtime chunks before app chunks). Optional `integrity` section for SRI hashes.
     ```json
@@ -61,7 +61,7 @@ Encore's real value to Symfony is two JSON files written into `outputPath`, cons
 The plugin must behave differently depending on the bundler mode:
 
 - **Build mode** (`vite build`, `rsbuild build`): assets are written to `outputPath` with content hashes; `entrypoints.json`/`manifest.json` point at those files under `publicPath`.
-- **Serve/dev mode** (`vite`, `rsbuild dev`): the bundler's own dev server holds modules in memory and serves them over HTTP with native ESM + HMR. Here `entrypoints.json` must instead point at the dev server origin (e.g. `http://127.0.0.1:5173/build/app.js`) and inject the HMR client (`@vite/client`; React additionally needs the refresh preamble), so WebpackEncoreBundle's Twig tags load from the running dev server rather than from disk.
+- **Serve/dev mode** (`vite`, `rsbuild dev`): the bundler's own dev server holds modules in memory and serves them over HTTP with native ESM + HMR. Here `entrypoints.json` must instead point at the dev server origin (e.g. `http://127.0.0.1:5173/build/app.js`) and inject the HMR client (`@vite/client`; React additionally needs the refresh preamble), so RepriseBundle's Twig tags load from the running dev server rather than from disk.
 
 The dev server itself is native to Vite/Rsbuild — this plugin does not run one. Its only dev-server responsibility is detecting the mode (unplugin `meta`, or Vite's `configResolved` `command === 'serve'` vs `'build'`; Rsbuild/Rspack expose the same distinction) and emitting the dev-flavored `entrypoints.json` plus client injection. Encore's counterpart is `configureDevServerOptions()` (webpack-dev-server) in the reference `index.ts`, but that whole layer is replaced by the native dev server.
 
@@ -95,5 +95,6 @@ Read-only clones under `.references/` (git-ignored) show how mature unplugins ar
 - ESM only, strict TypeScript, ES2017 target. Use the `node:` prefix for Node builtins.
 - New public options go in `assets/src/types.ts` with JSDoc; keep bundler adapters trivial.
 - Documentation: any user-facing feature ships with a short section in `doc/index.rst`, and that section shows **both** a Vite and an Rsbuild example (the two supported bundlers) — never document one without the other. Flip the matching `*(planned)*` marker in the feature lists (`doc/index.rst` and `README.md`) when the feature lands. Match the existing sections' natural voice; draft/polish the prose with the `natural-writing-editor` agent.
-- Commit messages: Symfony style `[<Scope>] <Short description>` — PascalCase scope, imperative mood, capitalized first word, no trailing period; combine scopes as `[A][B]` when a change spans several. E.g. `[Stimulus] Emit forward-slash local controller paths`, `[Docs] Frame Stimulus usage as the Encore experience`, `[CI] Cancel superseded runs with a concurrency group`. This is the convention used across Symfony UX and WebpackEncoreBundle — **not** Conventional Commits (no `feat:`/`fix:`/`chore:` prefixes).
+- Tests: a functional/integration test for one bundler (Vite or Rsbuild) always ships with its equivalent for the other — never cover one bundler without the other, including the negative/off cases.
+- Commit messages: Symfony style `[<Scope>] <Short description>` — PascalCase scope, imperative mood, capitalized first word, no trailing period. A feature commit uses the feature's **own name** as the scope (e.g. `[Integrity]`, `[Manifest]`) and does **not** tack on `[Tests]` or `[Docs]` for the tests and docs it naturally includes; `[Tests]`/`[Docs]` are only for changes that are _exclusively_ tests or documentation. Combine scopes as `[A][B]` only when a change genuinely spans several distinct components. E.g. `[Stimulus] Emit forward-slash local controller paths`, `[Docs] Frame Stimulus usage as the Encore experience`, `[CI] Cancel superseded runs with a concurrency group`. This is the convention used across Symfony UX and WebpackEncoreBundle — **not** Conventional Commits (no `feat:`/`fix:`/`chore:` prefixes).
 - Releases: the published npm package lives in `assets/` (`@symfony/reprise`); its `prepublishOnly` runs the `tsdown` build before publish.
