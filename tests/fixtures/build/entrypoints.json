@@ -1,0 +1,23 @@
+{
+    "isProd": true,
+    "devServer": null,
+    "publicPath": "/build/",
+    "entryPoints": {
+        "app": {
+            "js": ["/build/app-a1b2.js"],
+            "css": ["/build/app-c3d4.css"],
+            "preload": ["/build/shared-e5f6.js"],
+            "dynamic": ["/build/lazy-x.js"]
+        },
+        "admin": {
+            "js": ["/build/admin-99.js"],
+            "css": [],
+            "preload": ["/build/shared-e5f6.js"],
+            "dynamic": []
+        }
+    },
+    "integrity": {
+        "/build/app-a1b2.js": "sha384-app",
+        "/build/shared-e5f6.js": "sha384-shared"
+    }
+}

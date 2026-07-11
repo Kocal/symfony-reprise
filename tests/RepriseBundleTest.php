@@ -29,7 +29,7 @@ final class RepriseBundleTest extends TestCase
     }
 
     #[DataProvider('provideKernels')]
-    public function testBundleBootsInAKernel(Kernel $kernel): void
+    public function testBundleBootsInAKernel(Kernel $kernel)
     {
         $kernel->boot();
 

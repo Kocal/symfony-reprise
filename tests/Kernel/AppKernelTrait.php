@@ -11,11 +11,6 @@
 
 namespace Symfony\Reprise\Tests\Kernel;
 
-/**
- * @author Hugo Alliaume <hugo@alliau.me>
- *
- * @internal
- */
 trait AppKernelTrait
 {
     public function getCacheDir(): string
