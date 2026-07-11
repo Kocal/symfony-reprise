@@ -7,28 +7,45 @@ interface ViteChunkMetadata {
 }
 type ViteOutputChunk = Rollup.OutputChunk & { viteMetadata?: ViteChunkMetadata };
 
-export function bundleToGraph(bundle: Rollup.OutputBundle): NormalizedGraph {
+export function bundleToGraph(bundle: Rollup.OutputBundle, root: string): NormalizedGraph {
     const entryPoints: Record<string, EntryFiles> = {};
     const assets: AssetEntry[] = [];
+    // File names of the CSS emitted for any chunk (entry or lazily-imported). It stays keyed by its
+    // logical name (e.g. `app.css`, `map_controller.css`), matching Rsbuild's chunk-name keying;
+    // Vite reports its `originalFileNames` as the importing JS module, so the source-path branch
+    // below (for imported images/fonts) must not apply to it.
+    const chunkCss = new Set<string>();
 
     for (const file of Object.values(bundle)) {
-        if (file.type === 'chunk') {
-            if (file.isEntry) {
-                const chunk = file as ViteOutputChunk;
-                entryPoints[chunk.name] = {
-                    js: [chunk.fileName],
-                    css: chunk.viteMetadata ? [...chunk.viteMetadata.importedCss] : [],
-                    preload: [...chunk.imports],
-                    dynamic: [...chunk.dynamicImports],
-                };
-                assets.push({ logicalName: `${chunk.name}.js`, fileName: chunk.fileName });
-            }
-        } else {
-            assets.push({ logicalName: file.names[0] ?? file.fileName, fileName: file.fileName });
-        }
+        if (file.type !== 'chunk') continue;
+        const chunk = file as ViteOutputChunk;
+        const css = chunk.viteMetadata ? [...chunk.viteMetadata.importedCss] : [];
+        for (const name of css) chunkCss.add(name);
+        if (!chunk.isEntry) continue;
+        entryPoints[chunk.name] = {
+            js: [chunk.fileName],
+            css,
+            preload: [...chunk.imports],
+            dynamic: [...chunk.dynamicImports],
+        };
+        assets.push({ logicalName: `${chunk.name}.js`, fileName: chunk.fileName });
+    }
+
+    for (const file of Object.values(bundle)) {
+        if (file.type !== 'asset') continue;
+        assets.push({ logicalName: assetLogicalName(file, root, chunkCss), fileName: file.fileName });
     }
 
     return { entryPoints, assets };
+}
+
+function assetLogicalName(file: Rollup.OutputAsset, root: string, chunkCss: Set<string>): string {
+    // Imported assets (images, fonts) get their source path relative to the project root, so the
+    // manifest key matches Rsbuild's `sourceFilename` and same-basename files in different folders
+    // stay distinct. Chunk CSS and assets with no source path fall back to the basename.
+    const original = chunkCss.has(file.fileName) ? undefined : file.originalFileNames[0];
+    if (original) return slash(relative(root, resolve(root, original)));
+    return file.names[0] ?? file.fileName;
 }
 
 const CSS_EXTS = new Set(['.css', '.scss', '.sass', '.less', '.styl', '.stylus', '.postcss', '.pcss']);

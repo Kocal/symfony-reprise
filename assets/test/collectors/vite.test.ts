@@ -11,8 +11,8 @@ function chunk(partial: Partial<Rollup.OutputChunk> & { fileName: string; name: 
     };
 }
 
-function asset(fileName: string, names: string[]): any {
-    return { type: 'asset', fileName, names, originalFileNames: [], source: '' };
+function asset(fileName: string, names: string[], originalFileNames: string[] = []): any {
+    return { type: 'asset', fileName, names, originalFileNames, source: '' };
 }
 
 describe('bundleToGraph', () => {
@@ -33,7 +33,7 @@ describe('bundleToGraph', () => {
             'app-c3.css': asset('app-c3.css', ['app.css']),
         } as unknown as Rollup.OutputBundle;
 
-        const graph = bundleToGraph(bundle);
+        const graph = bundleToGraph(bundle, '/app');
 
         expect(graph.entryPoints.app).toEqual({
             js: ['app-a1b2.js'],
@@ -45,13 +45,13 @@ describe('bundleToGraph', () => {
         expect(graph.entryPoints.vendor).toBeUndefined();
     });
 
-    it('collects manifest assets: entry chunks by "<name>.js" and assets by names[0]', () => {
+    it('collects manifest assets: entry chunks by "<name>.js" and assets by names[0] without a source path', () => {
         const bundle = {
             'app-a1b2.js': chunk({ fileName: 'app-a1b2.js', name: 'app', isEntry: true }),
             'app-c3.css': asset('app-c3.css', ['app.css']),
         } as unknown as Rollup.OutputBundle;
 
-        const graph = bundleToGraph(bundle);
+        const graph = bundleToGraph(bundle, '/app');
 
         expect(graph.assets).toContainEqual({ logicalName: 'app.js', fileName: 'app-a1b2.js' });
         expect(graph.assets).toContainEqual({ logicalName: 'app.css', fileName: 'app-c3.css' });
@@ -63,9 +63,72 @@ describe('bundleToGraph', () => {
             'noname-x.png': asset('noname-x.png', []),
         } as unknown as Rollup.OutputBundle;
 
-        const graph = bundleToGraph(bundle);
+        const graph = bundleToGraph(bundle, '/app');
 
         expect(graph.assets).toContainEqual({ logicalName: 'noname-x.png', fileName: 'noname-x.png' });
+    });
+
+    it('keys imported assets by their source path relative to root (not the basename)', () => {
+        const bundle = {
+            'app-a1b2.js': chunk({ fileName: 'app-a1b2.js', name: 'app', isEntry: true }),
+            'krkr-h.webp': asset('krkr-h.webp', ['krkr.webp'], ['/app/assets/images/krkr.webp']),
+        } as unknown as Rollup.OutputBundle;
+
+        const graph = bundleToGraph(bundle, '/app');
+
+        expect(graph.assets).toContainEqual({ logicalName: 'assets/images/krkr.webp', fileName: 'krkr-h.webp' });
+    });
+
+    it('gives same-basename assets from different directories distinct keys', () => {
+        const bundle = {
+            'app-a1b2.js': chunk({ fileName: 'app-a1b2.js', name: 'app', isEntry: true }),
+            'pic-1.png': asset('pic-1.png', ['pic.png'], ['/app/a/pic.png']),
+            'pic-2.png': asset('pic-2.png', ['pic.png'], ['/app/b/pic.png']),
+        } as unknown as Rollup.OutputBundle;
+
+        const graph = bundleToGraph(bundle, '/app');
+
+        expect(graph.assets).toContainEqual({ logicalName: 'a/pic.png', fileName: 'pic-1.png' });
+        expect(graph.assets).toContainEqual({ logicalName: 'b/pic.png', fileName: 'pic-2.png' });
+    });
+
+    it('keeps entry CSS keyed by name, not by its importing chunk path', () => {
+        const bundle = {
+            'app-a1b2.js': {
+                ...chunk({ fileName: 'app-a1b2.js', name: 'app', isEntry: true }),
+                viteMetadata: { importedCss: new Set(['app-c3.css']), importedAssets: new Set() },
+            },
+            // Vite/rolldown reports the entry CSS's originalFileNames as the importing JS, which would
+            // be a misleading manifest key — the entry-CSS branch must win over the source-path branch.
+            'app-c3.css': asset('app-c3.css', ['app.css'], ['/app/assets/app.js']),
+        } as unknown as Rollup.OutputBundle;
+
+        const graph = bundleToGraph(bundle, '/app');
+
+        expect(graph.assets).toContainEqual({ logicalName: 'app.css', fileName: 'app-c3.css' });
+        expect(graph.assets.some((a) => a.logicalName === 'assets/app.js')).toBe(false);
+    });
+
+    it('keeps async (non-entry) chunk CSS keyed by name, not its importing module path', () => {
+        const bundle = {
+            'app-a1b2.js': chunk({ fileName: 'app-a1b2.js', name: 'app', isEntry: true }),
+            // A lazily-imported controller: its chunk is not an entry, but it still pulls in CSS whose
+            // originalFileNames points at the importing JS (here inside node_modules).
+            'map-x.js': {
+                ...chunk({ fileName: 'map-x.js', name: 'map_controller', isEntry: false }),
+                viteMetadata: { importedCss: new Set(['map-c.css']), importedAssets: new Set() },
+            },
+            'map-c.css': asset(
+                'map-c.css',
+                ['map_controller.css'],
+                ['/app/node_modules/@x/ux-map/dist/map_controller.js']
+            ),
+        } as unknown as Rollup.OutputBundle;
+
+        const graph = bundleToGraph(bundle, '/app');
+
+        expect(graph.assets).toContainEqual({ logicalName: 'map_controller.css', fileName: 'map-c.css' });
+        expect(graph.assets.some((a) => a.logicalName.includes('node_modules'))).toBe(false);
     });
 });
 
