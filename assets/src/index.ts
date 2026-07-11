@@ -17,8 +17,12 @@ const VIRTUAL_ID = VIRTUAL_CONTROLLERS_ID;
 const RESOLVED_VIRTUAL_ID = `\0${VIRTUAL_ID}`;
 
 export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _meta) => {
-    const resolved = normalizeOptions(options, process.cwd());
+    const cwd = process.cwd();
+    const resolved = normalizeOptions(options, cwd);
     let isDev = false;
+    // Vite's project root, captured in `configResolved` (defaults to cwd). Used to key imported
+    // assets relative to it in `bundleToGraph`, matching Rsbuild's context-relative sourceFilename.
+    let root = cwd;
     // When SRI is on, entrypoints.json is finished in `writeBundle` (see below); stash what it needs.
     let pendingIntegrity: { graph: NormalizedGraph; ctx: BuildContext } | null = null;
 
@@ -37,7 +41,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
             }),
 
             generateBundle(_outputOptions, bundle) {
-                const graph = bundleToGraph(bundle);
+                const graph = bundleToGraph(bundle, root);
                 const ctx: BuildContext = {
                     isProd: true,
                     devServer: null,
@@ -89,6 +93,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
 
             configResolved(config) {
                 isDev = config.command === 'serve';
+                root = config.root;
             },
 
             resolveId(id) {
@@ -102,7 +107,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
 
             load(id) {
                 if (resolved.stimulus && id === RESOLVED_VIRTUAL_ID)
-                    return generateControllersModule(resolved.stimulus, process.cwd(), isDev);
+                    return generateControllersModule(resolved.stimulus, cwd, isDev);
             },
 
             configureServer(server) {
