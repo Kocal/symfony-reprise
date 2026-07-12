@@ -96,3 +96,33 @@ describe('rsbuild dev writes absolute dev-server URLs and no HTML', () => {
         expect(htmlFiles).toEqual([]);
     }, 60_000);
 });
+
+describe('rsbuild dev pins the HMR client to the loopback dev-server origin', () => {
+    it('sets dev.client host/port/protocol so HMR and lazy compilation target the dev server', async () => {
+        const out = mkdtempSync(join(tmpdir(), 'ups-rsbuild-devclient-'));
+        const rsbuild = await createRsbuild({
+            cwd: fixture,
+            rsbuildConfig: {
+                mode: 'development',
+                source: { entry: { app: join(fixture, 'app.js') } },
+                plugins: [Symfony({ outputPath: out, publicPath: '/build/' })],
+            },
+        });
+
+        const { origin } = await rsbuild.inspectConfig();
+
+        // Without this, the compiled HMR client derives its socket URL from window.location (the
+        // Symfony page) and 404s. `<port>` is substituted with the real port at server start; the
+        // 127.0.0.1 loopback host keeps `ws://` allowed from an HTTPS Symfony page; `ws` matches the
+        // plain-HTTP dev server. Lazy compilation reads the same config.
+        expect(origin.rsbuildConfig.dev?.client).toMatchObject({
+            host: '127.0.0.1',
+            port: '<port>',
+            protocol: 'ws',
+        });
+
+        // Async chunks build their URLs from the dev runtime publicPath; it must point at the dev
+        // server + publicPath (verbatim, `<port>` resolved at start), not the page origin.
+        expect(origin.rsbuildConfig.dev?.assetPrefix).toBe('http://127.0.0.1:<port>/build/');
+    });
+});

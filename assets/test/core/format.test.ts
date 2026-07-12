@@ -19,13 +19,13 @@ const graph: NormalizedGraph = {
 };
 
 describe('buildEntrypoints', () => {
-    it('prefixes every asset list with publicPath', () => {
+    it('emits docroot-relative references (no leading slash) for a build', () => {
         const out = buildEntrypoints(graph, ctx);
         expect(out.entryPoints.app).toEqual({
-            js: ['/build/app-a1b2.js'],
-            css: ['/build/app-c3d4.css'],
-            preload: ['/build/vendor-e5f6.js'],
-            dynamic: ['/build/lazy-x.js'],
+            js: ['build/app-a1b2.js'],
+            css: ['build/app-c3d4.css'],
+            preload: ['build/vendor-e5f6.js'],
+            dynamic: ['build/lazy-x.js'],
         });
     });
 
@@ -38,22 +38,22 @@ describe('buildEntrypoints', () => {
 
     it('keeps empty arrays for entries without css/preload/dynamic', () => {
         const out = buildEntrypoints(graph, ctx);
-        expect(out.entryPoints.admin).toEqual({ js: ['/build/admin-99.js'], css: [], preload: [], dynamic: [] });
+        expect(out.entryPoints.admin).toEqual({ js: ['build/admin-99.js'], css: [], preload: [], dynamic: [] });
     });
 
-    it('inserts a slash when urlPrefix has no trailing slash', () => {
+    it('strips the leading slash even when urlPrefix has no trailing slash', () => {
         const out = buildEntrypoints(graph, { ...ctx, urlPrefix: '/build' });
-        expect(out.entryPoints.app.js).toEqual(['/build/app-a1b2.js']);
+        expect(out.entryPoints.app.js).toEqual(['build/app-a1b2.js']);
     });
 
-    it('emits a top-level integrity map keyed by URL when the graph carries hashes', () => {
+    it('emits a top-level integrity map keyed by reference when the graph carries hashes', () => {
         const out = buildEntrypoints(
             { ...graph, integrity: { 'app-a1b2.js': 'sha384-JS', 'app-c3d4.css': 'sha384-CSS' } },
             ctx
         );
         expect(out.integrity).toEqual({
-            '/build/app-a1b2.js': 'sha384-JS',
-            '/build/app-c3d4.css': 'sha384-CSS',
+            'build/app-a1b2.js': 'sha384-JS',
+            'build/app-c3d4.css': 'sha384-CSS',
         });
     });
 
@@ -64,7 +64,7 @@ describe('buildEntrypoints', () => {
     it('builds URLs from urlPrefix but emits the original publicPath field', () => {
         const devCtx: BuildContext = {
             isProd: false,
-            devServer: { origin: 'http://127.0.0.1:5173', client: 'vite' },
+            devServer: { origin: 'http://127.0.0.1:5173', client: 'http://127.0.0.1:5173/build/@vite/client' },
             publicPath: '/build/',
             urlPrefix: 'http://127.0.0.1:5173/build/',
             manifestKeyPrefix: 'build/',
@@ -74,7 +74,10 @@ describe('buildEntrypoints', () => {
             devCtx
         );
         expect(out.publicPath).toBe('/build/');
-        expect(out.devServer).toEqual({ origin: 'http://127.0.0.1:5173', client: 'vite' });
+        expect(out.devServer).toEqual({
+            origin: 'http://127.0.0.1:5173',
+            client: 'http://127.0.0.1:5173/build/@vite/client',
+        });
         expect(out.entryPoints.app.js).toEqual(['http://127.0.0.1:5173/build/assets/app.js']);
     });
 });
@@ -104,7 +107,7 @@ describe('buildManifest', () => {
         const g: NormalizedGraph = { entryPoints: {}, assets: [{ logicalName: 'app.js', fileName: 'app-a1b2.js' }] };
         const devCtx: BuildContext = {
             isProd: false,
-            devServer: { origin: 'http://127.0.0.1:5173', client: 'vite' },
+            devServer: { origin: 'http://127.0.0.1:5173', client: 'http://127.0.0.1:5173/build/@vite/client' },
             publicPath: '/build/',
             urlPrefix: 'http://127.0.0.1:5173/build/',
             manifestKeyPrefix: 'build/',

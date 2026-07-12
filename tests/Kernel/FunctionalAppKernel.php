@@ -20,15 +20,20 @@ use Symfony\Reprise\Asset\EntrypointsLookupInterface;
 use Symfony\Reprise\RepriseBundle;
 
 /**
- * A framework kernel wired with a given Reprise `output_path`, exposing the lookup service
- * publicly so functional tests can fetch it from the container.
+ * A framework kernel wired with a given Reprise `output_path`, exposing the lookup and the tag
+ * renderer publicly so functional tests can fetch them from the container.
  */
 final class FunctionalAppKernel extends Kernel implements CompilerPassInterface
 {
     use AppKernelTrait;
 
-    public function __construct(private readonly string $outputPath)
-    {
+    /**
+     * @param array<string, mixed> $repriseConfig extra reprise config merged over `output_path`
+     */
+    public function __construct(
+        private readonly string $outputPath,
+        private readonly array $repriseConfig = [],
+    ) {
         parent::__construct('test', true);
     }
 
@@ -47,6 +52,7 @@ final class FunctionalAppKernel extends Kernel implements CompilerPassInterface
             ]);
             $container->loadFromExtension('reprise', [
                 'output_path' => $this->outputPath,
+                ...$this->repriseConfig,
             ]);
 
             // A user-land service autowiring the lookup by its interface.
@@ -64,5 +70,6 @@ final class FunctionalAppKernel extends Kernel implements CompilerPassInterface
     public function process(ContainerBuilder $container): void
     {
         $container->getAlias(EntrypointsLookupInterface::class)->setPublic(true);
+        $container->getDefinition('reprise.tag_renderer')->setPublic(true);
     }
 }

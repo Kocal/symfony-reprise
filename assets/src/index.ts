@@ -8,7 +8,7 @@ import { bundleToGraph, configToDevGraph } from './collectors/vite';
 import { copyManifest, resolveCopyFiles, writeCopyFiles } from './core/copy';
 import { resolveDevOrigin } from './core/dev-server';
 import { writeSymfonyFiles } from './core/emit';
-import { buildEntrypoints, buildManifest } from './core/format';
+import { buildEntrypoints, buildManifest, joinUrl } from './core/format';
 import { integrityFromDisk, referencedFileNames } from './core/integrity';
 import { normalizeOptions, resolvePublicPath } from './core/options';
 import { generateControllersModule, STIMULUS_NOT_ENABLED_MESSAGE, VIRTUAL_CONTROLLERS_ID } from './core/stimulus';
@@ -124,11 +124,15 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                     });
                     server.config.server.origin = origin; // keep Vite's internal URL rewriting in sync
 
+                    // Vite serves its HMR client under `base` (our publicPath), so the client URL is
+                    // `<origin><publicPath>@vite/client` — not `<origin>/@vite/client`. Emit the full URL
+                    // so the Symfony side injects it verbatim.
+                    const urlPrefix = resolvePublicPath(resolved.publicPath, origin);
                     const ctx: BuildContext = {
                         isProd: false,
-                        devServer: { origin, client: 'vite' },
+                        devServer: { origin, client: joinUrl(urlPrefix, '@vite/client') },
                         publicPath: resolved.publicPath,
-                        urlPrefix: resolvePublicPath(resolved.publicPath, origin),
+                        urlPrefix,
                         manifestKeyPrefix: resolved.manifestKeyPrefix,
                     };
                     try {

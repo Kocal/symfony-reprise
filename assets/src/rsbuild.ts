@@ -69,6 +69,39 @@ export default function symfony(options?: Options): RsbuildPlugin {
                 // This drives the production build's asset URLs; in dev the serving path comes from
                 // `server.base` above.
                 config.output.assetPrefix = resolved.publicPath;
+                // Standardise on ESM so the tags render as `<script type="module">` like Vite.
+                config.output.module = true;
+
+                // HMR + lazy-compilation client. Rspack compiles the client INTO the bundle, and by
+                // default it derives its WebSocket URL from `window.location` — which is the Symfony
+                // page, not our dev server — so HMR and the `/_rspack/lazy/trigger` request hit the
+                // wrong origin (Symfony 404s them). Pin the client to the dev-server origin instead.
+                // `<port>` is a token Rsbuild substitutes with the real resolved port at server start
+                // (the port is dynamic and unknown in this config-time hook). `127.0.0.1` is a
+                // loopback host, which is "potentially trustworthy", so `ws://` is allowed even when
+                // Symfony serves the page over HTTPS (it is not mixed content). Setting the protocol
+                // explicitly stops the client inferring `wss` from an HTTPS page when the dev server
+                // itself is plain HTTP. Lazy compilation reads the same `dev.client`, so this fixes it
+                // too. (A non-loopback dev host with an HTTPS Symfony page would need the dev server on
+                // HTTPS; the loopback default needs no TLS on the dev server.)
+                config.dev ??= {};
+                config.dev.client = {
+                    ...config.dev.client,
+                    host: '127.0.0.1',
+                    port: '<port>',
+                    protocol: config.server.https ? 'wss' : 'ws',
+                };
+                // Async chunks (code-split JS/CSS, e.g. a lazy Stimulus controller's stylesheet) load
+                // through Rspack's chunk-loading runtime, which builds their URLs from
+                // `output.publicPath`. In dev that comes from `dev.assetPrefix` (default `/`), so the
+                // chunks resolve against the Symfony page origin and 404. The string form is used
+                // verbatim — `server.base` is NOT composed in — so it must carry the full publicPath;
+                // `<port>` is substituted with the real dev-server port at server start. Skip an
+                // absolute (CDN) publicPath, which the local dev server can't serve (mirrors the
+                // `server.base` fallback above). Dev-only: the production build uses `output.assetPrefix`.
+                if (!resolved.publicPath.includes('://')) {
+                    config.dev.assetPrefix = `${config.server.https ? 'https' : 'http'}://127.0.0.1:<port>${resolved.publicPath}`;
+                }
 
                 // Handle the bare virtual specifier. `resolve.alias` cannot: Rspack's resolver
                 // (enhanced-resolve) treats any request matching a URI-scheme pattern
@@ -83,7 +116,12 @@ export default function symfony(options?: Options): RsbuildPlugin {
                 const prevList = Array.isArray(prev) ? prev : prev ? [prev] : [];
                 config.tools.rspack = [
                     ...prevList,
-                    (_rspackConfig, { appendPlugins }) => {
+                    (rspackConfig, { appendPlugins }) => {
+                        rspackConfig.experiments ??= {};
+                        rspackConfig.experiments.outputModule = true;
+                        rspackConfig.output ??= {};
+                        rspackConfig.output.module = true;
+                        rspackConfig.output.chunkFormat = 'module';
                         if (vmPlugin) {
                             // Stimulus enabled: redirect to the absolute path backed by `vmPlugin` (see above).
                             appendPlugins([

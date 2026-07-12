@@ -13,9 +13,11 @@ namespace Symfony\Reprise\Tests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Reprise\Tests\Kernel\EmptyAppKernel;
 use Symfony\Reprise\Tests\Kernel\FrameworkAppKernel;
+use Symfony\Reprise\Tests\Kernel\FunctionalAppKernel;
 
 final class RepriseBundleTest extends TestCase
 {
@@ -34,5 +36,14 @@ final class RepriseBundleTest extends TestCase
         $kernel->boot();
 
         $this->assertArrayHasKey('RepriseBundle', $kernel->getBundles());
+    }
+
+    public function testRejectsAnInvalidCrossoriginValue()
+    {
+        // crossorigin is an enum: any value other than false/anonymous/use-credentials is a config
+        // error surfaced at container-compile time, not silently rendered onto the tags.
+        $this->expectException(InvalidConfigurationException::class);
+
+        new FunctionalAppKernel(__DIR__.'/fixtures/build', ['crossorigin' => 'not-valid'])->boot();
     }
 }

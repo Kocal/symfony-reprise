@@ -15,13 +15,16 @@
         }
     ],
     "require": {
-        "php": ">=8.4"
+        "php": ">=8.4",
+        "symfony/asset": "^7.4|^8.0",
+        "twig/twig": "^3.0"
     },
     "require-dev": {
         "symfony/framework-bundle": "^7.4|^8.0",
         "phpunit/phpunit": "^13.2",
         "phpstan/phpstan": "^2.2",
-        "friendsofphp/php-cs-fixer": "^3.95"
+        "friendsofphp/php-cs-fixer": "^3.95",
+        "symfony/web-link": "^7.4|^8.0"
     },
     "autoload": {
         "psr-4": { "Symfony\\Reprise\\": "src/" }

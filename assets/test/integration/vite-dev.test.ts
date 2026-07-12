@@ -32,10 +32,11 @@ describe('vite serve writes a dev entrypoints.json', () => {
 
         expect(entry.isProd).toBe(false);
         expect(entry.publicPath).toBe('/build/');
-        expect(entry.devServer.client).toBe('vite');
-        expect(entry.devServer.origin).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
-
         const origin = entry.devServer.origin;
+        expect(origin).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+        // The HMR client is served under `base` (our publicPath), so its URL carries `/build/`.
+        expect(entry.devServer.client).toBe(`${origin}/build/@vite/client`);
+
         expect(Object.keys(entry.entryPoints).sort()).toEqual(['admin', 'app']);
         expect(entry.entryPoints.app.js).toEqual([`${origin}/build/app.js`]);
         expect(entry.entryPoints.app.css).toEqual([]);

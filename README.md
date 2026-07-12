@@ -30,12 +30,13 @@ Symfony Reprise covers only the Symfony-side glue the bundlers leave out:
 - 🔖 **Asset versioning**: content-hash cache busting, wired into the manifest
 - 📁 **File copy**: copy static files (images, fonts…) into the build, keyed in the manifest
 - 🔥 **Dev server & HMR**: points Twig at the running Vite/Rsbuild server
+- 🏷️ **Twig tag rendering**: `reprise_entry_script_tags`/`reprise_entry_link_tags` render straight from `entrypoints.json`
 - 🧩 **Symfony UX / Stimulus**: registers `controllers.json` and local controllers, eager or lazy
 - 🌐 **CDN support**: serve built assets from an absolute `publicPath`
 - 🛡️ **Subresource Integrity**: SRI hashes in `entrypoints.json`
 
 Vite and Rsbuild already handle **Sass/Less/PostCSS**, **TypeScript**, **JSX/Vue/Svelte**, **code splitting**, **content hashing**, **source maps**, **minification** and **HMR** on their own, so Symfony Reprise does not reimplement any of that.
 
-It generates the Encore-compatible `entrypoints.json` and `manifest.json` that Reprise's own Symfony bundle (`RepriseBundle`, still a stub) reads to render the `<script>` and `<link>` tags, wires up the native dev server, and turns your Stimulus controllers into a running application.
+It generates the Encore-compatible `entrypoints.json` and `manifest.json` that Reprise's own Symfony bundle (`RepriseBundle`) reads to render the `<script>` and `<link>` tags, wires up the native dev server, and turns your Stimulus controllers into a running application.
 
 [Read the documentation](doc/index.rst)

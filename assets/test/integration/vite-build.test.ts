@@ -33,9 +33,9 @@ describe('vite build emits Symfony files', () => {
         expect(entry.publicPath).toBe('/build/');
         expect(Object.keys(entry.entryPoints).sort()).toEqual(['admin', 'app']);
         expect(entry.entryPoints.app.js).toHaveLength(1);
-        expect(entry.entryPoints.app.js[0]).toMatch(/^\/build\/app-.*\.js$/);
-        expect(entry.entryPoints.app.css[0]).toMatch(/^\/build\/.*\.css$/);
-        expect(entry.entryPoints.app.dynamic[0]).toMatch(/^\/build\/.*\.js$/);
+        expect(entry.entryPoints.app.js[0]).toMatch(/^build\/app-.*\.js$/);
+        expect(entry.entryPoints.app.css[0]).toMatch(/^build\/.*\.css$/);
+        expect(entry.entryPoints.app.dynamic[0]).toMatch(/^build\/.*\.js$/);
     }, 30_000);
 
     it('writes a flat manifest.json with logical keys and public URLs', async () => {

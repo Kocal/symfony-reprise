@@ -1,10 +1,10 @@
 {
     "isProd": false,
-    "devServer": { "origin": "http://127.0.0.1:5173", "client": "http://127.0.0.1:5173/build/@vite/client" },
+    "devServer": { "origin": "http://127.0.0.1:3000", "client": null },
     "publicPath": "/build/",
     "entryPoints": {
         "app": {
-            "js": ["http://127.0.0.1:5173/build/app.js"],
+            "js": ["http://127.0.0.1:3000/build/app.js"],
             "css": [],
             "preload": [],
             "dynamic": []

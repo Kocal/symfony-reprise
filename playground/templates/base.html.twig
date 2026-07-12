@@ -5,16 +5,16 @@
         <title>{% block title %}Welcome!{% endblock %}</title>
         <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
         {% block stylesheets %}
-            <link rel="stylesheet" href="{{ asset('build/static/css/app.90dc3bdd26.css') }}">
+            {{ encore_entry_link_tags('app') }}
+            {{ reprise_entry_link_tags('app') }}
         {% endblock %}
 
         {% block javascripts %}
-            <script src="{{ asset('build/static/js/327.cefc8c56dd.js') }}" type="module"></script>
-            <script src="{{ asset('build/static/js/app.c02f8f4d26.js') }}" type="module"></script>
+            {{ encore_entry_script_tags('app') }}
+            {{ reprise_entry_script_tags('app') }}
         {% endblock %}
     </head>
     <body>
         {% block body %}{% endblock %}
-        <div data-controller="hello"></div>
     </body>
 </html>
