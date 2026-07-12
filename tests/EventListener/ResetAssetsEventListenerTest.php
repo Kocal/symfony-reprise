@@ -38,7 +38,7 @@ final class ResetAssetsEventListenerTest extends TestCase
         new ResetAssetsEventListener($lookup)->onFinishRequest($this->finishRequest(HttpKernelInterface::MAIN_REQUEST));
 
         // After the reset the shared chunk is offered again to the next request.
-        $this->assertSame(['/build/shared-e5f6.js'], $lookup->getPreloadFiles('admin'));
+        $this->assertSame(['build/shared-e5f6.js'], $lookup->getPreloadFiles('admin'));
     }
 
     public function testIgnoresSubRequests()

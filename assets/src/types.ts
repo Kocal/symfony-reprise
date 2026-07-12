@@ -179,7 +179,12 @@ export interface EntryFiles {
 
 export interface DevServer {
     origin: string;
-    client: 'vite' | null;
+    /**
+     * URL of the HMR client script to inject (Vite serves it under `base`, e.g.
+     * `http://127.0.0.1:5173/build/@vite/client`), or `null` when the bundler compiles its client
+     * into the entry (Rsbuild) so nothing extra needs to be rendered.
+     */
+    client: string | null;
 }
 
 export interface AssetEntry {

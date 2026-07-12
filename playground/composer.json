@@ -28,7 +28,8 @@
         "symfony/ux-map": "^3.2",
         "symfony/ux-leaflet-map": "^3.2",
         "symfony/console": "7.4.*|8.1.*",
-        "symfony/dotenv": "7.4.*|8.1.*"
+        "symfony/dotenv": "7.4.*|8.1.*",
+        "symfony/reprise": "@dev"
     },
     "config": {
         "allow-plugins": {
@@ -52,5 +53,13 @@
             "allow-contrib": true,
             "require": "7.4.*|8.1.*"
         }
-    }
+    },
+    "repositories": [{
+        "name": "reprise",
+        "type": "path",
+        "url": "..",
+        "options": {
+            "symlink": true
+        }
+    }]
 }

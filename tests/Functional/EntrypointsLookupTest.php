@@ -9,14 +9,14 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\Reprise\Tests\Asset;
+namespace Symfony\Reprise\Tests\Functional;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Reprise\Asset\EntrypointsLookupInterface;
 use Symfony\Reprise\Tests\Kernel\FunctionalAppKernel;
 use Symfony\Reprise\Tests\Kernel\LookupConsumer;
 
-final class EntrypointsLookupFunctionalTest extends TestCase
+final class EntrypointsLookupTest extends TestCase
 {
     public function testTheLookupIsWiredFromConfigAndResolvesAnEntry()
     {
@@ -26,7 +26,7 @@ final class EntrypointsLookupFunctionalTest extends TestCase
         $lookup = $kernel->getContainer()->get(EntrypointsLookupInterface::class);
 
         $this->assertInstanceOf(EntrypointsLookupInterface::class, $lookup);
-        $this->assertSame(['/build/app-a1b2.js'], $lookup->getJavaScriptFiles('app'));
+        $this->assertSame(['build/app-a1b2.js'], $lookup->getJavaScriptFiles('app'));
         $this->assertTrue($lookup->isProd());
     }
 
@@ -38,6 +38,6 @@ final class EntrypointsLookupFunctionalTest extends TestCase
         $consumer = $kernel->getContainer()->get(LookupConsumer::class);
 
         $this->assertInstanceOf(LookupConsumer::class, $consumer);
-        $this->assertSame(['/build/app-a1b2.js'], $consumer->lookup->getJavaScriptFiles('app'));
+        $this->assertSame(['build/app-a1b2.js'], $consumer->lookup->getJavaScriptFiles('app'));
     }
 }

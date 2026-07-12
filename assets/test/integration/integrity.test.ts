@@ -15,9 +15,9 @@ const fixture = join(import.meta.dirname, '../fixtures/basic');
 function assertIntegrityMatchesDisk(out: string, integrity: Record<string, string>): void {
     expect(Object.keys(integrity).length).toBeGreaterThan(0);
     for (const [url, sri] of Object.entries(integrity)) {
-        expect(url).toMatch(/^\/build\//);
+        expect(url).toMatch(/^build\//);
         expect(sri).toMatch(/^sha384-/);
-        const diskPath = join(out, url.replace(/^\/build\//, ''));
+        const diskPath = join(out, url.replace(/^build\//, ''));
         expect(computeIntegrity(readFileSync(diskPath), ['sha384'])).toBe(sri);
     }
 }

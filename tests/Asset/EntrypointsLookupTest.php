@@ -28,10 +28,10 @@ final class EntrypointsLookupTest extends TestCase
     {
         $lookup = $this->lookup();
 
-        $this->assertSame(['/build/app-a1b2.js'], $lookup->getJavaScriptFiles('app'));
-        $this->assertSame(['/build/app-c3d4.css'], $lookup->getCssFiles('app'));
-        $this->assertSame(['/build/shared-e5f6.js'], $lookup->getPreloadFiles('app'));
-        $this->assertSame(['/build/lazy-x.js'], $lookup->getDynamicFiles('app'));
+        $this->assertSame(['build/app-a1b2.js'], $lookup->getJavaScriptFiles('app'));
+        $this->assertSame(['build/app-c3d4.css'], $lookup->getCssFiles('app'));
+        $this->assertSame(['build/shared-e5f6.js'], $lookup->getPreloadFiles('app'));
+        $this->assertSame(['build/lazy-x.js'], $lookup->getDynamicFiles('app'));
     }
 
     public function testDeduplicatesSharedFilesAcrossCalls()
@@ -39,10 +39,10 @@ final class EntrypointsLookupTest extends TestCase
         $lookup = $this->lookup();
 
         // app pulls the shared preload chunk...
-        $this->assertSame(['/build/shared-e5f6.js'], $lookup->getPreloadFiles('app'));
+        $this->assertSame(['build/shared-e5f6.js'], $lookup->getPreloadFiles('app'));
         // ...admin references the same chunk, but it must not be emitted twice on one page.
         $this->assertSame([], $lookup->getPreloadFiles('admin'));
-        $this->assertSame(['/build/admin-99.js'], $lookup->getJavaScriptFiles('admin'));
+        $this->assertSame(['build/admin-99.js'], $lookup->getJavaScriptFiles('admin'));
     }
 
     public function testResetClearsDeduplicationState()
@@ -52,7 +52,7 @@ final class EntrypointsLookupTest extends TestCase
         $lookup->getPreloadFiles('app');
         $lookup->reset();
 
-        $this->assertSame(['/build/shared-e5f6.js'], $lookup->getPreloadFiles('admin'));
+        $this->assertSame(['build/shared-e5f6.js'], $lookup->getPreloadFiles('admin'));
     }
 
     public function testEntryExists()
@@ -69,7 +69,7 @@ final class EntrypointsLookupTest extends TestCase
 
         $this->assertTrue($lookup->isProd());
         $this->assertNull($lookup->getDevServer());
-        $this->assertSame('sha384-app', $lookup->getIntegrityData()['/build/app-a1b2.js']);
+        $this->assertSame('sha384-app', $lookup->getIntegrityData()['build/app-a1b2.js']);
     }
 
     public function testExposesTheDevServerAndDevModeForAServeFlavouredFile()
@@ -83,7 +83,7 @@ final class EntrypointsLookupTest extends TestCase
         $devServer = $lookup->getDevServer();
         $this->assertNotNull($devServer);
         $this->assertSame('http://127.0.0.1:5173', $devServer->origin);
-        $this->assertSame('vite', $devServer->client);
+        $this->assertSame('http://127.0.0.1:5173/build/@vite/client', $devServer->client);
     }
 
     public function testThrowsWhenTheFileIsNotAJsonObject()

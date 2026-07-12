@@ -25,7 +25,7 @@ describe('rsbuild build emits Symfony files and no HTML', () => {
         expect(entry.devServer).toBeNull();
         expect(entry.publicPath).toBe('/build/');
         expect(Object.keys(entry.entryPoints).sort()).toEqual(['admin', 'app']);
-        expect(entry.entryPoints.app.js.some((u: string) => /^\/build\/.*\.js$/.test(u))).toBe(true);
+        expect(entry.entryPoints.app.js.some((u: string) => /^build\/.*\.js$/.test(u))).toBe(true);
 
         const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
         expect(Object.keys(manifest).length).toBeGreaterThan(0);
@@ -60,5 +60,24 @@ describe('rsbuild build emits Symfony files and no HTML', () => {
 
         const entry = JSON.parse(readFileSync(join(outputPath, 'entrypoints.json'), 'utf8'));
         expect(Object.keys(entry.entryPoints)).toEqual(['app']);
+    }, 60_000);
+
+    it('emits ES-module output (loadable under <script type="module">)', async () => {
+        const out = mkdtempSync(join(tmpdir(), 'ups-rsbuild-esm-'));
+        const rsbuild = await createRsbuild({
+            cwd: fixture,
+            rsbuildConfig: {
+                mode: 'production',
+                source: { entry: { app: join(fixture, 'app.js') } },
+                plugins: [Symfony({ outputPath: out, publicPath: '/build/' })],
+            },
+        });
+        await rsbuild.build();
+
+        // The entry JS chunk is an ES module: ESM output uses `export`/`import` at top level.
+        const entry = JSON.parse(readFileSync(join(out, 'entrypoints.json'), 'utf8'));
+        const appJs = (entry.entryPoints.app.js as string[]).find((u) => u.endsWith('.js'))!;
+        const contents = readFileSync(join(out, appJs.replace(/^build\//, '')), 'utf8');
+        expect(/\b(export|import)\b/.test(contents)).toBe(true);
     }, 60_000);
 });

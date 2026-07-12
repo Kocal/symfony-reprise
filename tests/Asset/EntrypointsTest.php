@@ -51,7 +51,7 @@ final class EntrypointsTest extends TestCase
     {
         $devServer = Entrypoints::fromArray([
             'isProd' => false,
-            'devServer' => ['origin' => 'http://localhost:5173', 'client' => 'vite'],
+            'devServer' => ['origin' => 'http://localhost:5173', 'client' => 'http://localhost:5173/build/@vite/client'],
             'publicPath' => '/build/',
             'entryPoints' => [],
             'integrity' => [],
@@ -59,7 +59,7 @@ final class EntrypointsTest extends TestCase
 
         $this->assertNotNull($devServer);
         $this->assertSame('http://localhost:5173', $devServer->origin);
-        $this->assertSame('vite', $devServer->client);
+        $this->assertSame('http://localhost:5173/build/@vite/client', $devServer->client);
     }
 
     public function testFromArrayDefaultsMissingOptionalSections()

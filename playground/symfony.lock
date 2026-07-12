@@ -44,6 +44,9 @@
             ".editorconfig"
         ]
     },
+    "symfony/reprise": {
+        "version": "dev-feat/twig-asset-tags"
+    },
     "symfony/routing": {
         "version": "7.3",
         "recipe": {
