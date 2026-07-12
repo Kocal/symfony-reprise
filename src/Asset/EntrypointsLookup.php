@@ -11,6 +11,7 @@
 
 namespace Symfony\Reprise\Asset;
 
+use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Reprise\Exception\EntrypointNotFoundException;
 use Symfony\Reprise\Exception\EntrypointsFileNotFoundException;
 use Symfony\Reprise\Exception\InvalidEntrypointsException;
@@ -36,6 +37,8 @@ final class EntrypointsLookup implements EntrypointsLookupInterface
     public function __construct(
         private readonly string $entrypointsPath,
         private readonly bool $strictMode = true,
+        private readonly ?CacheItemPoolInterface $cache = null,
+        private readonly string $cacheKey = 'reprise.entrypoints',
     ) {
     }
 
@@ -133,12 +136,31 @@ final class EntrypointsLookup implements EntrypointsLookupInterface
         }
         $this->loaded = true;
 
+        if (null === $this->cache) {
+            return $this->entrypoints = $this->load();
+        }
+
+        $item = $this->cache->getItem($this->cacheKey);
+        if ($item->isHit()) {
+            $entrypoints = $item->get();
+
+            return $this->entrypoints = $entrypoints instanceof Entrypoints ? $entrypoints : null;
+        }
+
+        $entrypoints = $this->load();
+        $this->cache->save($item->set($entrypoints));
+
+        return $this->entrypoints = $entrypoints;
+    }
+
+    private function load(): ?Entrypoints
+    {
         if (!is_file($this->entrypointsPath)) {
             if ($this->strictMode) {
                 throw new EntrypointsFileNotFoundException(\sprintf('Could not find the entrypoints file "%s". Did the assets get built?', $this->entrypointsPath));
             }
 
-            return $this->entrypoints = null;
+            return null;
         }
 
         $decoded = json_decode((string) file_get_contents($this->entrypointsPath), true, flags: \JSON_THROW_ON_ERROR);
@@ -146,6 +168,6 @@ final class EntrypointsLookup implements EntrypointsLookupInterface
             throw new InvalidEntrypointsException(\sprintf('The entrypoints file "%s" must contain a JSON object.', $this->entrypointsPath));
         }
 
-        return $this->entrypoints = Entrypoints::fromArray($decoded);
+        return Entrypoints::fromArray($decoded);
     }
 }

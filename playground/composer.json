@@ -29,7 +29,8 @@
         "symfony/ux-leaflet-map": "^3.2",
         "symfony/console": "7.4.*|8.1.*",
         "symfony/dotenv": "7.4.*|8.1.*",
-        "symfony/reprise": "@dev"
+        "symfony/reprise": "@dev",
+        "symfony/web-link": "7.4.*|8.1.*"
     },
     "config": {
         "allow-plugins": {
@@ -52,6 +53,9 @@
         "symfony": {
             "allow-contrib": true,
             "require": "7.4.*|8.1.*"
+        },
+        "symfony/flex": {
+            "synchronize_package_json": false
         }
     },
     "repositories": [{
@@ -61,5 +65,9 @@
         "options": {
             "symlink": true
         }
-    }]
+    }],
+    "require-dev": {
+        "symfony/stopwatch": "7.4.*|8.1.*",
+        "symfony/web-profiler-bundle": "7.4.*|8.1.*"
+    }
 }

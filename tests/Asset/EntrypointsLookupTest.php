@@ -12,6 +12,8 @@
 namespace Symfony\Reprise\Tests\Asset;
 
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Reprise\Asset\Entrypoints;
 use Symfony\Reprise\Asset\EntrypointsLookup;
 use Symfony\Reprise\Exception\EntrypointNotFoundException;
 use Symfony\Reprise\Exception\EntrypointsFileNotFoundException;
@@ -118,5 +120,36 @@ final class EntrypointsLookupTest extends TestCase
 
         $this->assertSame([], $lookup->getJavaScriptFiles('app'));
         $this->assertFalse($lookup->entryExists('app'));
+    }
+
+    public function testACacheHitResolvesWithoutTouchingTheFile()
+    {
+        $cache = new ArrayAdapter();
+        $entrypoints = Entrypoints::fromArray([
+            'isProd' => true,
+            'devServer' => null,
+            'publicPath' => '/build/',
+            'entryPoints' => ['app' => ['js' => ['build/app.js']]],
+            'integrity' => [],
+        ]);
+        $cache->save($cache->getItem('reprise.entrypoints')->set($entrypoints));
+
+        // The path does not exist: a hit must serve from the cache, never the file (which would
+        // throw in strict mode).
+        $lookup = new EntrypointsLookup('/does/not/exist/entrypoints.json', true, $cache, 'reprise.entrypoints');
+
+        $this->assertSame(['build/app.js'], $lookup->getJavaScriptFiles('app'));
+    }
+
+    public function testACacheMissReadsTheFileAndPopulatesThePool()
+    {
+        $cache = new ArrayAdapter();
+        $lookup = new EntrypointsLookup(__DIR__.'/../fixtures/build/entrypoints.json', true, $cache, 'reprise.entrypoints');
+
+        $this->assertSame(['build/app-a1b2.js'], $lookup->getJavaScriptFiles('app'));
+
+        $item = $cache->getItem('reprise.entrypoints');
+        $this->assertTrue($item->isHit());
+        $this->assertInstanceOf(Entrypoints::class, $item->get());
     }
 }
