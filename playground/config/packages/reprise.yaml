@@ -1,0 +1,22 @@
+reprise:
+    # Directory the @symfony/reprise plugin writes entrypoints.json and manifest.json into.
+    output_path: '%kernel.project_dir%/public/build'
+
+    # Throw when entrypoints.json or a requested entry is missing, instead of rendering nothing.
+    strict_mode: true
+
+    # Cache the parsed entrypoints.json in a compiled PHP file, warmed at cache:warmup (needs symfony/cache).
+    cache: false
+
+    # A framework.assets package name used to resolve entry URLs. null uses the default package.
+    asset_package: null
+
+    # crossorigin attribute set alongside SRI integrity: false, 'anonymous' or 'use-credentials'.
+    crossorigin: false
+
+    # Register rendered assets as WebLink HTTP/2 Link: preload headers (needs symfony/web-link).
+    preload: true
+
+    # Default attributes added to every rendered <script> / <link> tag.
+    script_attributes:
+    link_attributes: []

@@ -154,6 +154,9 @@ Reprise exposes a few optional settings under its own configuration, all shown h
         # Throw when entrypoints.json or a requested entry is missing, instead of rendering nothing.
         strict_mode: true
 
+        # Cache the parsed entrypoints.json in a compiled PHP file, warmed at cache:warmup (needs symfony/cache).
+        cache: false
+
         # A framework.assets package name used to resolve entry URLs. null uses the default package.
         asset_package: null
 
@@ -171,6 +174,9 @@ Reprise exposes a few optional settings under its own configuration, all shown h
   own ``outputPath``.
 - ``strict_mode``: when ``true`` (the default), throws a clear exception on a missing file or an unknown entry; when
   ``false``, renders nothing instead.
+- ``cache``: when ``true``, parse ``entrypoints.json`` once at ``cache:warmup`` and read it from a compiled PHP file
+  at runtime instead of decoding the JSON on every request. Enable it in production and run ``cache:clear`` after
+  rebuilding your assets; it needs ``symfony/cache`` (``composer require symfony/cache``).
 - ``asset_package``: resolve entry URLs through a specific ``framework.assets`` package instead of the default one.
   You only need this if your default package applies a version strategy, which would re-hash files Reprise already
   content-hashed and break the URLs. Point it at a package with ``version: false`` (see below).

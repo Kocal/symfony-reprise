@@ -15,6 +15,7 @@ use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
+use Symfony\Component\VarExporter\VarExporter;
 use Symfony\Reprise\Asset\EntrypointsLookup;
 use Symfony\Reprise\Asset\EntrypointsLookupInterface;
 use Symfony\Reprise\Asset\TagRenderer;
@@ -40,6 +41,10 @@ final class RepriseBundle extends AbstractBundle
                 ->booleanNode('strict_mode')
                     ->defaultTrue()
                     ->info('Throw when the entrypoints.json file or a requested entry is missing.')
+                ->end()
+                ->booleanNode('cache')
+                    ->defaultFalse()
+                    ->info('Cache the parsed entrypoints.json in a compiled PHP file (warmed at cache:warmup). Enable in production; requires symfony/cache.')
                 ->end()
                 ->booleanNode('preload')
                     ->defaultTrue()
@@ -67,19 +72,33 @@ final class RepriseBundle extends AbstractBundle
     }
 
     /**
-     * @param array{output_path: string, strict_mode: bool, preload: bool, asset_package: ?string, crossorigin: string|false, script_attributes: array<string, bool|string>, link_attributes: array<string, bool|string>} $config
+     * @param array{output_path: string, strict_mode: bool, cache: bool, preload: bool, asset_package: ?string, crossorigin: string|false, script_attributes: array<string, bool|string>, link_attributes: array<string, bool|string>} $config
      */
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
         $services = $container->services();
 
+        $entrypointsPath = $config['output_path'].'/entrypoints.json';
+
+        if ($config['cache'] && !class_exists(VarExporter::class)) {
+            throw new \LogicException('Enabling "reprise.cache" requires the Symfony Cache component. Run "composer require symfony/cache".');
+        }
+
+        $lookupArgs = [$entrypointsPath, $config['strict_mode']];
+        if ($config['cache']) {
+            $lookupArgs[] = service('reprise.cache');
+            $lookupArgs[] = 'reprise.entrypoints';
+        }
+
         $services->set('reprise.entrypoints_lookup', EntrypointsLookup::class)
-            ->args([
-                $config['output_path'].'/entrypoints.json',
-                $config['strict_mode'],
-            ])
+            ->args($lookupArgs)
             ->tag('kernel.reset', ['method' => 'reset'])
         ;
+
+        if ($config['cache']) {
+            $container->parameters()->set('reprise.entrypoints_path', $entrypointsPath);
+            $container->import('../config/cache.php');
+        }
 
         $services->alias(EntrypointsLookupInterface::class, 'reprise.entrypoints_lookup');
 

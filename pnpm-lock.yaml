@@ -64,8 +64,8 @@ importers:
         specifier: ^3.0.0
         version: 3.2.2
       '@symfony/ux-leaflet-map':
-        specifier: ^2.36.2
-        version: 2.36.2(@hotwired/stimulus@3.2.2)(leaflet@1.9.4)
+        specifier: ^3.2.0
+        version: 3.2.0(@hotwired/stimulus@3.2.2)(leaflet@1.9.4)
       leaflet:
         specifier: ^1.9.4
         version: 1.9.4
@@ -954,8 +954,8 @@ packages:
   '@swc/helpers@0.5.23':
     resolution: {integrity: sha512-5lSsMOTXURePglDfvuAQUqkGek9Hg2kksOYay2m0+XR++b2NWYL/4sWyuvVBIs8oKnJaxkdi9whaL/sqN13afw==}
 
-  '@symfony/ux-leaflet-map@2.36.2':
-    resolution: {integrity: sha512-n7yaBpRMY9scanUYGXL+jRjbeGtCepWhz0gYHfl6v7QuVofyllRzGp4vlBFS+BsWF/JqABwInOAkzS+d0RhtGg==}
+  '@symfony/ux-leaflet-map@3.2.0':
+    resolution: {integrity: sha512-hZNJoNok45N+mVa5Ql6Uj0T3wqb+dd7wAi7/eqJH8N9b8KOxALWBu2pNubqDGT9yM9emp8uPO22NQ6P5+qPwig==}
     peerDependencies:
       '@hotwired/stimulus': ^3.0.0
       leaflet: ^1.9.4
@@ -2451,7 +2451,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@symfony/ux-leaflet-map@2.36.2(@hotwired/stimulus@3.2.2)(leaflet@1.9.4)':
+  '@symfony/ux-leaflet-map@3.2.0(@hotwired/stimulus@3.2.2)(leaflet@1.9.4)':
     dependencies:
       '@hotwired/stimulus': 3.2.2
       leaflet: 1.9.4
