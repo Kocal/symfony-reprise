@@ -10,6 +10,7 @@
 /.symfony.bundle.yaml export-ignore
 /AGENTS.md export-ignore
 /CLAUDE.md export-ignore
+/MAINTAINERS.md export-ignore
 /assets export-ignore
 /docs export-ignore
 /package.json export-ignore
@@ -19,4 +20,5 @@
 /pnpm-lock.yaml export-ignore
 /pnpm-workspace.yaml export-ignore
 /reference-repos.md export-ignore
+/release.sh export-ignore
 /tests export-ignore
