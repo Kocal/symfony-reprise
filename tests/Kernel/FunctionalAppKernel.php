@@ -28,11 +28,13 @@ final class FunctionalAppKernel extends Kernel implements CompilerPassInterface
     use AppKernelTrait;
 
     /**
-     * @param array<string, mixed> $repriseConfig extra reprise config merged over `output_path`
+     * @param array<string, mixed> $repriseConfig   extra reprise config merged over `output_path`
+     * @param array<string, mixed> $frameworkConfig extra framework config merged over the defaults
      */
     public function __construct(
         private readonly string $outputPath,
         private readonly array $repriseConfig = [],
+        private readonly array $frameworkConfig = [],
     ) {
         parent::__construct('test', true);
     }
@@ -49,6 +51,7 @@ final class FunctionalAppKernel extends Kernel implements CompilerPassInterface
                 'secret' => '$ecret',
                 'test' => true,
                 'http_method_override' => false,
+                ...$this->frameworkConfig,
             ]);
             $container->loadFromExtension('reprise', [
                 'output_path' => $this->outputPath,
@@ -74,6 +77,10 @@ final class FunctionalAppKernel extends Kernel implements CompilerPassInterface
 
         if ($container->hasDefinition('reprise.entrypoints_cache_warmer')) {
             $container->getDefinition('reprise.entrypoints_cache_warmer')->setPublic(true);
+        }
+
+        if ($container->hasDefinition('assets.packages')) {
+            $container->getDefinition('assets.packages')->setPublic(true);
         }
     }
 }
