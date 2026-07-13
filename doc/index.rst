@@ -272,10 +272,10 @@ Check each package's own docs for this kind of tweak.
 File copy
 ---------
 
-Some assets are referenced by a stable path straight from your templates, like
-``{{ asset('build/images/logo.svg') }}``, rather than imported from JavaScript or CSS. Point ``copy`` at the
-directories that hold them and Reprise copies each file into the build and records it in ``manifest.json``, so the
-``asset()`` helper resolves it to the hashed URL:
+Some assets aren't imported from JavaScript or CSS at all: they're referenced by a stable path straight from your
+templates, like ``{{ asset('build/images/logo.svg') }}``. Point ``copy`` at the directories that hold them and
+Reprise copies each file into the build and records it in ``manifest.json``. Once Symfony is pointed at that
+manifest (below), the ``asset()`` helper resolves the logical path to the hashed URL:
 
 .. code-block:: javascript
 
@@ -327,6 +327,26 @@ How copied files are handled depends on the mode:
 
 Either way they land in ``public/build`` and are served by the Symfony web server, not the Vite/Rsbuild dev server,
 so they're available whether or not the dev server is running.
+
+For ``asset()`` to return the hashed URL, point Symfony's asset component at the generated ``manifest.json`` with
+``framework.assets.json_manifest_path``:
+
+.. code-block:: yaml
+
+    # config/packages/framework.yaml
+    framework:
+        assets:
+            json_manifest_path: '%kernel.project_dir%/public/build/manifest.json'
+
+This is Symfony's native manifest support, the same setting Webpack Encore relies on, so it applies to every logical
+asset reference, not just copied files. The entry references that ``RepriseBundle`` renders already carry their hash
+and aren't manifest keys, so they pass through untouched.
+
+By default the lookup is lenient: a reference missing from the manifest is returned unchanged. Set
+``framework.assets.strict_mode: true`` to fail loudly on an unknown reference instead. Under strict mode, the entry
+references ``RepriseBundle`` renders would be rejected too, so route them through a package that skips the manifest:
+set ``reprise.asset_package`` to a package with ``version: false`` (see `Configuration`_) and keep
+``json_manifest_path`` on the default package for your other assets.
 
 Using a CDN
 -----------
