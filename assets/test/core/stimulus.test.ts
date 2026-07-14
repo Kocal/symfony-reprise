@@ -38,6 +38,26 @@ describe('generateControllersModule — third-party', () => {
     });
 });
 
+describe('generateControllersModule — controllers.json errors', () => {
+    it('throws a clear error when the controllers.json file is missing', () => {
+        const missing = {
+            controllersJson: join(root, 'no-such-controllers.json'),
+            controllersDir: opts.controllersDir,
+        };
+        expect(() => generateControllersModule(missing, root, false)).toThrow(
+            /@symfony\/reprise: cannot read the Stimulus controllers file/
+        );
+    });
+
+    it('throws a clear error when the controllers.json file is not valid JSON', () => {
+        const malformed = {
+            controllersJson: join(root, 'malformed-controllers.json'),
+            controllersDir: opts.controllersDir,
+        };
+        expect(() => generateControllersModule(malformed, root, false)).toThrow(/is not valid JSON/);
+    });
+});
+
 describe('generateControllersModule — local', () => {
     const localOpts = { controllersJson: join(root, 'controllers.json'), controllersDir: join(root, 'controllers') };
 

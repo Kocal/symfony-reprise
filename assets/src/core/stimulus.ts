@@ -48,12 +48,37 @@ const LAZY_COMMENT_RE =
     /(?:\/\*!?\s*stimulusFetch:\s*['"]lazy['"]\s*\*\/|\/\/\s*stimulusFetch:\s*['"]lazy['"])\s*(?:export\s+(?:default\s+)?)?(?:abstract\s+)?class\b/i;
 const LOCAL_CONTROLLER_RE = /[-_]controller\.[jt]s$/;
 
+// Every other failure in this module reports a `@symfony/reprise:` error; a missing or malformed
+// controllers.json must not slip through as a raw Node ENOENT/SyntaxError.
+function readControllersJson(controllersJson: string): ControllersJson {
+    let raw: string;
+    try {
+        raw = readFileSync(controllersJson, 'utf8');
+    } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+            throw new Error(
+                `@symfony/reprise: cannot read the Stimulus controllers file "${controllersJson}". ` +
+                    'Create it, or point the "stimulus" option at the right path.'
+            );
+        }
+        throw err;
+    }
+    try {
+        return JSON.parse(raw) as ControllersJson;
+    } catch (err) {
+        throw new Error(
+            `@symfony/reprise: the Stimulus controllers file "${controllersJson}" is not valid JSON` +
+                `${err instanceof Error ? ` (${err.message})` : ''}.`
+        );
+    }
+}
+
 export function generateControllersModule(opts: ResolvedStimulusOptions, root: string, isDev: boolean): string {
     // Keyed by identifier; local added after third-party so a local override wins (last write wins).
     const controllers = new Map<string, ResolvedController>();
 
     const require = createRequire(path.join(root, 'noop.js'));
-    const json = JSON.parse(readFileSync(opts.controllersJson, 'utf8')) as ControllersJson;
+    const json = readControllersJson(opts.controllersJson);
 
     for (const packageName of Object.keys(json.controllers ?? {})) {
         let pkg: { symfony?: { controllers?: Record<string, PackageControllerConfig> } };
