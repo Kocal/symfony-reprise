@@ -25,24 +25,31 @@
     "encore"
   ],
   "exports": {
-    ".": "./dist/index.mjs",
-    "./rsbuild": "./dist/rsbuild.mjs",
-    "./stimulus": "./dist/stimulus.mjs",
-    "./types": "./dist/types.mjs",
-    "./vite": "./dist/vite.mjs",
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./rsbuild": {
+      "types": "./dist/rsbuild.d.mts",
+      "default": "./dist/rsbuild.mjs"
+    },
+    "./stimulus": {
+      "types": "./dist/stimulus.d.mts",
+      "default": "./dist/stimulus.mjs"
+    },
+    "./types": {
+      "types": "./dist/types.d.mts",
+      "default": "./dist/types.mjs"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.mts",
+      "default": "./dist/vite.mjs"
+    },
     "./package.json": "./package.json"
   },
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
-  "typesVersions": {
-    "*": {
-      "*": [
-        "./dist/*",
-        "./*"
-      ]
-    }
-  },
   "files": [
     "dist"
   ],
