@@ -33,6 +33,12 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
         // Shared Stimulus virtual module: unplugin applies these universal hooks to Vite and forwards
         // them to Rspack (via `api.modifyRspackConfig`), so one implementation serves both bundlers. The
         // `\0` prefix sidesteps Rspack's URI-scheme rejection of a raw `virtual:` id.
+        //
+        // On Rspack, unplugin attaches its `load` loader to every module whose `loadInclude` passes
+        // (and retypes it `javascript/auto`). Without this gate it would match binary assets too —
+        // the loader is not `raw`, so it re-emits them as UTF-8 strings and corrupts images/fonts in
+        // dev. Restrict it to the virtual id so real files are never touched.
+        loadInclude: (id) => id.includes(VIRTUAL_ID),
         resolveId(id) {
             if (id !== VIRTUAL_ID) return;
             // Imported unconditionally by `startStimulusApp()`; fail clearly when the feature is off.
