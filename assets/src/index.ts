@@ -12,7 +12,7 @@ import { resolveDevOrigin } from './core/dev-server';
 import { writeSymfonyFiles } from './core/emit';
 import { buildEntrypoints, buildManifest, joinUrl } from './core/format';
 import { integrityFromDisk, referencedFileNames } from './core/integrity';
-import { normalizeOptions, resolvePublicPath } from './core/options';
+import { isAbsolutePublicPath, normalizeOptions, resolvePublicPath } from './core/options';
 import { generateControllersModule, STIMULUS_NOT_ENABLED_MESSAGE, VIRTUAL_CONTROLLERS_ID } from './core/stimulus';
 
 const VIRTUAL_ID = VIRTUAL_CONTROLLERS_ID;
@@ -180,7 +180,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                     config.server.publicDir = false;
                     // Serve the dev server under `publicPath` so advertised URLs match (else every URL 404s).
                     // `server.base` must be a slash-path, so an absolute (CDN) publicPath falls back to `/`.
-                    config.server.base = resolved.publicPath.includes('://') ? '/' : resolved.publicPath;
+                    config.server.base = isAbsolutePublicPath(resolved.publicPath) ? '/' : resolved.publicPath;
                     // Already defaulted to `/` by Rsbuild, so `??=` wouldn't apply — assign unconditionally.
                     // Drives production asset URLs (dev uses `server.base` above).
                     config.output.assetPrefix = resolved.publicPath;
@@ -205,7 +205,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                     };
                     // Async chunk URLs come from `dev.assetPrefix` (default `/` -> 404 against the Symfony page).
                     // It's used verbatim (no `server.base` composed in), so carry the full publicPath; skip CDN.
-                    if (!resolved.publicPath.includes('://')) {
+                    if (!isAbsolutePublicPath(resolved.publicPath)) {
                         config.dev.assetPrefix = `${config.server.https ? 'https' : 'http'}://${devHost}:<port>${resolved.publicPath}`;
                     }
 

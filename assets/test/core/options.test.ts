@@ -47,6 +47,16 @@ describe('normalizeOptions', () => {
         expect(r.manifestKeyPrefix).toBe('build/');
     });
 
+    it('throws for a protocol-relative publicPath without manifestKeyPrefix', () => {
+        expect(() => normalizeOptions({ publicPath: '//cdn.example.com/x' }, '/app')).toThrow(/manifestKeyPrefix/);
+    });
+
+    it('accepts a protocol-relative publicPath when manifestKeyPrefix is set', () => {
+        const r = normalizeOptions({ publicPath: '//cdn.example.com/x', manifestKeyPrefix: 'build/' }, '/app');
+        expect(r.publicPath).toBe('//cdn.example.com/x');
+        expect(r.manifestKeyPrefix).toBe('build/');
+    });
+
     it('leaves stimulus undefined when not configured', () => {
         const r = normalizeOptions(undefined, '/app');
         expect(r.stimulus).toBeUndefined();
@@ -149,5 +159,8 @@ describe('resolvePublicPath', () => {
         expect(resolvePublicPath('https://cdn.example.com/x/', 'http://127.0.0.1:5173')).toBe(
             'https://cdn.example.com/x/'
         );
+    });
+    it('keeps a protocol-relative publicPath as-is even in dev', () => {
+        expect(resolvePublicPath('//cdn.example.com/x/', 'http://127.0.0.1:5173')).toBe('//cdn.example.com/x/');
     });
 });

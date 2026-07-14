@@ -1,6 +1,15 @@
 import type { CopyEntry, Options, ResolvedCopyEntry, ResolvedOptions, ResolvedStimulusOptions } from '../types';
 import * as path from 'node:path';
 
+/**
+ * Whether `publicPath` points off the docroot: an absolute URL (`https://cdn/…`) or a
+ * protocol-relative one (`//cdn/…`). Both need an explicit `manifestKeyPrefix` and must never
+ * get the dev-server origin prepended.
+ */
+export function isAbsolutePublicPath(publicPath: string): boolean {
+    return publicPath.includes('://') || publicPath.startsWith('//');
+}
+
 function normalizeIntegrity(integrity: Options['integrity']): ResolvedOptions['integrity'] {
     if (!integrity?.enabled) return undefined;
     return { algorithms: integrity.algorithms?.length ? [...integrity.algorithms] : ['sha384'] };
@@ -48,7 +57,7 @@ export function normalizeOptions(options: Options | undefined, cwd: string): Res
 
     let manifestKeyPrefix = options?.manifestKeyPrefix ?? null;
     if (manifestKeyPrefix === null) {
-        if (publicPath.includes('://')) {
+        if (isAbsolutePublicPath(publicPath)) {
             throw new Error(
                 `@symfony/reprise: cannot derive "manifestKeyPrefix" from an absolute "publicPath" (${publicPath}). ` +
                     'Set "manifestKeyPrefix" explicitly (e.g. "build/").'
@@ -69,6 +78,6 @@ export function normalizeOptions(options: Options | undefined, cwd: string): Res
 }
 
 export function resolvePublicPath(publicPath: string, devOrigin: string | null): string {
-    if (!devOrigin || publicPath.includes('://')) return publicPath;
+    if (!devOrigin || isAbsolutePublicPath(publicPath)) return publicPath;
     return `${devOrigin.replace(/\/$/, '')}${publicPath}`;
 }
