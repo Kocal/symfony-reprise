@@ -97,7 +97,7 @@ describe('rsbuild dev writes absolute dev-server URLs and no HTML', () => {
     }, 60_000);
 });
 
-describe('rsbuild dev pins the HMR client to the loopback dev-server origin', () => {
+describe('rsbuild dev pins the HMR client to the dev-server host', () => {
     it('sets dev.client host/port/protocol so HMR and lazy compilation target the dev server', async () => {
         const out = mkdtempSync(join(tmpdir(), 'ups-rsbuild-devclient-'));
         const rsbuild = await createRsbuild({
@@ -112,17 +112,42 @@ describe('rsbuild dev pins the HMR client to the loopback dev-server origin', ()
         const { origin } = await rsbuild.inspectConfig();
 
         // Without this, the compiled HMR client derives its socket URL from window.location (the
-        // Symfony page) and 404s. `<port>` is substituted with the real port at server start; the
-        // 127.0.0.1 loopback host keeps `ws://` allowed from an HTTPS Symfony page; `ws` matches the
-        // plain-HTTP dev server. Lazy compilation reads the same config.
+        // Symfony page) and 404s. `<port>` is substituted with the real port at server start; `ws`
+        // matches the plain-HTTP dev server. The host MUST be the host the dev server binds to:
+        // Rsbuild's default `server.host` resolves to `localhost` (which binds `::1` on IPv6-capable
+        // machines), so a literal `127.0.0.1` (IPv4 loopback) would not be listening and every HMR /
+        // lazy-compilation / async-chunk request to it would be refused. `localhost` is also
+        // "potentially trustworthy", so `ws://`/`http://` stay allowed from an HTTPS Symfony page.
+        // Lazy compilation reads the same config.
         expect(origin.rsbuildConfig.dev?.client).toMatchObject({
-            host: '127.0.0.1',
+            host: 'localhost',
             port: '<port>',
             protocol: 'ws',
         });
 
         // Async chunks build their URLs from the dev runtime publicPath; it must point at the dev
-        // server + publicPath (verbatim, `<port>` resolved at start), not the page origin.
+        // server host + publicPath (verbatim, `<port>` resolved at start), not the page origin, and
+        // uses the same host as the client so it lands where the server actually listens.
+        expect(origin.rsbuildConfig.dev?.assetPrefix).toBe('http://localhost:<port>/build/');
+    });
+
+    it('honours a custom server.host for the client + asset prefix', async () => {
+        const out = mkdtempSync(join(tmpdir(), 'ups-rsbuild-devhost-'));
+        const rsbuild = await createRsbuild({
+            cwd: fixture,
+            rsbuildConfig: {
+                mode: 'development',
+                server: { host: '127.0.0.1' },
+                source: { entry: { app: join(fixture, 'app.js') } },
+                plugins: [Symfony({ outputPath: out, publicPath: '/build/' })],
+            },
+        });
+
+        const { origin } = await rsbuild.inspectConfig();
+
+        // A user who pins the dev server to a specific host must have the advertised URLs follow it,
+        // so they still match where the server binds (here IPv4 loopback, explicitly requested).
+        expect(origin.rsbuildConfig.dev?.client).toMatchObject({ host: '127.0.0.1' });
         expect(origin.rsbuildConfig.dev?.assetPrefix).toBe('http://127.0.0.1:<port>/build/');
     });
 });
