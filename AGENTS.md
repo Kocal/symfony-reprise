@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**Reprise** (`symfony/reprise`) — a Symfony bundle that brings Webpack Encore's key features to modern bundlers: **Vite** and **Rsbuild/Rspack**. The bundle is a Composer package (PHP `src/`/`tests/` at the repo root); its JS side is the `@symfony/reprise` npm package, an [unplugin](https://github.com/unjs/unplugin) living under `assets/`. Full ESM, greenfield (early stage, most features are stubs).
+**Reprise** (`symfony/reprise`) — a Symfony bundle that brings Webpack Encore's key features to modern bundlers: **Vite** and **Rsbuild/Rspack**. The bundle is a Composer package (PHP `src/`/`tests/` at the repo root); its JS side is the `@symfony/reprise` npm package, an [unplugin](https://github.com/unjs/unplugin) living under `assets/`. Full ESM. Past the stub stage: the Encore-parity feature set (entrypoints/manifest, asset versioning, CDN `publicPath`, dev server + HMR, SRI, file copy, Stimulus) works on both bundlers, and the PHP `RepriseBundle` renders the tags.
 
 **Design principle — do NOT re-implement what the bundler already does.** Vite and Rsbuild natively handle Sass/Less/PostCSS, TypeScript, code splitting, content hashing, source maps, minification, HMR, and the dev server. This plugin does NOT wrap or re-expose any of those (so no `enableSassLoader()`-style API from Encore). Its job is the **Symfony integration glue** that the bundlers do not provide — see below.
 
@@ -14,10 +14,11 @@ The repo is a **Composer bundle** (`symfony/reprise`, PHP `src/`/`tests/` at the
 
 ## Commands
 
-Package manager is **pnpm** (enforced via `packageManager` field). Node 22 (`.nvmrc`). The root `pnpm build`/`dev`/`test`/`lint`/`fmt` scripts run from the workspace root; `build`/`dev`/`test` delegate to the `assets` package, while `lint` (Oxlint) and `fmt` (Oxfmt) run at the root over the whole repo.
+Package manager is **pnpm** (enforced via `packageManager` field). Node 22 (`.nvmrc`). The root `pnpm build`/`dev`/`typecheck`/`test`/`lint`/`fmt` scripts run from the workspace root; `build`/`dev`/`typecheck`/`test` delegate to the `assets` package, while `lint` (Oxlint) and `fmt` (Oxfmt) run at the root over the whole repo.
 
 - `pnpm build` — delegates to `assets`, build via `tsdown` (bundles every `assets/src/*.ts` to `assets/dist/`)
 - `pnpm dev` — delegates to `assets`, `tsdown -w`, watch/rebuild
+- `pnpm typecheck` — delegates to `assets`, `tsc --noEmit` via `assets/tsconfig.typecheck.json` (bundler resolution + DOM libs, so it type-checks the sources the way tsdown/Vite/Rspack resolve them; the build `tsconfig.json` stays `nodenext`). tsdown does not type-check, so CI runs this in the `lint` job.
 - `pnpm lint` — `oxlint` at the root (config in `.oxlintrc.json`); `pnpm lint:fix` auto-fixes. `playground/`, `assets/test/fixtures/` and `docs/` are ignored (not library source)
 - `pnpm fmt` / `pnpm fmt:check` — `oxfmt` at the root (config in `.oxfmtrc.json`); `fmt:check` is the read-only variant CI runs
 - `pnpm test` — delegates to `assets`, run tests (vitest, scoped to `assets/test/` via `vitest.config.ts` so it never picks up `.references/` clones)
@@ -28,7 +29,7 @@ Package manager is **pnpm** (enforced via `packageManager` field). Node 22 (`.nv
 
 `playground/` is a **full Symfony 7 PHP app** used to exercise the plugin against a real backend. It defines two entries (`app`, `admin`) and imports the plugin directly from `../assets/src` (Vite via `playground/vite.config.ts`, Rsbuild via `playground/rsbuild.config.ts`). `nodemon` rebuilds on `assets/src/**/*.ts` changes.
 
-Run from the playground dir (the root `pnpm play` script is broken — it calls a nonexistent `dev` script):
+Run from the playground dir (there is no root wrapper script):
 
 - `npm -C playground run vite:dev` / `npm -C playground run vite:build`
 - `npm -C playground run rsbuild:dev` / `npm -C playground run rsbuild:build`
@@ -48,13 +49,13 @@ Both bundlers go through the one `unpluginFactory`: Vite via `createVitePlugin`,
 
 ## The Symfony integration contract (the core of this project)
 
-Encore's real value to Symfony is two JSON files written into `outputPath`, consumed by Reprise's **own** Symfony bundle (`RepriseBundle`, the PHP side under `src/` — still a stub) via its Twig helpers that render the `<script>`/`<link>`/`asset()` tags. Reprise does **not** use `symfony/webpack-encore-bundle`. Generating these two files in Encore-compatible format is the primary work:
+Encore's real value to Symfony is two JSON files written into `outputPath`, consumed by Reprise's **own** Symfony bundle (`RepriseBundle`, the PHP side under `src/`) via its Twig helpers that render the `<script>`/`<link>`/`asset()` tags. Reprise does **not** use `symfony/webpack-encore-bundle`. Generating these two files in Encore-compatible format is the primary work:
 
 - **`entrypoints.json`** — maps each entry name to its asset URLs grouped by type, in load order (runtime chunks before app chunks). Optional `integrity` section for SRI hashes.
     ```json
     { "entrypoints": { "app": { "js": ["/build/runtime.js", "/build/app.js"], "css": ["/build/app.css"] } } }
     ```
-- **`manifest.json`** — maps logical filename -> versioned/hashed URL, for cache-busting. Keys are prefixed with `manifestKeyPrefix` (defaults to `publicPath` minus leading slash). When `publicPath` is an absolute CDN URL (contains `://`), `manifestKeyPrefix` must be set explicitly. Reprise ports the relevant half of Encore's `validatePublicPathAndManifestKeyPrefix` (`../webpack-encore/lib/config/path-util.js`) in `normalizeOptions`: an absolute `publicPath` without an explicit `manifestKeyPrefix` throws. Encore's second branch — rejecting a `publicPath` not contained in `outputPath` — is intentionally not ported: Reprise's `outputPath` (a filesystem dir) and `publicPath` (a URL prefix) are decoupled, so that heuristic would reject valid configs. CDN URLs in `entrypoints.json`/`manifest.json` are covered end-to-end by `assets/test/integration/cdn.test.ts`.
+- **`manifest.json`** — maps logical filename -> versioned/hashed URL, for cache-busting. Keys are prefixed with `manifestKeyPrefix` (defaults to `publicPath` minus leading slash). When `publicPath` points off the docroot — an absolute CDN URL (`://`) or a protocol-relative one (`//`), as classified by `isAbsolutePublicPath` — `manifestKeyPrefix` must be set explicitly. Reprise ports the relevant half of Encore's `validatePublicPathAndManifestKeyPrefix` (`../webpack-encore/lib/config/path-util.js`) in `normalizeOptions`: an absolute or protocol-relative `publicPath` without an explicit `manifestKeyPrefix` throws. Encore's second branch — rejecting a `publicPath` not contained in `outputPath` — is intentionally not ported: Reprise's `outputPath` (a filesystem dir) and `publicPath` (a URL prefix) are decoupled, so that heuristic would reject valid configs. CDN URLs in `entrypoints.json`/`manifest.json` are covered end-to-end by `assets/test/integration/cdn.test.ts`.
 
 ### Dev server (build mode vs serve mode)
 
@@ -73,7 +74,7 @@ Encore wires this with `enableStimulusBridge(controllerJsonPath)` (reference `li
 
 That loader is webpack-only, so it must be reimplemented here as a bundler-agnostic **virtual module** (unplugin `resolveId`/`load`): parse `controllers.json`, resolve each third-party controller from its npm package (honoring enabled + eager/lazy + `autoimport`), glob the local `assets/controllers/` dir, and emit the code that registers them on the Stimulus app. Prior art: `vite-plugin-symfony`'s `virtual:symfony/controllers` module.
 
-Feature roadmap (see README): `entrypoints.json` (build + dev), `manifest.json`, asset versioning wired into the manifest, absolute/CDN `publicPath`, dev-server + HMR, SRI hashes, Symfony UX / Stimulus controllers.
+Implemented (see the README feature list): `entrypoints.json` (build + dev), `manifest.json`, asset versioning wired into the manifest, absolute/CDN `publicPath`, dev-server + HMR, SRI hashes, file copy, Symfony UX / Stimulus controllers — all on both Vite and Rsbuild.
 
 ## Reference: the project being replaced
 
@@ -92,9 +93,9 @@ Read-only clones under `.references/` (git-ignored) show how mature unplugins ar
 
 ## Conventions
 
-- ESM only, strict TypeScript, ES2017 target. Use the `node:` prefix for Node builtins.
+- ESM only, strict TypeScript (type-checked in CI via `pnpm typecheck`), ES2022 target (via `@tsconfig/node22`). Use the `node:` prefix for Node builtins.
 - New public options go in `assets/src/types.ts` with JSDoc; keep bundler adapters trivial.
-- Documentation: any user-facing feature ships with a short section in `doc/index.rst`, and that section shows **both** a Vite and an Rsbuild example (the two supported bundlers) — never document one without the other. Flip the matching `*(planned)*` marker in the feature lists (`doc/index.rst` and `README.md`) when the feature lands. Match the existing sections' natural voice; draft/polish the prose with the `natural-writing-editor` agent.
+- Documentation: any user-facing feature ships with a short section in `doc/index.rst`, and that section shows **both** a Vite and an Rsbuild example (the two supported bundlers) — never document one without the other. Add the feature to the README feature list when it lands. Match the existing sections' natural voice; draft/polish the prose with the `natural-writing-editor` agent.
 - Tests: a functional/integration test for one bundler (Vite or Rsbuild) always ships with its equivalent for the other — never cover one bundler without the other, including the negative/off cases.
 - Commit messages: Symfony style `[<Scope>] <Short description>` — PascalCase scope, imperative mood, capitalized first word, no trailing period. A feature commit uses the feature's **own name** as the scope (e.g. `[Integrity]`, `[Manifest]`) and does **not** tack on `[Tests]` or `[Docs]` for the tests and docs it naturally includes; `[Tests]`/`[Docs]` are only for changes that are _exclusively_ tests or documentation. Combine scopes as `[A][B]` only when a change genuinely spans several distinct components. E.g. `[Stimulus] Emit forward-slash local controller paths`, `[Docs] Frame Stimulus usage as the Encore experience`, `[CI] Cancel superseded runs with a concurrency group`. This is the convention used across Symfony UX and WebpackEncoreBundle — **not** Conventional Commits (no `feat:`/`fix:`/`chore:` prefixes).
 - Releases: the published npm package lives in `assets/` (`@symfony/reprise`); its `prepublishOnly` runs the `tsdown` build before publish.
