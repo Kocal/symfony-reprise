@@ -38,6 +38,8 @@ jobs:
               run: pnpm run lint
             - name: Format check
               run: pnpm run fmt:check
+            - name: Typecheck
+              run: pnpm run typecheck
 
     test:
         name: Node ${{ matrix.node-version }} on ${{ matrix.os }}

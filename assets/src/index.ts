@@ -191,7 +191,9 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                     // binds `::1` only, so a literal `127.0.0.1` isn't listening and refuses HMR/lazy/chunk requests.
                     // Same `0.0.0.0`/unset -> `localhost` mapping as the `done` tap, so client + origin stay in sync.
                     const devHost =
-                        config.server.host && config.server.host !== '0.0.0.0' ? config.server.host : 'localhost';
+                        typeof config.server.host === 'string' && config.server.host !== '0.0.0.0'
+                            ? config.server.host
+                            : 'localhost';
 
                     // Pin the HMR/lazy-compilation client to the dev server: by default it derives its WS URL from
                     // `window.location` (the Symfony page) and 404s. `<port>` is substituted at server start; the
@@ -216,7 +218,8 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                         ...prevList,
                         (rspackConfig) => {
                             rspackConfig.experiments ??= {};
-                            rspackConfig.experiments.outputModule = true;
+                            // `outputModule` is a valid Rspack experiment but missing from its typings.
+                            (rspackConfig.experiments as { outputModule?: boolean }).outputModule = true;
                             rspackConfig.output ??= {};
                             rspackConfig.output.module = true;
                             rspackConfig.output.chunkFormat = 'module';

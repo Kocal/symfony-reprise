@@ -1,0 +1,12 @@
+{
+    // Type-check only (`tsc --noEmit`); tsdown owns the real build. Relative imports are extensionless
+    // because every consumer (tsdown, Vite, Rspack) resolves them bundler-style, so type-check the same
+    // way instead of the base config's `nodenext`. `stimulus.ts` is browser code, hence the DOM libs.
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "module": "preserve",
+        "moduleResolution": "bundler",
+        "lib": ["es2024", "esnext.array", "esnext.collection", "es2025.iterator", "dom", "dom.iterable"],
+        "noEmit": true
+    }
+}

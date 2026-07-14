@@ -59,6 +59,7 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown -w",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublishOnly": "tsdown"
