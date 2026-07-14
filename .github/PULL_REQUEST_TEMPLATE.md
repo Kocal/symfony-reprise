@@ -1,19 +1,21 @@
-| Q             | A
-| ------------- | ---
-| Bug fix?      | yes/no
-| New feature?  | yes/no
-| Deprecations? | yes/no
-| Issues        | Fix #... <!-- prefix each issue number with "Fix #", no need to open an issue if none exists, explain below instead -->
-| License       | MIT
+| Q              | A
+| -------------- | ---
+| Bug fix?       | yes/no
+| New feature?   | yes/no <!-- please update CHANGELOG.md file -->
+| Deprecations?  | yes/no <!-- if yes, also update UPGRADE-*.md and CHANGELOG.md files -->
+| Documentation? | yes/no <!-- required for new features, or documentation updates -->
+| Issues         | Fix #... <!-- prefix each issue number with "Fix #", no need to create an issue if none exist, explain below instead -->
+| License        | MIT
 
 <!--
-Replace this notice with a description of your feature or bugfix.
-This helps reviewers and is a good starting point for the documentation.
+Replace this notice by a description of your feature/bugfix.
+This will help reviewers and should be a good start for the documentation.
 
 Additionally (see https://symfony.com/releases):
  - Always add tests and ensure they pass.
  - For new features, provide some code snippets to help understand usage.
- - Features and deprecations must be submitted against the main branch.
- - Update or add documentation as required (we can help!).
+ - Features and deprecations must be submitted against branch main.
+ - Update/add documentation as required (we can help!)
+ - Changelog entry should follow https://symfony.com/doc/current/contributing/code/conventions.html#writing-a-changelog-entry
  - Never break backward compatibility (see https://symfony.com/bc).
 -->
