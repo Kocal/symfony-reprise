@@ -10,11 +10,8 @@ type ViteOutputChunk = Rollup.OutputChunk & { viteMetadata?: ViteChunkMetadata }
 export function bundleToGraph(bundle: Rollup.OutputBundle, root: string): NormalizedGraph {
     const entryPoints: Record<string, EntryFiles> = {};
     const assets: AssetEntry[] = [];
-    // Entry CSS stays in the manifest, keyed by its logical name (e.g. `app.css`, matching Rsbuild's
-    // chunk-name keying). Async (non-entry) chunk CSS does not: it loads at runtime with its lazily
-    // imported chunk, never via `asset()`, so a manifest entry would only be a byproduct that diverges
-    // from Rsbuild and collides when two chunks share a name. Both kinds report `originalFileNames` as
-    // the importing JS, so neither must reach the source-path branch (that is for imported images/fonts).
+    // Entry CSS is kept in the manifest (keyed by logical name like `app.css`); async chunk CSS isn't
+    // (it loads with its chunk, never via `asset()`, and would collide across same-named chunks).
     const entryCss = new Set<string>();
     const asyncCss = new Set<string>();
 
@@ -47,9 +44,8 @@ export function bundleToGraph(bundle: Rollup.OutputBundle, root: string): Normal
 }
 
 function assetLogicalName(file: Rollup.OutputAsset, root: string, entryCss: Set<string>): string {
-    // Imported assets (images, fonts) get their source path relative to the project root, so the
-    // manifest key matches Rsbuild's `sourceFilename` and same-basename files in different folders
-    // stay distinct. Entry CSS and assets with no source path fall back to the basename.
+    // Imported assets key by source path relative to root (matches Rsbuild's `sourceFilename`, keeps
+    // same-basename files distinct); entry CSS and path-less assets fall back to the basename.
     const original = entryCss.has(file.fileName) ? undefined : file.originalFileNames[0];
     if (original) return slash(relative(root, resolve(root, original)));
     return file.names[0] ?? file.fileName;
