@@ -5,8 +5,7 @@ export function joinUrl(prefix: string, name: string): string {
 }
 
 function toReference(prefix: string, name: string): string {
-    // Docroot-relative reference (ADR 0001): a build URL like `/build/app-<hash>.js` becomes
-    // `build/app-<hash>.js`; an absolute dev-server URL has no leading slash and is unchanged.
+    // Docroot-relative reference (ADR 0001): strips the leading slash (dev-server URLs have none).
     return joinUrl(prefix, name).replace(/^\//, '');
 }
 
@@ -27,8 +26,7 @@ export function buildEntrypoints(graph: NormalizedGraph, ctx: BuildContext): Ent
         entryPoints,
     };
     if (graph.integrity) {
-        // Re-key the per-file-name hashes by the same references that appear in the entry lists,
-        // so the Symfony side can look each one up by asset reference.
+        // Re-key hashes by the same references used in the entry lists, for lookup by reference.
         out.integrity = Object.fromEntries(
             Object.entries(graph.integrity).map(([fileName, sri]) => [toReference(ctx.urlPrefix, fileName), sri])
         );

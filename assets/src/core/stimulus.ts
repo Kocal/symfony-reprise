@@ -22,11 +22,7 @@ interface ControllersJson {
 /** The virtual module the runtime helper imports; provided by each bundler adapter. */
 export const VIRTUAL_CONTROLLERS_ID = 'virtual:symfony/controllers';
 
-/**
- * Shown when `virtual:symfony/controllers` is imported (typically via `startStimulusApp()`)
- * while the `stimulus` option is unset — instead of the bundler's cryptic
- * "failed to resolve" / "Unhandled scheme" error.
- */
+/** Shown when the virtual module is imported while the `stimulus` option is unset. */
 export const STIMULUS_NOT_ENABLED_MESSAGE =
     `[@symfony/reprise] "${VIRTUAL_CONTROLLERS_ID}" was imported (this is what startStimulusApp() ` +
     `from "@symfony/reprise/stimulus" pulls in), but the Stimulus integration is not enabled. ` +
@@ -42,29 +38,18 @@ interface ResolvedController {
     autoimports: string[];
 }
 
-// A controller opts into lazy loading with a `stimulusFetch: 'lazy'` comment placed *directly
-// above the class declaration* — after the imports, like a decorator:
-//
-//   import { Controller } from '@hotwired/stimulus'
+// A controller opts into lazy loading with a `stimulusFetch: 'lazy'` comment directly above the
+// class (line/block comment, either quotes, `/*!...*/` survives minification) — recognised only
+// when the class is the very next code, so a stray marker elsewhere doesn't count:
 //
 //   /* stimulusFetch: 'lazy' */
 //   export default class extends Controller {}
-//
-// The marker is recognised only when the very next code is the class (`[export [default]] class`),
-// which is why a stray `stimulusFetch: 'lazy'` sitting above the imports (or anywhere else) does
-// NOT flip the controller to lazy. It may be a block comment or a single-line one, single or
-// double quotes; a block comment may sit on the class's own line, a line comment must precede it.
-// A preserved block comment (`/*! ... */`, the form tsc/esbuild keep so the marker survives
-// minification) is recognised too.
 const LAZY_COMMENT_RE =
     /(?:\/\*!?\s*stimulusFetch:\s*['"]lazy['"]\s*\*\/|\/\/\s*stimulusFetch:\s*['"]lazy['"])\s*(?:export\s+(?:default\s+)?)?(?:abstract\s+)?class\b/i;
 const LOCAL_CONTROLLER_RE = /[-_]controller\.[jt]s$/;
 
 export function generateControllersModule(opts: ResolvedStimulusOptions, root: string, isDev: boolean): string {
-    // Collect controllers keyed by identifier. Third-party controllers are added first, local
-    // ones second, so a local controller sharing an identifier with a third-party one overrides
-    // it (last write wins) and each identifier ends up in exactly one of the two maps — never
-    // emitted twice, never registered twice.
+    // Keyed by identifier; local added after third-party so a local override wins (last write wins).
     const controllers = new Map<string, ResolvedController>();
 
     const require = createRequire(path.join(root, 'noop.js'));
@@ -108,8 +93,7 @@ export function generateControllersModule(opts: ResolvedStimulusOptions, root: s
         controllers.set(identifier, {
             identifier,
             fetch: LAZY_COMMENT_RE.test(readFileSync(abs, 'utf8')) ? 'lazy' : 'eager',
-            // Emit a forward-slash path: a valid ESM import specifier on every OS (a Windows
-            // backslash path would be escaped in the generated string and is not a portable specifier).
+            // Forward slashes: a portable ESM specifier (a Windows backslash path isn't).
             main: abs.replace(/\\/g, '/'),
             autoimports: [],
         });
@@ -179,8 +163,7 @@ function listLocalControllers(dir: string): string[] {
         entries
             .map((e) => String(e).replace(/\\/g, '/'))
             .filter((e) => LOCAL_CONTROLLER_RE.test(e))
-            // Sort so the generated module -- and therefore its content hash -- stays stable
-            // regardless of the filesystem's iteration order. See symfony/ux#3703.
+            // Sort so the module (and its content hash) is stable across FS order. See symfony/ux#3703.
             .sort()
     );
 }

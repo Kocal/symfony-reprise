@@ -3,20 +3,12 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-/**
- * Build a Subresource Integrity string for `content`: one `<algorithm>-<base64 digest>`
- * token per algorithm, joined by spaces (the format browsers expect in an `integrity`
- * attribute, and the one Webpack Encore writes into `entrypoints.json`).
- */
+/** SRI string for `content`: space-joined `<algo>-<base64 digest>` tokens, one per algorithm. */
 export function computeIntegrity(content: string | Uint8Array, algorithms: string[]): string {
     return algorithms.map((algo) => `${algo}-${createHash(algo).update(content).digest('base64')}`).join(' ');
 }
 
-/**
- * The distinct file names referenced by every entry, across all four buckets
- * (js/css/preload/dynamic), in first-seen order. This is the set of emitted files
- * that get an integrity hash.
- */
+/** Distinct file names across every entry's four buckets (first-seen order) — the SRI set. */
 export function referencedFileNames(entryPoints: Record<string, EntryFiles>): string[] {
     const seen = new Set<string>();
     for (const files of Object.values(entryPoints)) {
@@ -27,11 +19,7 @@ export function referencedFileNames(entryPoints: Record<string, EntryFiles>): st
     return [...seen];
 }
 
-/**
- * Compute the integrity of each file read from `outputPath` on disk, keyed by file name.
- * Used by the Rspack path, whose `done` hook fires after the assets are emitted (like
- * Encore, which reads the emitted files back). Bytes are hashed raw, so binary assets work.
- */
+/** Integrity of each file read back from disk (Rspack path; raw bytes, so binary assets work). */
 export function integrityFromDisk(
     fileNames: string[],
     outputPath: string,

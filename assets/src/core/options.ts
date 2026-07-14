@@ -7,9 +7,8 @@ function normalizeIntegrity(integrity: Options['integrity']): ResolvedOptions['i
 }
 
 function normalizeCopyTo(to: string): string {
-    // Collapse "." segments and redundant slashes, then drop any leading "./" or "/" and trailing
-    // "/". A leading "./" or "/" would corrupt the manifest key ("build/./to-copy/…") and, in the
-    // Vite path, make Rollup reject the emitted asset fileName (it forbids relative-looking paths).
+    // Drop leading `./`|`/` and trailing `/`: they corrupt the manifest key and make Rollup reject
+    // a relative-looking emitted fileName.
     const normalized = path.posix.normalize(to.replace(/\\/g, '/'));
     return normalized
         .replace(/^\.?\/+/, '')
