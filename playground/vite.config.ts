@@ -8,7 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       input: {
         app: resolve(__dirname, './assets/app.js'),
         admin: resolve(__dirname, './assets/admin.js'),
