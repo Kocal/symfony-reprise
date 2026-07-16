@@ -49,8 +49,5 @@ jobs:
             - name: Install root JS dependencies
               run: pnpm install --frozen-lockfile
 
-            - name: Build JS assets
-              run: pnpm run build
-
             - name: Publish on NPM
               run: pnpm publish --recursive --access public --no-git-checks --provenance
