@@ -27,10 +27,10 @@ final class EntrypointsLookup implements EntrypointsLookupInterface
     private ?Entrypoints $entrypoints = null;
 
     /**
-     * Files already returned this request, so a chunk shared by several entries
-     * (e.g. a preloaded vendor chunk) is emitted only once per page.
+     * Files already returned this request, kept as a set (name => true) so a chunk shared by
+     * several entries (e.g. a preloaded vendor chunk) is emitted only once per page.
      *
-     * @var list<string>
+     * @var array<string, true>
      */
     private array $returnedFiles = [];
 
@@ -123,8 +123,15 @@ final class EntrypointsLookup implements EntrypointsLookupInterface
             'dynamic' => $entry->dynamic,
         };
 
-        $newFiles = array_values(array_diff($files, $this->returnedFiles));
-        $this->returnedFiles = [...$this->returnedFiles, ...$newFiles];
+        $newFiles = [];
+        foreach ($files as $file) {
+            if (!isset($this->returnedFiles[$file])) {
+                $newFiles[] = $file;
+            }
+        }
+        foreach ($newFiles as $file) {
+            $this->returnedFiles[$file] = true;
+        }
 
         return $newFiles;
     }
