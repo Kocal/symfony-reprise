@@ -128,17 +128,23 @@ export function generateControllersModule(opts: ResolvedStimulusOptions, root: s
     return render([...controllers.values()], isDev);
 }
 
+// Stimulus identifier normalization: `_` -> `-`, `/` -> `--` (e.g. `foo/bar_baz` -> `foo--bar-baz`).
+function normalizeIdentifier(id: string): string {
+    return id.replace(/_/g, '-').replace(/\//g, '--');
+}
+
 function thirdPartyIdentifier(
     packageName: string,
     controllerName: string,
     pkgName?: string,
     userName?: string
 ): string {
+    // Explicit user/package names keep their underscores; only the slash separator is collapsed.
     if (userName) return userName.replace(/\//g, '--');
     if (pkgName) return pkgName.replace(/\//g, '--');
     let id = `${packageName}/${controllerName}`;
     if (id.startsWith('@')) id = id.slice(1);
-    return id.replace(/_/g, '-').replace(/\//g, '--');
+    return normalizeIdentifier(id);
 }
 
 function render(controllers: ResolvedController[], isDev: boolean): string {
@@ -196,5 +202,5 @@ function listLocalControllers(dir: string): string[] {
 
 function localIdentifier(rel: string): string {
     const base = slash(rel).replace(/[-_]controller\.[jt]s$/, '');
-    return base.replace(/_/g, '-').replace(/\//g, '--');
+    return normalizeIdentifier(base);
 }
