@@ -18,8 +18,11 @@ export function bundleToGraph(bundle: Rollup.OutputBundle, root: string): Normal
     for (const file of Object.values(bundle)) {
         if (file.type !== 'chunk') continue;
         const chunk = file as ViteOutputChunk;
-        const css = chunk.viteMetadata ? [...chunk.viteMetadata.importedCss] : [];
         if (chunk.isEntry) {
+            // Rollup can emit the entry as a thin *facade* that just re-imports the real chunk (e.g. when the
+            // entry module uses top-level await); the CSS then rides on that statically-imported chunk, not the
+            // facade. Walk static imports so entry CSS is collected wherever Rollup parked it.
+            const css = collectEntryCss(chunk, bundle);
             for (const name of css) entryCss.add(name);
             entryPoints[chunk.name] = {
                 js: [chunk.fileName],
@@ -28,8 +31,8 @@ export function bundleToGraph(bundle: Rollup.OutputBundle, root: string): Normal
                 dynamic: [...chunk.dynamicImports],
             };
             assets.push({ logicalName: `${chunk.name}.js`, fileName: chunk.fileName });
-        } else {
-            for (const name of css) asyncCss.add(name);
+        } else if (chunk.viteMetadata) {
+            for (const name of chunk.viteMetadata.importedCss) asyncCss.add(name);
         }
     }
 
@@ -41,6 +44,26 @@ export function bundleToGraph(bundle: Rollup.OutputBundle, root: string): Normal
     }
 
     return { entryPoints, assets };
+}
+
+// Collect an entry's CSS: its own `importedCss` plus that of every statically-imported chunk, reached
+// transitively. Static imports only — dynamic-import CSS loads with its chunk and stays out of the entry.
+function collectEntryCss(entry: ViteOutputChunk, bundle: Rollup.OutputBundle): string[] {
+    const css = new Set<string>();
+    const visited = new Set<string>();
+    const walk = (chunk: ViteOutputChunk): void => {
+        if (chunk.viteMetadata) {
+            for (const name of chunk.viteMetadata.importedCss) css.add(name);
+        }
+        for (const imported of chunk.imports) {
+            if (visited.has(imported)) continue;
+            visited.add(imported);
+            const dep = bundle[imported];
+            if (dep && dep.type === 'chunk') walk(dep as ViteOutputChunk);
+        }
+    };
+    walk(entry);
+    return [...css];
 }
 
 function assetLogicalName(file: Rollup.OutputAsset, root: string, entryCss: Set<string>): string {
