@@ -45,6 +45,66 @@ describe('bundleToGraph', () => {
         expect(graph.entryPoints.vendor).toBeUndefined();
     });
 
+    it('collects entry CSS from a facade chunk that only re-imports the real chunk', () => {
+        // Rollup emits a thin *facade* entry (e.g. when the entry uses top-level await) that just re-imports
+        // the real chunk; the CSS then rides on that statically-imported chunk, not the facade itself.
+        const bundle = {
+            'app-facade.js': {
+                ...chunk({
+                    fileName: 'app-facade.js',
+                    name: 'app',
+                    isEntry: true,
+                    imports: ['app-real.js'],
+                }),
+                viteMetadata: { importedCss: new Set<string>(), importedAssets: new Set() },
+            },
+            'app-real.js': {
+                ...chunk({ fileName: 'app-real.js', name: 'app', isEntry: false }),
+                viteMetadata: { importedCss: new Set(['app-c3.css']), importedAssets: new Set() },
+            },
+            'app-c3.css': asset('app-c3.css', ['app.css']),
+        } as unknown as Rollup.OutputBundle;
+
+        const graph = bundleToGraph(bundle, '/app');
+
+        expect(graph.entryPoints.app).toEqual({
+            js: ['app-facade.js'],
+            css: ['app-c3.css'],
+            preload: ['app-real.js'],
+            dynamic: [],
+        });
+        // The facade's CSS must stay in the manifest (keyed by name), not be dropped as async chunk CSS.
+        expect(graph.assets).toContainEqual({ logicalName: 'app.css', fileName: 'app-c3.css' });
+    });
+
+    it('collects entry CSS transitively through a chain of statically imported chunks', () => {
+        // entry -> mid -> leaf, with CSS on both the mid and the (deepest) leaf chunk. The walk must
+        // follow imports to any depth, not just the entry's direct imports.
+        const bundle = {
+            'app.js': {
+                ...chunk({ fileName: 'app.js', name: 'app', isEntry: true, imports: ['mid.js'] }),
+                viteMetadata: { importedCss: new Set<string>(), importedAssets: new Set() },
+            },
+            'mid.js': {
+                ...chunk({ fileName: 'mid.js', name: 'mid', isEntry: false, imports: ['leaf.js'] }),
+                viteMetadata: { importedCss: new Set(['mid.css']), importedAssets: new Set() },
+            },
+            'leaf.js': {
+                ...chunk({ fileName: 'leaf.js', name: 'leaf', isEntry: false }),
+                viteMetadata: { importedCss: new Set(['leaf.css']), importedAssets: new Set() },
+            },
+            'mid.css': asset('mid.css', ['mid.css']),
+            'leaf.css': asset('leaf.css', ['leaf.css']),
+        } as unknown as Rollup.OutputBundle;
+
+        const graph = bundleToGraph(bundle, '/app');
+
+        expect(graph.entryPoints.app.css).toEqual(['mid.css', 'leaf.css']);
+        // Both stay in the manifest (keyed by name), not dropped as async chunk CSS.
+        expect(graph.assets).toContainEqual({ logicalName: 'mid.css', fileName: 'mid.css' });
+        expect(graph.assets).toContainEqual({ logicalName: 'leaf.css', fileName: 'leaf.css' });
+    });
+
     it('collects manifest assets: entry chunks by "<name>.js" and assets by names[0] without a source path', () => {
         const bundle = {
             'app-a1b2.js': chunk({ fileName: 'app-a1b2.js', name: 'app', isEntry: true }),
