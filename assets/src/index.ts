@@ -82,10 +82,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                 }
                 const manifest = {
                     ...buildManifest(graph, ctx),
-                    ...copyManifest(copyFiles, {
-                        publicPath: resolved.publicPath,
-                        manifestKeyPrefix: resolved.manifestKeyPrefix,
-                    }),
+                    ...copyManifest(copyFiles, resolved),
                 };
                 this.emitFile({
                     type: 'asset',
@@ -145,10 +142,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                         writeSymfonyFiles(
                             resolved.outputPath,
                             buildEntrypoints(configToDevGraph(server.config), ctx),
-                            copyManifest(copyFiles, {
-                                publicPath: resolved.publicPath,
-                                manifestKeyPrefix: resolved.manifestKeyPrefix,
-                            })
+                            copyManifest(copyFiles, resolved)
                         );
                     } catch (err) {
                         server.config.logger.error(
@@ -292,10 +286,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                             if (isDev) {
                                 const copyFiles = resolveCopyFiles(resolved.copy, false);
                                 writeCopyFiles(copyFiles, resolved.outputPath);
-                                manifest = copyManifest(copyFiles, {
-                                    publicPath: resolved.publicPath,
-                                    manifestKeyPrefix: resolved.manifestKeyPrefix,
-                                });
+                                manifest = copyManifest(copyFiles, resolved);
                             } else {
                                 manifest = buildManifest(graph, ctx);
                             }
