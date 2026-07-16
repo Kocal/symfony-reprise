@@ -1,5 +1,6 @@
 import type { CopyEntry, Options, ResolvedCopyEntry, ResolvedOptions, ResolvedStimulusOptions } from '../types';
 import * as path from 'node:path';
+import { slash, trimTrailingSlash } from './paths';
 
 /**
  * Whether `publicPath` points off the docroot: an absolute URL (`https://cdn/…`) or a
@@ -18,7 +19,7 @@ function normalizeIntegrity(integrity: Options['integrity']): ResolvedOptions['i
 function normalizeCopyTo(to: string): string {
     // Drop leading `./`|`/` and trailing `/`: they corrupt the manifest key and make Rollup reject
     // a relative-looking emitted fileName.
-    const normalized = path.posix.normalize(to.replace(/\\/g, '/'));
+    const normalized = path.posix.normalize(slash(to));
     return normalized
         .replace(/^\.?\/+/, '')
         .replace(/^\.$/, '')
@@ -79,5 +80,5 @@ export function normalizeOptions(options: Options | undefined, cwd: string): Res
 
 export function resolvePublicPath(publicPath: string, devOrigin: string | null): string {
     if (!devOrigin || isAbsolutePublicPath(publicPath)) return publicPath;
-    return `${devOrigin.replace(/\/$/, '')}${publicPath}`;
+    return `${trimTrailingSlash(devOrigin)}${publicPath}`;
 }

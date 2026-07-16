@@ -2,6 +2,7 @@ import type { ResolvedStimulusOptions } from '../types';
 import { readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import * as path from 'node:path';
+import { slash } from './paths';
 
 interface UserControllerConfig {
     enabled?: boolean;
@@ -119,7 +120,7 @@ export function generateControllersModule(opts: ResolvedStimulusOptions, root: s
             identifier,
             fetch: LAZY_COMMENT_RE.test(readFileSync(abs, 'utf8')) ? 'lazy' : 'eager',
             // Forward slashes: a portable ESM specifier (a Windows backslash path isn't).
-            main: abs.replace(/\\/g, '/'),
+            main: slash(abs),
             autoimports: [],
         });
     }
@@ -186,7 +187,7 @@ function listLocalControllers(dir: string): string[] {
     }
     return (
         entries
-            .map((e) => String(e).replace(/\\/g, '/'))
+            .map((e) => slash(String(e)))
             .filter((e) => LOCAL_CONTROLLER_RE.test(e))
             // Sort so the module (and its content hash) is stable across FS order. See symfony/ux#3703.
             .sort()
@@ -194,6 +195,6 @@ function listLocalControllers(dir: string): string[] {
 }
 
 function localIdentifier(rel: string): string {
-    const base = rel.replace(/\\/g, '/').replace(/[-_]controller\.[jt]s$/, '');
+    const base = slash(rel).replace(/[-_]controller\.[jt]s$/, '');
     return base.replace(/_/g, '-').replace(/\//g, '--');
 }

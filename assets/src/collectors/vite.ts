@@ -1,6 +1,7 @@
 import type { Rollup } from 'vite';
 import type { AssetEntry, EntryFiles, NormalizedGraph } from '../types';
 import { extname, relative, resolve } from 'node:path';
+import { slash } from '../core/paths';
 
 interface ViteChunkMetadata {
     importedCss: Set<string>;
@@ -82,10 +83,6 @@ export interface DevConfig {
         rolldownOptions?: { input?: Rollup.InputOption };
         rollupOptions?: { input?: Rollup.InputOption };
     };
-}
-
-function slash(p: string): string {
-    return p.replace(/\\/g, '/');
 }
 
 export function configToDevGraph(config: DevConfig): NormalizedGraph {
