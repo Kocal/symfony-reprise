@@ -53,7 +53,8 @@ Vite
 
     export default defineConfig({
       build: {
-        rollupOptions: {
+        // On Vite 7 or older, use `rollupOptions` instead
+        rolldownOptions: {
           input: {
             app: './assets/app.js',
           },

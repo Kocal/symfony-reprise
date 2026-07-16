@@ -222,11 +222,24 @@ describe('configToDevGraph', () => {
         expect(configToDevGraph({ root: '/app', build: { rollupOptions: {} } } as any).entryPoints).toEqual({});
     });
 
-    it('reads rolldownOptions.input when rollupOptions is absent (Vite 8)', () => {
+    it('reads rolldownOptions.input when rollupOptions is absent (rolldown-vite)', () => {
         const graph = configToDevGraph({
             root: '/app',
             build: { rolldownOptions: { input: { app: '/app/assets/app.js' } } },
         } as any);
         expect(graph.entryPoints.app).toEqual({ js: ['assets/app.js'], css: [], preload: [], dynamic: [] });
+    });
+
+    it('prefers rolldownOptions.input over the deprecated rollupOptions', () => {
+        const graph = configToDevGraph({
+            root: '/app',
+            build: {
+                rolldownOptions: { input: { app: '/app/assets/app.js' } },
+                rollupOptions: { input: { legacy: '/app/assets/legacy.js' } },
+            },
+        } as any);
+        expect(graph.entryPoints).toEqual({
+            app: { js: ['assets/app.js'], css: [], preload: [], dynamic: [] },
+        });
     });
 });

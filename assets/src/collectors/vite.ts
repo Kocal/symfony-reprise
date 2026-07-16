@@ -79,8 +79,8 @@ const CSS_EXTS = new Set(['.css', '.scss', '.sass', '.less', '.styl', '.stylus',
 export interface DevConfig {
     root: string;
     build: {
-        rollupOptions?: { input?: Rollup.InputOption };
         rolldownOptions?: { input?: Rollup.InputOption };
+        rollupOptions?: { input?: Rollup.InputOption };
     };
 }
 
@@ -90,8 +90,9 @@ function slash(p: string): string {
 
 export function configToDevGraph(config: DevConfig): NormalizedGraph {
     const entryPoints: Record<string, EntryFiles> = {};
-    // Vite 8 (rolldown) exposes the input under either key.
-    const input = config.build.rollupOptions?.input ?? config.build.rolldownOptions?.input;
+    // rolldown-vite renamed `build.rollupOptions` to `build.rolldownOptions`; prefer the new key and
+    // fall back to the deprecated one so both current Vite and rolldown-vite keep working.
+    const input = config.build.rolldownOptions?.input ?? config.build.rollupOptions?.input;
     const entries: Record<string, string> =
         typeof input === 'object' && input !== null && !Array.isArray(input) ? (input as Record<string, string>) : {};
 
