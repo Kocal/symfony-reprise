@@ -1,6 +1,8 @@
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from '@rsbuild/core'
+import { pluginReact } from '@rsbuild/plugin-react'
+import { pluginVue } from '@rsbuild/plugin-vue'
 import Symfony from '../assets/src/rsbuild'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -13,6 +15,8 @@ export default defineConfig({
     },
   },
   plugins: [
+    pluginReact(),
+    pluginVue(),
     Symfony({
         stimulus: './assets/controllers.json',
         integrity: {
@@ -26,6 +30,9 @@ export default defineConfig({
     }),
   ],
     resolve: {
+      // @symfony/ux-react is linked to a local UX build that ships its own React copy,
+      // so force a single one here (Rsbuild, unlike Vite, doesn't dedupe React).
+      dedupe: ['react', 'react-dom'],
       alias: {
           'leaflet/dist/leaflet.min.css': 'leaflet/dist/leaflet.css',
       }

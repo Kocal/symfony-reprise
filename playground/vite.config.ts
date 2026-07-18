@@ -1,6 +1,8 @@
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import vue from '@vitejs/plugin-vue'
 import Inspect from 'vite-plugin-inspect'
 import Unplugin from '../assets/src/vite'
 
@@ -17,6 +19,8 @@ export default defineConfig({
   },
   plugins: [
     Inspect(),
+    react(),
+    vue(),
     Unplugin({
         stimulus: './assets/controllers.json',
         integrity: {

@@ -1,7 +1,16 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
-    <h1>Hello world!</h1>
+    <div style="background-color:white; padding: 5">
+        <h1>Hello world!</h1>
+        <h2><time>{{ 'now'|date('m/d/Y H:i:s') }}</time></h2>
 
-    {{ ux_map(map, { style: 'height: 300px' }) }}
+        {{ ux_map(map, { style: 'height: 300px' }) }}
+
+        <h2>UX React</h2>
+        <div {{ react_component('Hello', { fullName: 'Reprise' }) }}></div>
+
+        <h2>UX Vue</h2>
+        <div {{ vue_component('Hello', { fullName: 'Reprise' }) }}></div>
+    </div>
 {% endblock %}
