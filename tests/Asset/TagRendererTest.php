@@ -187,6 +187,41 @@ final class TagRendererTest extends TestCase
         $this->assertStringNotContainsString('@vite/client', $html);
     }
 
+    public function testInjectsReactRefreshPreambleAfterTheClientAndBeforeTheEntryInDev()
+    {
+        $renderer = $this->renderer(
+            js: ['http://127.0.0.1:5173/build/app.js'],
+            devServer: new DevServer(
+                'http://127.0.0.1:5173',
+                'http://127.0.0.1:5173/build/@vite/client',
+                'http://127.0.0.1:5173/build/@react-refresh',
+            ),
+        );
+
+        $html = $renderer->renderScriptTags('app');
+
+        $this->assertStringContainsString('import RefreshRuntime from "http://127.0.0.1:5173/build/@react-refresh"', $html);
+        $this->assertStringContainsString('window.__vite_plugin_react_preamble_installed__ = true', $html);
+
+        // Order matters: the HMR client, then the preamble, then the entry that imports the components.
+        $clientPos = strpos($html, '@vite/client');
+        $preamblePos = strpos($html, '@react-refresh');
+        $entryPos = strpos($html, 'build/app.js');
+        $this->assertLessThan($preamblePos, $clientPos);
+        $this->assertLessThan($entryPos, $preamblePos);
+    }
+
+    public function testDoesNotInjectReactRefreshPreambleWhenNotAReactApp()
+    {
+        $html = $this->renderer(
+            js: ['http://127.0.0.1:5173/build/app.js'],
+            devServer: new DevServer('http://127.0.0.1:5173', 'http://127.0.0.1:5173/build/@vite/client'),
+        )->renderScriptTags('app');
+
+        $this->assertStringNotContainsString('@react-refresh', $html);
+        $this->assertStringNotContainsString('__vite_plugin_react_preamble_installed__', $html);
+    }
+
     public function testRendersModulepreloadLinksWithIntegrityBeforeScripts()
     {
         $html = $this->renderer(

@@ -790,6 +790,14 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         default_map_id?: scalar|Param|null, // Default: null
  *     },
  * }
+ * @psalm-type ReactConfig = array{
+ *     controllers_path?: scalar|Param|null, // The path to the directory where React controller components are stored - relevant only when using symfony/asset-mapper. // Default: "%kernel.project_dir%/assets/react/controllers"
+ *     name_glob?: list<scalar|Param|null>,
+ * }
+ * @psalm-type VueConfig = array{
+ *     controllers_path?: scalar|Param|null, // The path to the directory where Vue controller components are stored - relevant only when using symfony/asset-mapper. // Default: "%kernel.project_dir%/assets/vue/controllers"
+ *     name_glob?: list<scalar|Param|null>,
+ * }
  * @psalm-type RepriseConfig = array{
  *     output_path?: scalar|Param|null, // Directory where the @symfony/reprise plugin writes entrypoints.json and manifest.json. // Default: "%kernel.project_dir%/public/build"
  *     strict_mode?: bool|Param, // Throw when the entrypoints.json file or a requested entry is missing. // Default: true
@@ -817,6 +825,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     twig_extra?: TwigExtraConfig,
  *     stimulus?: StimulusConfig,
  *     ux_map?: UxMapConfig,
+ *     react?: ReactConfig,
+ *     vue?: VueConfig,
  *     reprise?: RepriseConfig,
  *     "when@dev"?: array{
  *         imports?: ImportsConfig,
@@ -827,6 +837,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         twig_extra?: TwigExtraConfig,
  *         stimulus?: StimulusConfig,
  *         ux_map?: UxMapConfig,
+ *         react?: ReactConfig,
+ *         vue?: VueConfig,
  *         reprise?: RepriseConfig,
  *         web_profiler?: WebProfilerConfig,
  *     },
@@ -839,6 +851,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         twig_extra?: TwigExtraConfig,
  *         stimulus?: StimulusConfig,
  *         ux_map?: UxMapConfig,
+ *         react?: ReactConfig,
+ *         vue?: VueConfig,
  *         reprise?: RepriseConfig,
  *     },
  *     "when@test"?: array{
@@ -850,6 +864,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         twig_extra?: TwigExtraConfig,
  *         stimulus?: StimulusConfig,
  *         ux_map?: UxMapConfig,
+ *         react?: ReactConfig,
+ *         vue?: VueConfig,
  *         reprise?: RepriseConfig,
  *         web_profiler?: WebProfilerConfig,
  *     },

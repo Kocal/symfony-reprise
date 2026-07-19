@@ -27,6 +27,8 @@
         "symfony/stimulus-bundle": "^3.2",
         "symfony/ux-map": "^3.2",
         "symfony/ux-leaflet-map": "^3.2",
+        "symfony/ux-react": "^3.2",
+        "symfony/ux-vue": "^3.2",
         "symfony/console": "7.4.*|8.1.*",
         "symfony/dotenv": "7.4.*|8.1.*",
         "symfony/reprise": "@dev",

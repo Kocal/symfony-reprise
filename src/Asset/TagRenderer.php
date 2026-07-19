@@ -53,6 +53,9 @@ final class TagRenderer implements ResetInterface
         $devServer = $this->lookup->getDevServer();
         if (!$this->clientInjected && null !== $devServer && null !== $devServer->client) {
             $tags[] = \sprintf('<script type="module" src="%s"></script>', htmlspecialchars($devServer->client, \ENT_QUOTES));
+            if (null !== $devServer->reactRefresh) {
+                $tags[] = $this->renderReactRefreshPreamble($devServer->reactRefresh);
+            }
             $this->clientInjected = true;
         }
 
@@ -111,6 +114,27 @@ final class TagRenderer implements ResetInterface
     public function reset(): void
     {
         $this->clientInjected = false;
+    }
+
+    /**
+     * Emits Vite's React Fast Refresh preamble. `@vitejs/plugin-react` normally injects this into the
+     * HTML itself, but cannot when Symfony renders the page (backend integration), so we render it here
+     * before the entry. See https://vite.dev/guide/backend-integration.
+     */
+    private function renderReactRefreshPreamble(string $reactRefreshUrl): string
+    {
+        return \sprintf(
+            <<<'HTML'
+                <script type="module">
+                import RefreshRuntime from "%s";
+                RefreshRuntime.injectIntoGlobalHook(window);
+                window.$RefreshReg$ = () => {};
+                window.$RefreshSig$ = () => (type) => type;
+                window.__vite_plugin_react_preamble_installed__ = true;
+                </script>
+                HTML,
+            htmlspecialchars($reactRefreshUrl, \ENT_QUOTES),
+        );
     }
 
     private function url(string $reference, ?string $packageName): string

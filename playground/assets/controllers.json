@@ -5,6 +5,18 @@
                 "enabled": true,
                 "fetch": "lazy"
             }
+        },
+        "@symfony/ux-react": {
+            "react": {
+                "enabled": true,
+                "fetch": "eager"
+            }
+        },
+        "@symfony/ux-vue": {
+            "vue": {
+                "enabled": true,
+                "fetch": "eager"
+            }
         }
     },
     "entrypoints": []
