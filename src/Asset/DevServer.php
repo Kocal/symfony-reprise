@@ -23,6 +23,7 @@ final class DevServer
     public function __construct(
         public readonly string $origin,
         public readonly ?string $client,
+        public readonly ?string $reactRefresh = null,
     ) {
     }
 
@@ -41,6 +42,11 @@ final class DevServer
             throw new InvalidEntrypointsException('The dev-server "client" must be a string or null.');
         }
 
-        return new self($origin, $client);
+        $reactRefresh = $data['reactRefresh'] ?? null;
+        if (null !== $reactRefresh && !\is_string($reactRefresh)) {
+            throw new InvalidEntrypointsException('The dev-server "reactRefresh" must be a string or null.');
+        }
+
+        return new self($origin, $client, $reactRefresh);
     }
 }

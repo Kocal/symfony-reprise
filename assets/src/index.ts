@@ -127,11 +127,21 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                     });
                     server.config.server.origin = origin; // keep Vite's internal URL rewriting in sync
 
-                    // Vite serves `@vite/client` under `base` (publicPath), not at the origin root.
+                    // Vite serves `@vite/client` (and `@react-refresh`) under `base` (publicPath), not
+                    // at the origin root.
                     const urlPrefix = resolvePublicPath(resolved.publicPath, origin);
+                    // `@vitejs/plugin-react` (and `-react-swc`) register plugins named `vite:react-*`.
+                    // When present, Symfony must emit the Fast Refresh preamble itself (it can't touch the HTML).
+                    const usesReactPlugin = server.config.plugins.some((plugin) =>
+                        plugin.name?.startsWith('vite:react')
+                    );
                     const ctx: BuildContext = {
                         isProd: false,
-                        devServer: { origin, client: joinUrl(urlPrefix, '@vite/client') },
+                        devServer: {
+                            origin,
+                            client: joinUrl(urlPrefix, '@vite/client'),
+                            reactRefresh: usesReactPlugin ? joinUrl(urlPrefix, '@react-refresh') : null,
+                        },
                         publicPath: resolved.publicPath,
                         urlPrefix,
                         manifestKeyPrefix: resolved.manifestKeyPrefix,

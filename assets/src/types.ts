@@ -185,6 +185,13 @@ export interface DevServer {
      * into the entry (Rsbuild) so nothing extra needs to be rendered.
      */
     client: string | null;
+    /**
+     * URL of Vite's React Fast Refresh runtime (`@react-refresh`) to inject as a preamble before
+     * the entry in dev, set when `@vitejs/plugin-react` is used. `@vitejs/plugin-react` cannot inject
+     * this itself when Symfony renders the HTML (backend integration). `null`/absent otherwise, and
+     * always under Rsbuild, which wires React refresh into the bundle itself.
+     */
+    reactRefresh?: string | null;
 }
 
 export interface AssetEntry {
