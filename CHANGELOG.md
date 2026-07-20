@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 0.5.0
+
+- Require Vite `^7.0` or `^8.0`; Vite 7 is now the minimum supported version
+- Require Rsbuild `^1.7` or `^2.0`; Rsbuild 1.7 is now the minimum supported version
+
 ## 0.4.0
 
 - Support React Fast Refresh (HMR) with Vite by rendering the `@vitejs/plugin-react` preamble in dev

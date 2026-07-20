@@ -69,6 +69,46 @@ jobs:
             - name: Test
               run: pnpm test
 
+    bundler-versions:
+        name: ${{ matrix.name }}
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    # `vite`/`@rsbuild/core` are optional peers; prove both ends of every supported major
+                    # (the exact floor and the latest in range). `@vitejs/plugin-react@6` only peers Vite 8,
+                    # so the Vite 7 rows pull `@vitejs/plugin-react@5` (covers 6/7/8) for the React HMR test.
+                    - { name: 'Vite 7.0.0', add: 'vite@7.0.0 @vitejs/plugin-react@5' }
+                    - { name: 'Vite ^7.0', add: 'vite@^7.0 @vitejs/plugin-react@5' }
+                    - { name: 'Vite 8.0.0', add: 'vite@8.0.0' }
+                    - { name: 'Vite ^8.0', add: 'vite@^8.0' }
+                    - { name: 'Rsbuild 1.7.0', add: '@rsbuild/core@1.7.0' }
+                    - { name: 'Rsbuild ^1.7', add: '@rsbuild/core@^1.7' }
+                    - { name: 'Rsbuild 2.0.0', add: '@rsbuild/core@2.0.0' }
+                    - { name: 'Rsbuild ^2.0', add: '@rsbuild/core@^2.0' }
+        steps:
+            - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  persist-credentials: false
+            - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+            - name: Set node
+              uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+              with:
+                  node-version-file: .nvmrc
+                  cache: pnpm
+                  cache-dependency-path: pnpm-lock.yaml
+            - name: Install
+              run: pnpm install --frozen-lockfile
+            - name: Pin ${{ matrix.name }}
+              run: pnpm --filter @symfony/reprise add -D ${{ matrix.add }}
+            - name: Build
+              run: pnpm build
+            - name: Test
+              run: pnpm test
+
     php:
         name: PHP ${{ matrix.php-version }} + Symfony ${{ matrix.symfony-version }}${{ matrix.dependency-version == 'lowest' && ' lowest' || '' }} on ${{ matrix.os || 'ubuntu-latest' }}
         runs-on: ${{ matrix.os || 'ubuntu-latest' }}
