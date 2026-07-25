@@ -15,13 +15,12 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Event\FinishRequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
-use Symfony\Reprise\Asset\EntrypointsLookupInterface;
-use Symfony\Reprise\Asset\TagRenderer;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
- * Clears the per-request asset state (lookup dedup + renderer client flag) once the main request finishes,
- * so a long-running worker (FrankenPHP, RoadRunner, ...) starts afresh, and on an exception before
- * ErrorListener renders the error page, so that page still gets the full tag set.
+ * Resets the per-request asset state (every build's lookup dedup set and the renderer's injected clients)
+ * once the main request finishes, so a long-running worker (FrankenPHP, RoadRunner, ...) starts afresh,
+ * and on an exception before ErrorListener renders the error page, so that page still gets the full tag set.
  *
  * @author Hugo Alliaume <hugo@alliau.me>
  *
@@ -29,9 +28,11 @@ use Symfony\Reprise\Asset\TagRenderer;
  */
 final class ResetAssetsEventListener implements EventSubscriberInterface
 {
+    /**
+     * @param iterable<ResetInterface> $resettables
+     */
     public function __construct(
-        private readonly EntrypointsLookupInterface $entrypointsLookup,
-        private readonly TagRenderer $tagRenderer,
+        private readonly iterable $resettables,
     ) {
     }
 
@@ -60,7 +61,8 @@ final class ResetAssetsEventListener implements EventSubscriberInterface
 
     private function reset(): void
     {
-        $this->entrypointsLookup->reset();
-        $this->tagRenderer->reset();
+        foreach ($this->resettables as $resettable) {
+            $resettable->reset();
+        }
     }
 }

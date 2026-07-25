@@ -17,6 +17,7 @@ reimplement any of that. It covers only the Symfony-side glue the bundlers leave
 - **Asset versioning**: content-hash cache busting, wired into the manifest
 - **File copy**: copy static files into the build, keyed in the manifest
 - **Dev server and HMR**: points Twig at the running Vite/Rsbuild server
+- **Multiple builds**: drive several bundles (e.g. a main app and a separately-built embeddable widget) from one Symfony app
 - **Twig tag rendering**: ``reprise_entry_script_tags``/``reprise_entry_link_tags`` render straight from
   ``entrypoints.json``
 - **Symfony UX / Stimulus**: registers ``controllers.json`` and local controllers, eager or lazy
@@ -456,6 +457,89 @@ The resulting ``entrypoints.json`` gets an extra ``integrity`` section:
 Hashes cover every referenced file in each entry (js, css, and preloaded/dynamic chunks), and since they're computed
 from the files actually written to disk, they stay correct through minification and hashing.
 
+Multiple builds
+~~~~~~~~~~~~~~~
+
+Several areas of one app (a public part, an admin panel) are usually just separate entry points in one config: the
+Multiple entries case, addressed by name without a ``build`` argument. Reach for multiple builds only when a part
+needs its own bundler config and output directory, like an embeddable widget built apart from the main app.
+
+Give the widget its own config, pointing the plugin at a separate output directory -> with Vite:
+
+.. code-block:: javascript
+
+    // vite.config.widget.ts  -- run with `vite build --config vite.config.widget.ts`
+    import { defineConfig } from 'vite'
+    import Symfony from '@symfony/reprise/vite'
+
+    export default defineConfig({
+      build: {
+        rolldownOptions: {
+          input: {
+            widget: './assets/widget.js',
+          },
+        },
+      },
+      plugins: [
+        Symfony({
+          outputPath: 'public/widget-build',
+          publicPath: '/widget-build/',
+        }),
+      ],
+    })
+
+or with Rsbuild:
+
+.. code-block:: javascript
+
+    // rsbuild.config.widget.ts  -- run with `rsbuild build --config rsbuild.config.widget.ts`
+    import { defineConfig } from '@rsbuild/core'
+    import Symfony from '@symfony/reprise/rsbuild'
+
+    export default defineConfig({
+      source: {
+        entry: {
+          widget: './assets/widget.js',
+        },
+      },
+      plugins: [
+        Symfony({
+          outputPath: 'public/widget-build',
+          publicPath: '/widget-build/',
+        }),
+      ],
+    })
+
+These two blocks are alternatives: pick the one that matches your bundler, you don't use both in one project.
+
+Name that directory in ``reprise.yaml``:
+
+.. code-block:: yaml
+
+    # config/packages/reprise.yaml
+    reprise:
+        # the main app (your existing config), addressed without a build name
+        output_path: '%kernel.project_dir%/public/build'
+        builds:
+            # each extra build: name -> the directory its entrypoints.json lives in
+            widget: '%kernel.project_dir%/public/widget-build'
+
+In Twig, pass the build name to load from it; omit it for the default build:
+
+.. code-block:: twig
+
+    {# the main app (default build) #}
+    {{ reprise_entry_script_tags('app') }}
+    {{ reprise_entry_link_tags('app') }}
+
+    {# the widget build, selected with the build argument #}
+    {{ reprise_entry_script_tags('widget', build='widget') }}
+    {{ reprise_entry_link_tags('widget', build='widget') }}
+
+The ``build`` argument works on every ``reprise_entry_*`` function. Each build has its own dev server, so the app's
+and the widget's can run at once on different ports, each injecting its HMR client once. Set ``output_path: false``
+for a named-builds-only setup (at least one build is required).
+
 Configuration
 -------------
 
@@ -466,7 +550,11 @@ Reprise exposes a few optional settings under its own configuration, all shown h
     # config/packages/reprise.yaml
     reprise:
         # Directory the @symfony/reprise plugin writes entrypoints.json and manifest.json into.
+        # Set to false when using only named builds (requires at least one entry under builds).
         output_path: '%kernel.project_dir%/public/build'
+
+        # Additional named builds: a map of build name -> output directory (see `Multiple builds`_).
+        builds: {}
 
         # Throw when entrypoints.json or a requested entry is missing, instead of rendering nothing.
         strict_mode: true
@@ -488,7 +576,10 @@ Reprise exposes a few optional settings under its own configuration, all shown h
         link_attributes: []
 
 - ``output_path``: filesystem directory holding ``entrypoints.json`` and ``manifest.json``. Must match the plugin's
-  own ``outputPath``.
+  own ``outputPath``. Accepts ``false`` to disable the default build entirely (requires at least one entry under
+  ``builds``).
+- ``builds``: a map of build name -> output directory for additional bundles. Each named build is addressed by passing
+  ``build='<name>'`` to the tag and file functions. See `Multiple builds`_.
 - ``strict_mode``: when ``true`` (the default), throws a clear exception on a missing file or an unknown entry; when
   ``false``, renders nothing instead.
 - ``cache``: when ``true``, parse ``entrypoints.json`` once at ``cache:warmup`` and read it from a compiled PHP file

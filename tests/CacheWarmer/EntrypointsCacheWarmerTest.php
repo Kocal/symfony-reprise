@@ -35,8 +35,7 @@ final class EntrypointsCacheWarmerTest extends TestCase
     public function testWarmsThePoolFromTheEntrypointsFile()
     {
         $warmer = new EntrypointsCacheWarmer(
-            __DIR__.'/../fixtures/build/entrypoints.json',
-            'reprise.entrypoints',
+            ['_default' => __DIR__.'/../fixtures/build/entrypoints.json'],
             new PhpArrayAdapter($this->file, new ArrayAdapter()),
         );
 
@@ -44,19 +43,35 @@ final class EntrypointsCacheWarmerTest extends TestCase
         $this->assertSame([], $warmer->warmUp(sys_get_temp_dir()));
 
         // A fresh adapter reading the compiled file must hit and hold a built Entrypoints object.
-        $item = new PhpArrayAdapter($this->file, new ArrayAdapter())->getItem('reprise.entrypoints');
+        $item = new PhpArrayAdapter($this->file, new ArrayAdapter())->getItem('reprise.entrypoints._default');
         $this->assertTrue($item->isHit());
         $this->assertInstanceOf(Entrypoints::class, $item->get());
         $this->assertSame(['build/app-a1b2.js'], $item->get()->entryPoints['app']->js);
     }
 
+    public function testWarmsEveryBuildUnderItsOwnKey()
+    {
+        $warmer = new EntrypointsCacheWarmer(
+            [
+                '_default' => __DIR__.'/../fixtures/build/entrypoints.json',
+                'admin' => __DIR__.'/../fixtures/build/entrypoints.json',
+            ],
+            new PhpArrayAdapter($this->file, new ArrayAdapter()),
+        );
+        $warmer->warmUp(sys_get_temp_dir());
+
+        $cache = new PhpArrayAdapter($this->file, new ArrayAdapter());
+        $this->assertTrue($cache->getItem('reprise.entrypoints._default')->isHit());
+        $this->assertTrue($cache->getItem('reprise.entrypoints.admin')->isHit());
+    }
+
     public function testSkipsAMissingFileWithoutThrowing()
     {
         $cache = new PhpArrayAdapter($this->file, new ArrayAdapter());
-        $warmer = new EntrypointsCacheWarmer('/does/not/exist/entrypoints.json', 'reprise.entrypoints', $cache);
+        $warmer = new EntrypointsCacheWarmer(['_default' => '/does/not/exist/entrypoints.json'], $cache);
 
         $this->assertSame([], $warmer->warmUp(sys_get_temp_dir()));
-        $this->assertFalse($cache->getItem('reprise.entrypoints')->isHit());
+        $this->assertFalse($cache->getItem('reprise.entrypoints._default')->isHit());
     }
 
     public function testTheFullEntrypointsGraphSurvivesTheCompiledFileRoundTrip()

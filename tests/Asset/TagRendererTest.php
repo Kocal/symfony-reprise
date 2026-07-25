@@ -23,9 +23,13 @@ use Symfony\Reprise\Asset\DevServer;
 use Symfony\Reprise\Asset\EntrypointsLookup;
 use Symfony\Reprise\Asset\EntrypointsLookupInterface;
 use Symfony\Reprise\Asset\TagRenderer;
+use Symfony\Reprise\Exception\UndefinedBuildException;
+use Symfony\Reprise\Tests\BuildCollectionTrait;
 
 final class TagRendererTest extends TestCase
 {
+    use BuildCollectionTrait;
+
     private function renderer(
         array $js = [],
         array $css = [],
@@ -39,7 +43,28 @@ final class TagRendererTest extends TestCase
         bool $preloadEnabled = true,
         ?Packages $packages = null,
     ): TagRenderer {
-        $lookup = new class($js, $css, $preload, $integrity, $devServer) implements EntrypointsLookupInterface {
+        $packages ??= new Packages(new PathPackage('/', new EmptyVersionStrategy()));
+
+        return new TagRenderer(
+            $this->collection(['_default' => $this->lookup($js, $css, $preload, $integrity, $devServer)]),
+            $packages,
+            $requestStack,
+            null,
+            $crossorigin,
+            $preloadEnabled,
+            $scriptAttributes,
+            $linkAttributes,
+        );
+    }
+
+    private function lookup(
+        array $js = [],
+        array $css = [],
+        array $preload = [],
+        array $integrity = [],
+        ?DevServer $devServer = null,
+    ): EntrypointsLookupInterface {
+        return new class($js, $css, $preload, $integrity, $devServer) implements EntrypointsLookupInterface {
             public function __construct(
                 private array $js,
                 private array $css,
@@ -93,19 +118,6 @@ final class TagRendererTest extends TestCase
             {
             }
         };
-
-        $packages ??= new Packages(new PathPackage('/', new EmptyVersionStrategy()));
-
-        return new TagRenderer(
-            $lookup,
-            $packages,
-            $requestStack,
-            null,
-            $crossorigin,
-            $preloadEnabled,
-            $scriptAttributes,
-            $linkAttributes,
-        );
     }
 
     public function testRendersModuleScriptTagsWithPackagesResolvedSrc()
@@ -396,7 +408,7 @@ final class TagRendererTest extends TestCase
     public function testEntryExistsDelegatesToTheLookup()
     {
         $renderer = new TagRenderer(
-            new EntrypointsLookup(__DIR__.'/../fixtures/build/entrypoints.json'),
+            $this->collection(['_default' => new EntrypointsLookup(__DIR__.'/../fixtures/build/entrypoints.json')]),
             new Packages(new PathPackage('/', new EmptyVersionStrategy())),
         );
 
@@ -484,17 +496,52 @@ final class TagRendererTest extends TestCase
         $this->assertStringNotContainsString('sha384-FAKE', $html);
     }
 
-    public function testRenderingScriptTagsWithABuildNameThrowsUntilBuildsAreSupported()
+    public function testRenderingScriptTagsForAnUnknownBuildThrows()
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(UndefinedBuildException::class);
 
         $this->renderer(js: ['build/app.js'])->renderScriptTags('app', build: 'admin');
     }
 
-    public function testRenderingLinkTagsWithABuildNameThrowsUntilBuildsAreSupported()
+    public function testRenderingLinkTagsForAnUnknownBuildThrows()
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(UndefinedBuildException::class);
 
         $this->renderer(css: ['build/app.css'])->renderLinkTags('app', build: 'admin');
+    }
+
+    public function testRendersTheRequestedBuild()
+    {
+        $renderer = new TagRenderer(
+            $this->collection([
+                '_default' => $this->lookup(js: ['build/app.js']),
+                'admin' => $this->lookup(js: ['admin/dashboard.js']),
+            ]),
+            new Packages(new PathPackage('/', new EmptyVersionStrategy())),
+        );
+
+        $this->assertSame('<script src="/build/app.js" type="module"></script>', $renderer->renderScriptTags('app'));
+        $this->assertSame('<script src="/admin/dashboard.js" type="module"></script>', $renderer->renderScriptTags('dashboard', build: 'admin'));
+    }
+
+    public function testInjectsEachBuildsHmrClientOncePerRequest()
+    {
+        $renderer = new TagRenderer(
+            $this->collection([
+                '_default' => $this->lookup(js: ['http://127.0.0.1:5173/build/app.js'], devServer: new DevServer('http://127.0.0.1:5173', 'http://127.0.0.1:5173/build/@vite/client')),
+                'admin' => $this->lookup(js: ['http://127.0.0.1:3000/admin/app.js'], devServer: new DevServer('http://127.0.0.1:3000', 'http://127.0.0.1:3000/admin/@vite/client')),
+            ]),
+            new Packages(new PathPackage('/', new EmptyVersionStrategy())),
+        );
+
+        // Each build's dev server injects its own client exactly once, even on the same page.
+        $default = $renderer->renderScriptTags('app');
+        $admin = $renderer->renderScriptTags('app', build: 'admin');
+        $this->assertStringContainsString('http://127.0.0.1:5173/build/@vite/client', $default);
+        $this->assertStringContainsString('http://127.0.0.1:3000/admin/@vite/client', $admin);
+
+        // A second render of either build no longer re-injects its client.
+        $this->assertStringNotContainsString('@vite/client', $renderer->renderScriptTags('app'));
+        $this->assertStringNotContainsString('@vite/client', $renderer->renderScriptTags('app', build: 'admin'));
     }
 }

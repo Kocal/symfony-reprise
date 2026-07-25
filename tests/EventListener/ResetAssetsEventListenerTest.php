@@ -25,9 +25,12 @@ use Symfony\Reprise\Asset\EntrypointsLookup;
 use Symfony\Reprise\Asset\EntrypointsLookupInterface;
 use Symfony\Reprise\Asset\TagRenderer;
 use Symfony\Reprise\EventListener\ResetAssetsEventListener;
+use Symfony\Reprise\Tests\BuildCollectionTrait;
 
 final class ResetAssetsEventListenerTest extends TestCase
 {
+    use BuildCollectionTrait;
+
     private function lookup(string $fixture = 'build'): EntrypointsLookup
     {
         return new EntrypointsLookup(__DIR__.'/../fixtures/'.$fixture.'/entrypoints.json');
@@ -35,7 +38,10 @@ final class ResetAssetsEventListenerTest extends TestCase
 
     private function rendererFor(EntrypointsLookupInterface $lookup): TagRenderer
     {
-        return new TagRenderer($lookup, new Packages(new PathPackage('/', new EmptyVersionStrategy())));
+        return new TagRenderer(
+            $this->collection(['_default' => $lookup]),
+            new Packages(new PathPackage('/', new EmptyVersionStrategy())),
+        );
     }
 
     private function finishRequest(int $requestType): FinishRequestEvent
@@ -53,7 +59,7 @@ final class ResetAssetsEventListenerTest extends TestCase
         $lookup = $this->lookup();
         $lookup->getPreloadFiles('app'); // marks the shared chunk as already returned
 
-        new ResetAssetsEventListener($lookup, $this->rendererFor($lookup))->onFinishRequest($this->finishRequest(HttpKernelInterface::MAIN_REQUEST));
+        new ResetAssetsEventListener([$lookup, $this->rendererFor($lookup)])->onFinishRequest($this->finishRequest(HttpKernelInterface::MAIN_REQUEST));
 
         // After the reset the shared chunk is offered again to the next request.
         $this->assertSame(['build/shared-e5f6.js'], $lookup->getPreloadFiles('admin'));
@@ -64,7 +70,7 @@ final class ResetAssetsEventListenerTest extends TestCase
         $lookup = $this->lookup();
         $lookup->getPreloadFiles('app');
 
-        new ResetAssetsEventListener($lookup, $this->rendererFor($lookup))->onFinishRequest($this->finishRequest(HttpKernelInterface::SUB_REQUEST));
+        new ResetAssetsEventListener([$lookup, $this->rendererFor($lookup)])->onFinishRequest($this->finishRequest(HttpKernelInterface::SUB_REQUEST));
 
         // A sub-request finishing must NOT reset -- the shared chunk stays deduplicated.
         $this->assertSame([], $lookup->getPreloadFiles('admin'));
@@ -75,7 +81,7 @@ final class ResetAssetsEventListenerTest extends TestCase
         $lookup = $this->lookup();
         $lookup->getPreloadFiles('app');
 
-        new ResetAssetsEventListener($lookup, $this->rendererFor($lookup))->onException($this->exceptionEvent(HttpKernelInterface::MAIN_REQUEST));
+        new ResetAssetsEventListener([$lookup, $this->rendererFor($lookup)])->onException($this->exceptionEvent(HttpKernelInterface::MAIN_REQUEST));
 
         $this->assertSame(['build/shared-e5f6.js'], $lookup->getPreloadFiles('admin'));
     }
@@ -86,7 +92,7 @@ final class ResetAssetsEventListenerTest extends TestCase
         $lookup = $this->lookup();
         $lookup->getPreloadFiles('app');
 
-        new ResetAssetsEventListener($lookup, $this->rendererFor($lookup))->onException($this->exceptionEvent(HttpKernelInterface::SUB_REQUEST));
+        new ResetAssetsEventListener([$lookup, $this->rendererFor($lookup)])->onException($this->exceptionEvent(HttpKernelInterface::SUB_REQUEST));
 
         $this->assertSame(['build/shared-e5f6.js'], $lookup->getPreloadFiles('admin'));
     }
@@ -98,7 +104,7 @@ final class ResetAssetsEventListenerTest extends TestCase
         $renderer->renderScriptTags('app');
         $this->assertStringNotContainsString('@vite/client', $renderer->renderScriptTags('app'), 'sanity: not re-injected within the same request');
 
-        new ResetAssetsEventListener($lookup, $renderer)->onException($this->exceptionEvent(HttpKernelInterface::MAIN_REQUEST));
+        new ResetAssetsEventListener([$lookup, $renderer])->onException($this->exceptionEvent(HttpKernelInterface::MAIN_REQUEST));
 
         $this->assertStringContainsString('@vite/client', $renderer->renderScriptTags('app'));
     }
@@ -109,7 +115,7 @@ final class ResetAssetsEventListenerTest extends TestCase
         $renderer = $this->rendererFor($lookup);
 
         $dispatcher = new EventDispatcher();
-        $dispatcher->addSubscriber(new ResetAssetsEventListener($lookup, $renderer));
+        $dispatcher->addSubscriber(new ResetAssetsEventListener([$lookup, $renderer]));
 
         // Symfony's ErrorListener renders the error page at priority -128; capture what it would emit.
         $errorPageTags = null;

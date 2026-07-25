@@ -46,4 +46,20 @@ final class RepriseBundleTest extends TestCase
 
         new FunctionalAppKernel(__DIR__.'/fixtures/build', ['crossorigin' => 'not-valid'])->boot();
     }
+
+    public function testRejectsTheReservedDefaultBuildName()
+    {
+        // "_default" is reserved for the output_path build, so it cannot be used as a named build.
+        $this->expectException(InvalidConfigurationException::class);
+
+        new FunctionalAppKernel(__DIR__.'/fixtures/build', ['builds' => ['_default' => __DIR__.'/fixtures/build']])->boot();
+    }
+
+    public function testRequiresAtLeastOneBuild()
+    {
+        // output_path: false with no named builds leaves nothing to look up.
+        $this->expectException(\LogicException::class);
+
+        new FunctionalAppKernel(__DIR__.'/fixtures/build', ['output_path' => false])->boot();
+    }
 }

@@ -19,6 +19,7 @@ use Symfony\Reprise\Asset\DevServer;
 use Symfony\Reprise\Asset\EntrypointsLookup;
 use Symfony\Reprise\Asset\EntrypointsLookupInterface;
 use Symfony\Reprise\Asset\TagRenderer;
+use Symfony\Reprise\Tests\BuildCollectionTrait;
 use Symfony\Reprise\Twig\AssetExtension;
 use Symfony\Reprise\Twig\AssetRuntime;
 use Twig\Environment;
@@ -27,6 +28,8 @@ use Twig\RuntimeLoader\FactoryRuntimeLoader;
 
 final class AssetExtensionTest extends TestCase
 {
+    use BuildCollectionTrait;
+
     public function testFunctionsRenderThroughALazilyBuiltRuntime()
     {
         $built = 0;
@@ -92,13 +95,14 @@ final class AssetExtensionTest extends TestCase
 
     public function testEntryExistsFunctionReflectsTheLookup()
     {
+        $collection = $this->collection(['_default' => new EntrypointsLookup(__DIR__.'/../fixtures/build/entrypoints.json')]);
         $twig = new Environment(new ArrayLoader([
             'page' => "{{ reprise_entry_exists('app') ? 'yes' : 'no' }}|{{ reprise_entry_exists('missing') ? 'yes' : 'no' }}",
         ]));
         $twig->addExtension(new AssetExtension());
         $twig->addRuntimeLoader(new FactoryRuntimeLoader([
             AssetRuntime::class => static fn (): AssetRuntime => new AssetRuntime(new TagRenderer(
-                new EntrypointsLookup(__DIR__.'/../fixtures/build/entrypoints.json'),
+                $collection,
                 new Packages(new PathPackage('/', new EmptyVersionStrategy())),
             )),
         ]));
@@ -166,6 +170,9 @@ final class AssetExtensionTest extends TestCase
             }
         };
 
-        return new TagRenderer($lookup, new Packages(new PathPackage('/', new EmptyVersionStrategy())));
+        return new TagRenderer(
+            $this->collection(['_default' => $lookup]),
+            new Packages(new PathPackage('/', new EmptyVersionStrategy())),
+        );
     }
 }
