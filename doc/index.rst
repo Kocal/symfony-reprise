@@ -146,6 +146,16 @@ shape hasn't changed):
      - ``reprise_entry_js_files('app')``
      - JS URL list
 
+``reprise_entry_script_tags`` and ``reprise_entry_link_tags`` take a fourth ``attributes`` argument, merged over the
+global ``script_attributes``/``link_attributes`` (per-call wins, ``false`` drops the attribute). It mirrors Encore's
+fourth argument; since it follows the optional package name, pass it as a Twig named argument:
+
+.. code-block:: twig
+
+    {# a fourth `attributes` argument, merged over the configured script_attributes/link_attributes #}
+    {{ reprise_entry_script_tags('app', attributes={ 'data-turbo-track': 'reload' }) }}
+    {{ reprise_entry_link_tags('app', attributes={ media: 'print' }) }}
+
 **Nothing to set up for the common case.** The tags resolve against Symfony's default asset package, so a standard
 project needs nothing beyond installing the bundle (see `Configuration`_ below for the options). The snippet is the
 same whether Vite or Rsbuild produced ``entrypoints.json``, and there's nothing to configure for dev either: in dev

@@ -45,8 +45,13 @@ final class TagRenderer implements ResetInterface
     ) {
     }
 
-    public function renderScriptTags(string $entryName, ?string $packageName = null): string
+    /**
+     * @param array<string, bool|string> $attributes per-call attributes, merged last so they win over the
+     *                                               configured script_attributes (integrity/crossorigin stay authoritative)
+     */
+    public function renderScriptTags(string $entryName, ?string $packageName = null, ?string $build = null, array $attributes = []): string
     {
+        $this->assertNoBuild($build);
         $integrity = $this->lookup->getIntegrityData();
         $tags = [];
 
@@ -61,34 +66,37 @@ final class TagRenderer implements ResetInterface
 
         foreach ($this->lookup->getPreloadFiles($entryName) as $reference) {
             $url = $this->url($reference, $packageName);
-            $attributes = ['rel' => 'modulepreload', 'href' => $url];
-            $this->applyIntegrity($attributes, $reference, $integrity);
-            $tags[] = \sprintf('<link %s>', $this->attributes($attributes));
+            $tagAttributes = ['rel' => 'modulepreload', 'href' => $url];
+            $this->applyIntegrity($tagAttributes, $reference, $integrity);
+            $tags[] = \sprintf('<link %s>', $this->attributes($tagAttributes));
             $this->preload($url, 'modulepreload');
         }
 
         foreach ($this->lookup->getJavaScriptFiles($entryName) as $reference) {
             $url = $this->url($reference, $packageName);
-            $attributes = ['src' => $url, 'type' => 'module'];
-            $attributes += $this->scriptAttributes;
-            $this->applyIntegrity($attributes, $reference, $integrity);
-            $tags[] = \sprintf('<script %s></script>', $this->attributes($attributes));
+            $tagAttributes = ['src' => $url, 'type' => 'module'] + $attributes + $this->scriptAttributes;
+            $this->applyIntegrity($tagAttributes, $reference, $integrity);
+            $tags[] = \sprintf('<script %s></script>', $this->attributes($tagAttributes));
             $this->preload($url, 'preload', 'script');
         }
 
         return implode('', $tags);
     }
 
-    public function renderLinkTags(string $entryName, ?string $packageName = null): string
+    /**
+     * @param array<string, bool|string> $attributes per-call attributes, merged last so they win over the
+     *                                               configured link_attributes (integrity/crossorigin stay authoritative)
+     */
+    public function renderLinkTags(string $entryName, ?string $packageName = null, ?string $build = null, array $attributes = []): string
     {
+        $this->assertNoBuild($build);
         $integrity = $this->lookup->getIntegrityData();
         $tags = [];
         foreach ($this->lookup->getCssFiles($entryName) as $reference) {
             $url = $this->url($reference, $packageName);
-            $attributes = ['rel' => 'stylesheet', 'href' => $url];
-            $attributes += $this->linkAttributes;
-            $this->applyIntegrity($attributes, $reference, $integrity);
-            $tags[] = \sprintf('<link %s>', $this->attributes($attributes));
+            $tagAttributes = ['rel' => 'stylesheet', 'href' => $url] + $attributes + $this->linkAttributes;
+            $this->applyIntegrity($tagAttributes, $reference, $integrity);
+            $tags[] = \sprintf('<link %s>', $this->attributes($tagAttributes));
             $this->preload($url, 'preload', 'style');
         }
 
@@ -135,6 +143,13 @@ final class TagRenderer implements ResetInterface
                 HTML,
             htmlspecialchars($reactRefreshUrl, \ENT_QUOTES),
         );
+    }
+
+    private function assertNoBuild(?string $build): void
+    {
+        if (null !== $build) {
+            throw new \InvalidArgumentException(\sprintf('No build named "%s" is configured.', $build));
+        }
     }
 
     private function url(string $reference, ?string $packageName): string
