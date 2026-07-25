@@ -63,4 +63,9 @@ final class AssetRuntime implements RuntimeExtensionInterface
     {
         return $this->tagRenderer->getCssFiles($entryName, $packageName);
     }
+
+    public function entryExists(string $entryName): bool
+    {
+        return $this->tagRenderer->entryExists($entryName);
+    }
 }
