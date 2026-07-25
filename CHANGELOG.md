@@ -3,6 +3,7 @@
 ## 0.6.0
 
 - Add a per-call `attributes` argument to the `reprise_entry_script_tags()` and `reprise_entry_link_tags()` Twig functions
+- Add the `reprise_entry_exists()` Twig function
 
 ## 0.5.0
 

@@ -96,7 +96,7 @@ This is where Reprise pays off: once ``entrypoints.json`` exists, ``RepriseBundl
 ``<script>`` and ``<link>`` tags for an entry directly in Twig, the same experience `WebpackEncoreBundle`_ gives you
 with ``encore_entry_script_tags`` and ``encore_entry_link_tags``.
 
-Four Twig functions come with it:
+Five Twig functions come with it:
 
 .. code-block:: twig
 
@@ -124,6 +124,16 @@ Four Twig functions come with it:
 ``reprise_entry_js_files('app')`` and ``reprise_entry_css_files('app')`` are the same lookup, minus the HTML: they
 return the raw URL lists, for the rare case where you need the paths rather than the tags.
 
+``reprise_entry_exists('checkout')`` returns ``true`` when the named entry is present in ``entrypoints.json`` and
+``false`` otherwise. Use it to guard a page-specific or optional entry so rendering its tags doesn't error in strict
+mode:
+
+.. code-block:: twig
+
+    {% if reprise_entry_exists('checkout') %}
+        {{ reprise_entry_script_tags('checkout') }}
+    {% endif %}
+
 If you're migrating from Webpack Encore, it's a tag-for-tag swap (Reprise is Encore's heritage, so the template
 shape hasn't changed):
 
@@ -145,6 +155,9 @@ shape hasn't changed):
    * - ``encore_entry_js_files('app')``
      - ``reprise_entry_js_files('app')``
      - JS URL list
+   * - ``encore_entry_exists('app')``
+     - ``reprise_entry_exists('app')``
+     - ``true``/``false``
 
 ``reprise_entry_script_tags`` and ``reprise_entry_link_tags`` take a fourth ``attributes`` argument, merged over the
 global ``script_attributes``/``link_attributes`` (per-call wins, ``false`` drops the attribute). It mirrors Encore's

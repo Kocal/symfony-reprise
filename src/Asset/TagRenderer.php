@@ -119,6 +119,11 @@ final class TagRenderer implements ResetInterface
         return array_map(fn (string $r) => $this->url($r, $packageName), $this->lookup->getCssFiles($entryName));
     }
 
+    public function entryExists(string $entryName): bool
+    {
+        return $this->lookup->entryExists($entryName);
+    }
+
     public function reset(): void
     {
         $this->clientInjected = false;

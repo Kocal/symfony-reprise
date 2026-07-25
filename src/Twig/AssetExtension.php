@@ -31,6 +31,7 @@ final class AssetExtension extends AbstractExtension
             new TwigFunction('reprise_entry_link_tags', [AssetRuntime::class, 'renderLinkTags'], ['is_safe' => ['html']]),
             new TwigFunction('reprise_entry_js_files', [AssetRuntime::class, 'getJsFiles']),
             new TwigFunction('reprise_entry_css_files', [AssetRuntime::class, 'getCssFiles']),
+            new TwigFunction('reprise_entry_exists', [AssetRuntime::class, 'entryExists']),
         ];
     }
 }

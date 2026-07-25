@@ -20,6 +20,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\WebLink\GenericLinkProvider;
 use Symfony\Reprise\Asset\DevServer;
+use Symfony\Reprise\Asset\EntrypointsLookup;
 use Symfony\Reprise\Asset\EntrypointsLookupInterface;
 use Symfony\Reprise\Asset\TagRenderer;
 
@@ -390,6 +391,17 @@ final class TagRendererTest extends TestCase
             .'<link rel="stylesheet" href="/build/b.css">',
             $html,
         );
+    }
+
+    public function testEntryExistsDelegatesToTheLookup()
+    {
+        $renderer = new TagRenderer(
+            new EntrypointsLookup(__DIR__.'/../fixtures/build/entrypoints.json'),
+            new Packages(new PathPackage('/', new EmptyVersionStrategy())),
+        );
+
+        $this->assertTrue($renderer->entryExists('app'));
+        $this->assertFalse($renderer->entryExists('does-not-exist'));
     }
 
     public function testModulepreloadHasNoIntegrityWhenTheChunkIsNotHashed()
