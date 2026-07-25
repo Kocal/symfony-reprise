@@ -73,6 +73,22 @@ final class AssetExtensionTest extends TestCase
         );
     }
 
+    public function testScriptTagsAcceptPerCallAttributesViaNamedArgument()
+    {
+        $twig = new Environment(new ArrayLoader([
+            'page' => "{{ reprise_entry_script_tags('app', attributes={'defer': true, 'data-turbo-track': 'reload'}) }}",
+        ]));
+        $twig->addExtension(new AssetExtension());
+        $twig->addRuntimeLoader(new FactoryRuntimeLoader([
+            AssetRuntime::class => fn (): AssetRuntime => new AssetRuntime($this->tagRenderer(['build/app.js'])),
+        ]));
+
+        $this->assertSame(
+            '<script src="/build/app.js" type="module" defer data-turbo-track="reload"></script>',
+            $twig->render('page'),
+        );
+    }
+
     /**
      * @param list<string> $js
      * @param list<string> $css

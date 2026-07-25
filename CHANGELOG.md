@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 0.6.0
+
+- Add a per-call `attributes` argument to the `reprise_entry_script_tags()` and `reprise_entry_link_tags()` Twig functions
+
 ## 0.5.0
 
 - Require Vite `^7.0` or `^8.0`; Vite 7 is now the minimum supported version

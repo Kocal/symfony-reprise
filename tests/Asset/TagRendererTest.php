@@ -403,4 +403,86 @@ final class TagRendererTest extends TestCase
             $html,
         );
     }
+
+    public function testPerCallAttributesAreAppliedToScriptTags()
+    {
+        $html = $this->renderer(js: ['build/app.js'])
+            ->renderScriptTags('app', attributes: ['defer' => true, 'data-turbo-track' => 'reload']);
+
+        $this->assertSame('<script src="/build/app.js" type="module" defer data-turbo-track="reload"></script>', $html);
+    }
+
+    public function testPerCallAttributesAreAppliedToLinkTags()
+    {
+        $html = $this->renderer(css: ['build/app.css'])->renderLinkTags('app', attributes: ['media' => 'print']);
+
+        $this->assertSame('<link rel="stylesheet" href="/build/app.css" media="print">', $html);
+    }
+
+    public function testPerCallAttributesWinOverDefaultAttributes()
+    {
+        $html = $this->renderer(js: ['build/app.js'], scriptAttributes: ['data-turbo-track' => 'reload'])
+            ->renderScriptTags('app', attributes: ['data-turbo-track' => 'reload-only-on-this-page']);
+
+        $this->assertStringContainsString('data-turbo-track="reload-only-on-this-page"', $html);
+        $this->assertStringNotContainsString('data-turbo-track="reload"', $html);
+    }
+
+    public function testPerCallFalseValueDropsADefaultAttribute()
+    {
+        $html = $this->renderer(js: ['build/app.js'], scriptAttributes: ['defer' => true])
+            ->renderScriptTags('app', attributes: ['defer' => false]);
+
+        $this->assertSame('<script src="/build/app.js" type="module"></script>', $html);
+    }
+
+    public function testPerCallAttributesApplyToScriptsNotToModulepreloadLinks()
+    {
+        $html = $this->renderer(js: ['build/app.js'], preload: ['build/shared.js'])
+            ->renderScriptTags('app', attributes: ['data-turbo-track' => 'reload']);
+
+        // The per-call attribute rides on the <script>, never on the modulepreload <link>.
+        $this->assertSame(
+            '<link rel="modulepreload" href="/build/shared.js">'
+            .'<script src="/build/app.js" type="module" data-turbo-track="reload"></script>',
+            $html,
+        );
+    }
+
+    public function testPerCallAttributesDoNotLeakIntoTheHmrClient()
+    {
+        $html = $this->renderer(
+            js: ['http://127.0.0.1:5173/build/app.js'],
+            devServer: new DevServer('http://127.0.0.1:5173', 'http://127.0.0.1:5173/build/@vite/client'),
+        )->renderScriptTags('app', attributes: ['defer' => true]);
+
+        // The injected client tag is emitted verbatim; only the entry script carries the per-call attribute.
+        $this->assertStringContainsString('<script type="module" src="http://127.0.0.1:5173/build/@vite/client"></script>', $html);
+        $this->assertStringContainsString('src="http://127.0.0.1:5173/build/app.js" type="module" defer></script>', $html);
+    }
+
+    public function testPerCallAttributesCannotSpoofIntegrity()
+    {
+        $html = $this->renderer(
+            js: ['build/app-a1b2.js'],
+            integrity: ['build/app-a1b2.js' => 'sha384-REAL'],
+        )->renderScriptTags('app', attributes: ['integrity' => 'sha384-FAKE']);
+
+        $this->assertStringContainsString('integrity="sha384-REAL"', $html);
+        $this->assertStringNotContainsString('sha384-FAKE', $html);
+    }
+
+    public function testRenderingScriptTagsWithABuildNameThrowsUntilBuildsAreSupported()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $this->renderer(js: ['build/app.js'])->renderScriptTags('app', build: 'admin');
+    }
+
+    public function testRenderingLinkTagsWithABuildNameThrowsUntilBuildsAreSupported()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $this->renderer(css: ['build/app.css'])->renderLinkTags('app', build: 'admin');
+    }
 }

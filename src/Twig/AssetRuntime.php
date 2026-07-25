@@ -32,14 +32,20 @@ final class AssetRuntime implements RuntimeExtensionInterface
     {
     }
 
-    public function renderScriptTags(string $entryName, ?string $packageName = null): string
+    /**
+     * @param array<string, bool|string> $attributes
+     */
+    public function renderScriptTags(string $entryName, ?string $packageName = null, ?string $build = null, array $attributes = []): string
     {
-        return $this->tagRenderer->renderScriptTags($entryName, $packageName);
+        return $this->tagRenderer->renderScriptTags($entryName, $packageName, $build, $attributes);
     }
 
-    public function renderLinkTags(string $entryName, ?string $packageName = null): string
+    /**
+     * @param array<string, bool|string> $attributes
+     */
+    public function renderLinkTags(string $entryName, ?string $packageName = null, ?string $build = null, array $attributes = []): string
     {
-        return $this->tagRenderer->renderLinkTags($entryName, $packageName);
+        return $this->tagRenderer->renderLinkTags($entryName, $packageName, $build, $attributes);
     }
 
     /**
