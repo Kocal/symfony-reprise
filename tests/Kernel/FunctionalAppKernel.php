@@ -74,6 +74,7 @@ final class FunctionalAppKernel extends Kernel implements CompilerPassInterface
     {
         $container->getAlias(EntrypointsLookupInterface::class)->setPublic(true);
         $container->getDefinition('reprise.tag_renderer')->setPublic(true);
+        $container->getDefinition('reprise.reset_assets_listener')->setPublic(true);
 
         if ($container->hasDefinition('reprise.entrypoints_cache_warmer')) {
             $container->getDefinition('reprise.entrypoints_cache_warmer')->setPublic(true);

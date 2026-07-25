@@ -103,7 +103,7 @@ final class RepriseBundle extends AbstractBundle
         $services->alias(EntrypointsLookupInterface::class, 'reprise.entrypoints_lookup');
 
         $services->set('reprise.reset_assets_listener', ResetAssetsEventListener::class)
-            ->args([service('reprise.entrypoints_lookup')])
+            ->args([service('reprise.entrypoints_lookup'), service('reprise.tag_renderer')])
             ->tag('kernel.event_subscriber')
         ;
 
