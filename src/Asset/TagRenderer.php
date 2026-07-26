@@ -27,14 +27,20 @@ use Symfony\Contracts\Service\ResetInterface;
  */
 final class TagRenderer implements ResetInterface
 {
-    private bool $clientInjected = false;
+    /**
+     * HMR client URLs already injected this request, kept as a set so each dev server (there is one per
+     * build) injects its client exactly once, even when several builds render on the same page.
+     *
+     * @var array<string, true>
+     */
+    private array $injectedClients = [];
 
     /**
      * @param array<string, bool|string> $scriptAttributes
      * @param array<string, bool|string> $linkAttributes
      */
     public function __construct(
-        private readonly EntrypointsLookupInterface $lookup,
+        private readonly EntrypointsLookupCollectionInterface $collection,
         private readonly Packages $packages,
         private readonly ?RequestStack $requestStack = null,
         private readonly ?string $defaultPackage = null,
@@ -51,20 +57,20 @@ final class TagRenderer implements ResetInterface
      */
     public function renderScriptTags(string $entryName, ?string $packageName = null, ?string $build = null, array $attributes = []): string
     {
-        $this->assertNoBuild($build);
-        $integrity = $this->lookup->getIntegrityData();
+        $lookup = $this->collection->getEntrypointsLookup($build);
+        $integrity = $lookup->getIntegrityData();
         $tags = [];
 
-        $devServer = $this->lookup->getDevServer();
-        if (!$this->clientInjected && null !== $devServer && null !== $devServer->client) {
+        $devServer = $lookup->getDevServer();
+        if (null !== $devServer && null !== $devServer->client && !isset($this->injectedClients[$devServer->client])) {
             $tags[] = \sprintf('<script type="module" src="%s"></script>', htmlspecialchars($devServer->client, \ENT_QUOTES));
             if (null !== $devServer->reactRefresh) {
                 $tags[] = $this->renderReactRefreshPreamble($devServer->reactRefresh);
             }
-            $this->clientInjected = true;
+            $this->injectedClients[$devServer->client] = true;
         }
 
-        foreach ($this->lookup->getPreloadFiles($entryName) as $reference) {
+        foreach ($lookup->getPreloadFiles($entryName) as $reference) {
             $url = $this->url($reference, $packageName);
             $tagAttributes = ['rel' => 'modulepreload', 'href' => $url];
             $this->applyIntegrity($tagAttributes, $reference, $integrity);
@@ -72,7 +78,7 @@ final class TagRenderer implements ResetInterface
             $this->preload($url, 'modulepreload');
         }
 
-        foreach ($this->lookup->getJavaScriptFiles($entryName) as $reference) {
+        foreach ($lookup->getJavaScriptFiles($entryName) as $reference) {
             $url = $this->url($reference, $packageName);
             $tagAttributes = ['src' => $url, 'type' => 'module'] + $attributes + $this->scriptAttributes;
             $this->applyIntegrity($tagAttributes, $reference, $integrity);
@@ -89,10 +95,10 @@ final class TagRenderer implements ResetInterface
      */
     public function renderLinkTags(string $entryName, ?string $packageName = null, ?string $build = null, array $attributes = []): string
     {
-        $this->assertNoBuild($build);
-        $integrity = $this->lookup->getIntegrityData();
+        $lookup = $this->collection->getEntrypointsLookup($build);
+        $integrity = $lookup->getIntegrityData();
         $tags = [];
-        foreach ($this->lookup->getCssFiles($entryName) as $reference) {
+        foreach ($lookup->getCssFiles($entryName) as $reference) {
             $url = $this->url($reference, $packageName);
             $tagAttributes = ['rel' => 'stylesheet', 'href' => $url] + $attributes + $this->linkAttributes;
             $this->applyIntegrity($tagAttributes, $reference, $integrity);
@@ -106,27 +112,27 @@ final class TagRenderer implements ResetInterface
     /**
      * @return list<string>
      */
-    public function getJsFiles(string $entryName, ?string $packageName = null): array
+    public function getJsFiles(string $entryName, ?string $packageName = null, ?string $build = null): array
     {
-        return array_map(fn (string $r) => $this->url($r, $packageName), $this->lookup->getJavaScriptFiles($entryName));
+        return array_map(fn (string $r) => $this->url($r, $packageName), $this->collection->getEntrypointsLookup($build)->getJavaScriptFiles($entryName));
     }
 
     /**
      * @return list<string>
      */
-    public function getCssFiles(string $entryName, ?string $packageName = null): array
+    public function getCssFiles(string $entryName, ?string $packageName = null, ?string $build = null): array
     {
-        return array_map(fn (string $r) => $this->url($r, $packageName), $this->lookup->getCssFiles($entryName));
+        return array_map(fn (string $r) => $this->url($r, $packageName), $this->collection->getEntrypointsLookup($build)->getCssFiles($entryName));
     }
 
-    public function entryExists(string $entryName): bool
+    public function entryExists(string $entryName, ?string $build = null): bool
     {
-        return $this->lookup->entryExists($entryName);
+        return $this->collection->getEntrypointsLookup($build)->entryExists($entryName);
     }
 
     public function reset(): void
     {
-        $this->clientInjected = false;
+        $this->injectedClients = [];
     }
 
     /**
@@ -148,13 +154,6 @@ final class TagRenderer implements ResetInterface
                 HTML,
             htmlspecialchars($reactRefreshUrl, \ENT_QUOTES),
         );
-    }
-
-    private function assertNoBuild(?string $build): void
-    {
-        if (null !== $build) {
-            throw new \InvalidArgumentException(\sprintf('No build named "%s" is configured.', $build));
-        }
     }
 
     private function url(string $reference, ?string $packageName): string

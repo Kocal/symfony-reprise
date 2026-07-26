@@ -4,6 +4,7 @@
 
 - Add a per-call `attributes` argument to the `reprise_entry_script_tags()` and `reprise_entry_link_tags()` Twig functions
 - Add the `reprise_entry_exists()` Twig function
+- Add support for multiple named builds via the `builds` config and a `build` argument on the Twig functions
 
 ## 0.5.0
 

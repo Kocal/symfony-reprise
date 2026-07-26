@@ -31,8 +31,7 @@ return static function (ContainerConfigurator $container): void {
 
     $services->set('reprise.entrypoints_cache_warmer', EntrypointsCacheWarmer::class)
         ->args([
-            param('reprise.entrypoints_path'),
-            'reprise.entrypoints',
+            param('reprise.entrypoints_paths'),
             service('reprise.cache'),
         ])
         ->tag('kernel.cache_warmer')

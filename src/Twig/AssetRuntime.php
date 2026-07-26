@@ -51,21 +51,21 @@ final class AssetRuntime implements RuntimeExtensionInterface
     /**
      * @return list<string>
      */
-    public function getJsFiles(string $entryName, ?string $packageName = null): array
+    public function getJsFiles(string $entryName, ?string $packageName = null, ?string $build = null): array
     {
-        return $this->tagRenderer->getJsFiles($entryName, $packageName);
+        return $this->tagRenderer->getJsFiles($entryName, $packageName, $build);
     }
 
     /**
      * @return list<string>
      */
-    public function getCssFiles(string $entryName, ?string $packageName = null): array
+    public function getCssFiles(string $entryName, ?string $packageName = null, ?string $build = null): array
     {
-        return $this->tagRenderer->getCssFiles($entryName, $packageName);
+        return $this->tagRenderer->getCssFiles($entryName, $packageName, $build);
     }
 
-    public function entryExists(string $entryName): bool
+    public function entryExists(string $entryName, ?string $build = null): bool
     {
-        return $this->tagRenderer->entryExists($entryName);
+        return $this->tagRenderer->entryExists($entryName, $build);
     }
 }

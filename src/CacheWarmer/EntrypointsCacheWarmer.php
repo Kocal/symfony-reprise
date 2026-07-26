@@ -25,9 +25,11 @@ use Symfony\Reprise\Asset\Entrypoints;
  */
 final class EntrypointsCacheWarmer implements CacheWarmerInterface
 {
+    /**
+     * @param array<string, string> $entrypointsPaths build name => entrypoints.json path
+     */
     public function __construct(
-        private readonly string $entrypointsPath,
-        private readonly string $cacheKey,
+        private readonly array $entrypointsPaths,
         private readonly PhpArrayAdapter $cache,
     ) {
     }
@@ -39,17 +41,24 @@ final class EntrypointsCacheWarmer implements CacheWarmerInterface
 
     public function warmUp(string $cacheDir, ?string $buildDir = null): array
     {
-        if (!is_file($this->entrypointsPath)) {
-            return [];
+        $values = [];
+        foreach ($this->entrypointsPaths as $build => $path) {
+            if (!is_file($path)) {
+                continue;
+            }
+
+            try {
+                $decoded = json_decode((string) file_get_contents($path), true, flags: \JSON_THROW_ON_ERROR);
+                if (\is_array($decoded)) {
+                    $values['reprise.entrypoints.'.$build] = Entrypoints::fromArray($decoded);
+                }
+            } catch (\Throwable) {
+                // A malformed entrypoints.json at deploy time must not break cache:warmup.
+            }
         }
 
-        try {
-            $decoded = json_decode((string) file_get_contents($this->entrypointsPath), true, flags: \JSON_THROW_ON_ERROR);
-            if (\is_array($decoded)) {
-                $this->cache->warmUp([$this->cacheKey => Entrypoints::fromArray($decoded)]);
-            }
-        } catch (\Throwable) {
-            // A malformed entrypoints.json at deploy time must not break cache:warmup.
+        if ($values) {
+            $this->cache->warmUp($values);
         }
 
         return [];

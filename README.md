@@ -30,6 +30,7 @@ Symfony Reprise covers only the Symfony-side glue the bundlers leave out:
 - 🔖 **Asset versioning**: content-hash cache busting, wired into the manifest
 - 📁 **File copy**: copy static files (images, fonts…) into the build, keyed in the manifest
 - 🔥 **Dev server & HMR**: points Twig at the running Vite/Rsbuild server
+- 🧱 **Multiple builds**: drive several bundles (e.g. a main app and a separately-built embeddable widget) from one Symfony app
 - 🏷️ **Twig tag rendering**: `reprise_entry_script_tags`/`reprise_entry_link_tags` render straight from `entrypoints.json`
 - 🧩 **Symfony UX / Stimulus**: registers `controllers.json` and local controllers, eager or lazy
 - 🌐 **CDN support**: serve built assets from an absolute `publicPath`
