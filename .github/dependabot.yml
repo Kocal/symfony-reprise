@@ -34,9 +34,5 @@ updates:
           - dependency-name: 'tsx'
           - dependency-name: 'typescript'
           - dependency-name: 'vitest'
-      groups:
-          npm-dev-dependencies:
-              patterns:
-                  - '*'
       cooldown:
           default-days: 7
