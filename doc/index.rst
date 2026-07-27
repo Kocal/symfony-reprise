@@ -1,8 +1,10 @@
 Symfony Reprise
 ===============
 
-**EXPERIMENTAL** This bundle is experimental and is likely to change,
-or even change drastically.
+.. warning::
+
+    This bundle is experimental and is likely to change, or even change
+    drastically.
 
 Webpack Encore gave Symfony first-class asset integration for Webpack. Symfony Reprise brings the same to `Vite`_
 and `Rsbuild`_.
@@ -143,27 +145,15 @@ mode:
 If you're migrating from Webpack Encore, it's a tag-for-tag swap (Reprise is Encore's heritage, so the template
 shape hasn't changed):
 
-.. list-table::
-   :header-rows: 1
-
-   * - Webpack Encore
-     - Symfony Reprise
-     - Output
-   * - ``encore_entry_link_tags('app')``
-     - ``reprise_entry_link_tags('app')``
-     - ``<link rel="stylesheet">`` tags
-   * - ``encore_entry_script_tags('app')``
-     - ``reprise_entry_script_tags('app')``
-     - ``<script type="module">`` tags
-   * - ``encore_entry_css_files('app')``
-     - ``reprise_entry_css_files('app')``
-     - CSS URL list
-   * - ``encore_entry_js_files('app')``
-     - ``reprise_entry_js_files('app')``
-     - JS URL list
-   * - ``encore_entry_exists('app')``
-     - ``reprise_entry_exists('app')``
-     - ``true``/``false``
+===================================  ====================================  ================================
+Webpack Encore                       Symfony Reprise                       Output
+===================================  ====================================  ================================
+``encore_entry_link_tags('app')``    ``reprise_entry_link_tags('app')``    ``<link rel="stylesheet">`` tags
+``encore_entry_script_tags('app')``  ``reprise_entry_script_tags('app')``  ``<script type="module">`` tags
+``encore_entry_css_files('app')``    ``reprise_entry_css_files('app')``    CSS URL list
+``encore_entry_js_files('app')``     ``reprise_entry_js_files('app')``     JS URL list
+``encore_entry_exists('app')``       ``reprise_entry_exists('app')``       ``true``/``false``
+===================================  ====================================  ================================
 
 ``reprise_entry_script_tags`` and ``reprise_entry_link_tags`` take a fourth ``attributes`` argument, merged over the
 global ``script_attributes``/``link_attributes`` (per-call wins, ``false`` drops the attribute). It mirrors Encore's
@@ -654,72 +644,44 @@ Your build config
 Most of ``webpack.config.js`` has no equivalent, because the bundler already does the work. The Symfony glue Encore
 layered on top of Webpack stays, as a Reprise plugin option:
 
-.. list-table::
-   :header-rows: 1
-
-   * - Webpack Encore
-     - Reprise
-   * - ``setOutputPath()`` / ``setPublicPath()``
-     - plugin ``outputPath`` / ``publicPath`` (the defaults fit a standard project)
-   * - ``addEntry()`` / ``addEntries()``
-     - the bundler's own entry input: Vite ``build.rollupOptions.input``, Rsbuild ``source.entry``
-   * - ``enableVersioning()``
-     - nothing to do, content hashing is on by default
-   * - ``enableIntegrityHashes()``
-     - plugin ``integrity: { enabled: true }`` (see `Subresource Integrity`_)
-   * - ``copyFiles()``
-     - plugin ``copy: [ ... ]`` (see `File copy`_)
-   * - ``enableStimulusBridge()``
-     - plugin ``stimulus: 'assets/controllers.json'`` (see `Symfony UX / Stimulus controllers`_)
-   * - ``configureDevServerOptions()``
-     - nothing to do: run ``vite`` or ``rsbuild dev`` and Reprise points Twig at it
+=========================================  ===========================================================================================
+Webpack Encore                             Reprise
+=========================================  ===========================================================================================
+``setOutputPath()`` / ``setPublicPath()``  plugin ``outputPath`` / ``publicPath`` (the defaults fit a standard project)
+``addEntry()`` / ``addEntries()``          the bundler's own entry input: Vite ``build.rollupOptions.input``, Rsbuild ``source.entry``
+``enableVersioning()``                     nothing to do, content hashing is on by default
+``enableIntegrityHashes()``                plugin ``integrity: { enabled: true }`` (see `Subresource Integrity`_)
+``copyFiles()``                            plugin ``copy: [ ... ]`` (see `File copy`_)
+``enableStimulusBridge()``                 plugin ``stimulus: 'assets/controllers.json'`` (see `Symfony UX / Stimulus controllers`_)
+``configureDevServerOptions()``            nothing to do: run ``vite`` or ``rsbuild dev`` and Reprise points Twig at it
+=========================================  ===========================================================================================
 
 Everything Vite and Rsbuild handle themselves, you drop:
 
-.. list-table::
-   :header-rows: 1
-
-   * - Webpack Encore
-     - Now handled by the bundler
-   * - ``enableSassLoader()`` / ``enableLessLoader()`` / ``enableStylusLoader()``
-     - install the preprocessor and import the file (Vite out of the box, Rsbuild via ``@rsbuild/plugin-sass`` and friends)
-   * - ``enablePostCssLoader()``
-     - add a ``postcss.config.js``, picked up automatically
-   * - ``enableTypeScriptLoader()`` / ``configureBabel()`` / ``configureBabelPresetEnv()``
-     - native transpilation (Vite via esbuild, Rsbuild via SWC); set targets with ``browserslist`` or ``build.target``
-   * - ``splitEntryChunks()`` / ``configureSplitChunks()``
-     - native code splitting
-   * - ``enableSourceMaps()``
-     - native (Vite ``build.sourcemap``)
-   * - ``configureImageRule()`` / ``configureFontRule()`` / ``configureFilenames()``
-     - native asset handling and output naming
-   * - ``addAliases()``
-     - ``resolve.alias``
-   * - ``addExternals()``
-     - Vite ``build.rollupOptions.external``, Rsbuild ``output.externals``
-   * - ``cleanupOutputBeforeBuild()``
-     - native (Vite ``build.emptyOutDir``, Rsbuild cleans by default)
+===================================================================================  ====================================================================================================================
+Webpack Encore                                                                       Now handled by the bundler
+===================================================================================  ====================================================================================================================
+``enableSassLoader()`` / ``enableLessLoader()`` / ``enableStylusLoader()``           install the preprocessor and import the file (Vite out of the box, Rsbuild via ``@rsbuild/plugin-sass`` and friends)
+``enablePostCssLoader()``                                                            add a ``postcss.config.js``, picked up automatically
+``enableTypeScriptLoader()`` / ``configureBabel()`` / ``configureBabelPresetEnv()``  native transpilation (Vite via esbuild, Rsbuild via SWC); set targets with ``browserslist`` or ``build.target``
+``splitEntryChunks()`` / ``configureSplitChunks()``                                  native code splitting
+``enableSourceMaps()``                                                               native (Vite ``build.sourcemap``)
+``configureImageRule()`` / ``configureFontRule()`` / ``configureFilenames()``        native asset handling and output naming
+``addAliases()``                                                                     ``resolve.alias``
+``addExternals()``                                                                   Vite ``build.rollupOptions.external``, Rsbuild ``output.externals``
+``cleanupOutputBeforeBuild()``                                                       native (Vite ``build.emptyOutDir``, Rsbuild cleans by default)
+===================================================================================  ====================================================================================================================
 
 Framework presets become the bundler's own plugin:
 
-.. list-table::
-   :header-rows: 1
-
-   * - Webpack Encore
-     - Vite
-     - Rsbuild
-   * - ``enableReactPreset()``
-     - ``@vitejs/plugin-react``
-     - ``@rsbuild/plugin-react``
-   * - ``enableVueLoader()``
-     - ``@vitejs/plugin-vue``
-     - ``@rsbuild/plugin-vue``
-   * - ``enablePreactPreset()``
-     - ``@preact/preset-vite``
-     - ``@rsbuild/plugin-preact``
-   * - ``enableSvelte()``
-     - ``@sveltejs/vite-plugin-svelte``
-     - ``@rsbuild/plugin-svelte``
+========================  ================================  ==========================
+Webpack Encore            Vite                              Rsbuild
+========================  ================================  ==========================
+``enableReactPreset()``   ``@vitejs/plugin-react``          ``@rsbuild/plugin-react``
+``enableVueLoader()``     ``@vitejs/plugin-vue``            ``@rsbuild/plugin-vue``
+``enablePreactPreset()``  ``@preact/preset-vite``           ``@rsbuild/plugin-preact``
+``enableSvelte()``        ``@sveltejs/vite-plugin-svelte``  ``@rsbuild/plugin-svelte``
+========================  ================================  ==========================
 
 A few Encore features have no direct replacement:
 
