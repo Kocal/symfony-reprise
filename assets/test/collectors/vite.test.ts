@@ -7,6 +7,7 @@ function chunk(partial: Partial<Rollup.OutputChunk> & { fileName: string; name: 
         type: 'chunk',
         imports: [],
         dynamicImports: [],
+        code: 'export {};',
         ...partial,
     };
 }
@@ -30,6 +31,7 @@ describe('bundleToGraph', () => {
             },
             'admin-99.js': chunk({ fileName: 'admin-99.js', name: 'admin', isEntry: true }),
             'vendor-e5.js': chunk({ fileName: 'vendor-e5.js', name: 'vendor', isEntry: false }),
+            'lazy-x.js': chunk({ fileName: 'lazy-x.js', name: 'lazy-x', isEntry: false }),
             'app-c3.css': asset('app-c3.css', ['app.css']),
         } as unknown as Rollup.OutputBundle;
 
@@ -43,6 +45,27 @@ describe('bundleToGraph', () => {
         });
         expect(graph.entryPoints.admin).toEqual({ js: ['admin-99.js'], css: [], preload: [], dynamic: [] });
         expect(graph.entryPoints.vendor).toBeUndefined();
+    });
+
+    it('drops a CSS-only dynamic import whose chunk was pruned to empty JS', () => {
+        // `import('x.css')` yields a chunk rolldown-vite empties (code === '') and never writes; its name
+        // still shows in dynamicImports. It must be dropped, and its async CSS kept out of the manifest.
+        const bundle = {
+            'app.js': {
+                ...chunk({ fileName: 'app.js', name: 'app', isEntry: true, dynamicImports: ['lazy-css.js'] }),
+                viteMetadata: { importedCss: new Set<string>(), importedAssets: new Set() },
+            },
+            'lazy-css.js': {
+                ...chunk({ fileName: 'lazy-css.js', name: 'lazy-css', isEntry: false, code: '' }),
+                viteMetadata: { importedCss: new Set(['lazy-css.css']), importedAssets: new Set() },
+            },
+            'lazy-css.css': asset('lazy-css.css', ['lazy-css.css']),
+        } as unknown as Rollup.OutputBundle;
+
+        const graph = bundleToGraph(bundle, '/app');
+
+        expect(graph.entryPoints.app.dynamic).toEqual([]);
+        expect(graph.assets.some((a) => a.fileName === 'lazy-css.css')).toBe(false);
     });
 
     it('collects entry CSS from a facade chunk that only re-imports the real chunk', () => {
