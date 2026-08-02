@@ -28,8 +28,8 @@ export function bundleToGraph(bundle: Rollup.OutputBundle, root: string): Normal
             entryPoints[chunk.name] = {
                 js: [chunk.fileName],
                 css,
-                preload: [...chunk.imports],
-                dynamic: [...chunk.dynamicImports],
+                preload: emittedChunks(chunk.imports, bundle),
+                dynamic: emittedChunks(chunk.dynamicImports, bundle),
             };
             assets.push({ logicalName: `${chunk.name}.js`, fileName: chunk.fileName });
         } else if (chunk.viteMetadata) {
@@ -45,6 +45,17 @@ export function bundleToGraph(bundle: Rollup.OutputBundle, root: string): Normal
     }
 
     return { entryPoints, assets };
+}
+
+// A bare `import('x.css')` yields a CSS-only proxy chunk whose JS is empty or whitespace (`''` under
+// rolldown-vite, `'\n'` under Rollup/Vite 7) and is never written to disk, yet its name still shows up in
+// the entry's imports/dynamicImports. Keep only names backed by a chunk that has real JS, so preload and
+// SRI never reference a file that was never written.
+function emittedChunks(names: readonly string[], bundle: Rollup.OutputBundle): string[] {
+    return names.filter((name) => {
+        const output = bundle[name];
+        return output?.type === 'chunk' && output.code.trim() !== '';
+    });
 }
 
 // Collect an entry's CSS: its own `importedCss` plus that of every statically-imported chunk, reached
