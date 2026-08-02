@@ -1,0 +1,18 @@
+{% extends 'page.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    {{ reprise_entry_link_tags('admin') }}
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {{ reprise_entry_script_tags('admin') }}
+{% endblock %}
+
+{% block content %}
+    <div class="admin-panel">
+        <span class="admin-badge">admin entry</span>
+        <p>This page loads a <strong>second</strong> Reprise entrypoint (<code>admin</code>) on top of the site-wide <code>app</code> one. View source: two module <code>&lt;script&gt;</code> tags, one per entry. This whole panel is styled by the <code>admin</code> entry's SCSS (scoped to <code>.admin-panel</code> so it never leaks onto other pages), and the <code>admin</code> JS logs to the console.</p>
+    </div>
+{% endblock %}

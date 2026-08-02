@@ -1,0 +1,30 @@
+// Scoped to `.admin-panel` on purpose: a page-specific entry must not repaint the whole `body`,
+// or its stylesheet would leak onto other pages when Turbo Drive keeps the <link> across navigations.
+.admin-panel {
+    padding: 1.5rem;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ef4444, #991b1b);
+    color: #fff;
+    box-shadow: 0 12px 30px rgba(220, 38, 38, 0.25);
+
+    p {
+        margin: 1rem 0 0;
+    }
+
+    code {
+        padding: 0.1rem 0.35rem;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.2);
+    }
+}
+
+.admin-badge {
+    display: inline-block;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    background: #fff;
+    color: #b91c1c;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}

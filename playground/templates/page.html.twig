@@ -1,0 +1,12 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ page.title }} — Reprise Playground{% endblock %}
+
+{% block body %}
+    <div class="mx-auto max-w-5xl px-6 py-8">
+        <a class="mb-4 inline-block font-semibold text-emerald-600 no-underline" href="{{ path('dashboard') }}">← Dashboard</a>
+        <h1 class="mb-1 text-3xl font-bold">{{ page.icon }} {{ page.title }}</h1>
+        <p class="mt-0 text-slate-500">{{ page.description }}</p>
+        {% block content %}{% endblock %}
+    </div>
+{% endblock %}

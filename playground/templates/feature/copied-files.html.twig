@@ -1,0 +1,21 @@
+{% extends 'page.html.twig' %}
+
+{% block content %}
+    <p>These files live in <code>assets/to-copy/</code> and are never imported from JS. Reprise's <code>copy</code> option writes them into the build and records them in <code>manifest.json</code>, so <code>asset()</code> resolves each one (hashed in build, verbatim in dev).</p>
+
+    <h2 class="mt-8 mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Rule 1 — every file → <code>media/</code></h2>
+    <div class="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3">
+        {% for key in media %}
+            <img src="{{ asset(key) }}" alt="{{ key }}" class="w-full rounded-lg border border-slate-200">
+        {% endfor %}
+    </div>
+
+    <h2 class="mt-8 mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Rule 2 — only <code>/^tile-\d+\.png$/</code> → <code>tiles/</code></h2>
+    <div class="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3">
+        {% for key in tiles %}
+            <img src="{{ asset(key) }}" alt="{{ key }}" class="w-full rounded-lg border border-slate-200">
+        {% endfor %}
+    </div>
+
+    <p class="mt-4 text-slate-500">Same source directory, two rules: the second uses a regex <code>pattern</code> to copy only the tiles, leaving the hero images behind.</p>
+{% endblock %}

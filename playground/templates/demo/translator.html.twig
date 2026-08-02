@@ -1,0 +1,20 @@
+{% extends 'page.html.twig' %}
+
+{% block content %}
+    <twig:Panel data-controller="translator">
+        <p>Greeting — from the server (Twig <code>trans</code>): <strong>{{ 'greeting'|trans({'%name%': 'Reprise'}) }}</strong></p>
+        <p>Greeting — from JavaScript: <strong data-translator-target="greeting">…</strong></p>
+
+        <p class="mt-5">ICU plural — from the server: <strong>{{ 'apples'|trans({'count': 3}) }}</strong></p>
+        <p>
+            ICU plural — from JavaScript: <strong data-translator-target="apples">…</strong>
+            <twig:Button class="ml-2" data-action="translator#fewer">−</twig:Button>
+            <twig:Button data-action="translator#more">+</twig:Button>
+        </p>
+
+        <p class="mt-5">
+            <twig:Button data-action="translator#english">English</twig:Button>
+            <twig:Button data-action="translator#french">Français</twig:Button>
+        </p>
+    </twig:Panel>
+{% endblock %}
