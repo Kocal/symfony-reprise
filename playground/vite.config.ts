@@ -13,7 +13,7 @@ const publicPath = process.env.CDN_BASE ?? '/build/'
 
 export default defineConfig({
   build: {
-    rolldownOptions: {
+    rollupOptions: {
       input: {
         app: resolve(__dirname, './assets/app.ts'),
         admin: resolve(__dirname, './assets/admin.ts'),

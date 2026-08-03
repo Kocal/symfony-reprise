@@ -1,5 +1,5 @@
 <div{{ attributes }} class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5">
     <twig:Button data-action="live#action" data-live-action-param="decrement">−</twig:Button>
-    <strong class="min-w-[2ch] text-center text-2xl">{{ count }}</strong>
+    <strong data-testid="counter-value" class="min-w-[2ch] text-center text-2xl">{{ count }}</strong>
     <twig:Button data-action="live#action" data-live-action-param="increment">+</twig:Button>
 </div>

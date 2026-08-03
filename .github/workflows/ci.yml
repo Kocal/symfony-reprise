@@ -158,6 +158,98 @@ jobs:
             - name: PHPUnit
               run: vendor/bin/phpunit
 
+    e2e:
+        name: E2E ${{ matrix.name }}
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - {
+                          name: 'Vite 7 · Symfony 7.4',
+                          id: vite7-sf74,
+                          symfony-version: 7.4.*,
+                          bundler: vite,
+                          add: 'vite@^7 @vitejs/plugin-react@^5',
+                      }
+                    - {
+                          name: 'Vite 7 · Symfony 8.1',
+                          id: vite7-sf81,
+                          symfony-version: 8.1.*,
+                          bundler: vite,
+                          add: 'vite@^7 @vitejs/plugin-react@^5',
+                      }
+                    - {
+                          name: 'Vite 8 · Symfony 7.4',
+                          id: vite8-sf74,
+                          symfony-version: 7.4.*,
+                          bundler: vite,
+                          add: 'vite@^8',
+                      }
+                    - {
+                          name: 'Vite 8 · Symfony 8.1',
+                          id: vite8-sf81,
+                          symfony-version: 8.1.*,
+                          bundler: vite,
+                          add: 'vite@^8',
+                      }
+                    - { name: 'Rsbuild · Symfony 7.4', id: rsbuild-sf74, symfony-version: 7.4.*, bundler: rsbuild }
+                    - { name: 'Rsbuild · Symfony 8.1', id: rsbuild-sf81, symfony-version: 8.1.*, bundler: rsbuild }
+        env:
+            # symfony/flex forces every symfony/* package to this line during the Composer resolution.
+            SYMFONY_REQUIRE: ${{ matrix.symfony-version }}
+            E2E_BUNDLER: ${{ matrix.bundler }}
+            E2E_ARTIFACTS: '1'
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+            - name: Setup PHP
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+              with:
+                  php-version: '8.4'
+                  tools: flex, symfony-cli
+            - name: Install PHP dependencies
+              uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # 4.0.0
+              with:
+                  working-directory: playground
+                  dependency-versions: highest
+                  composer-options: --prefer-dist
+                  custom-cache-suffix: ${{ matrix.symfony-version }}
+            - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+            - name: Set node
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version-file: .nvmrc
+                  cache: pnpm
+                  cache-dependency-path: pnpm-lock.yaml
+            - name: Install JS dependencies
+              run: pnpm install --frozen-lockfile
+            - name: Pin ${{ matrix.name }}
+              if: matrix.add
+              run: pnpm -C playground add -D ${{ matrix.add }}
+            - name: Build Reprise
+              run: pnpm build
+            - name: Cache Playwright browsers
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
+            - name: Install Playwright Chromium
+              run: pnpm -C playground exec playwright install --with-deps chromium
+            - name: E2E
+              run: pnpm -C playground run test:e2e
+            - name: Upload Playwright artifacts
+              if: failure()
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+              with:
+                  name: e2e-artifacts-${{ matrix.id }}
+                  path: playground/tests/e2e/artifacts/
+                  if-no-files-found: ignore
+                  retention-days: 7
+
     php-qa:
         runs-on: ubuntu-latest
         permissions:
