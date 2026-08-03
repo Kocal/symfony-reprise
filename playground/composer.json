@@ -25,14 +25,23 @@
         "symfony/string": "7.4.*|8.1.*",
         "symfony/asset": "7.4.*|8.1.*",
         "symfony/stimulus-bundle": "^3.2",
-        "symfony/ux-map": "^3.2",
-        "symfony/ux-leaflet-map": "^3.2",
-        "symfony/ux-react": "^3.2",
-        "symfony/ux-vue": "^3.2",
+        "symfony/ux-map": "^3.4",
+        "symfony/ux-leaflet-map": "^3.4",
+        "symfony/ux-react": "^3.4",
+        "symfony/ux-vue": "^3.4",
         "symfony/console": "7.4.*|8.1.*",
         "symfony/dotenv": "7.4.*|8.1.*",
         "symfony/reprise": "@dev",
-        "symfony/web-link": "7.4.*|8.1.*"
+        "symfony/web-link": "7.4.*|8.1.*",
+        "symfony/ux-chartjs": "^3.4",
+        "symfony/ux-autocomplete": "^3.4",
+        "symfony/ux-dropzone": "^3.4",
+        "symfony/ux-cropperjs": "^3.4",
+        "symfony/ux-icons": "^3.4",
+        "symfony/ux-translator": "^3.4",
+        "symfony/ux-live-component": "^3.4",
+        "symfony/ux-twig-component": "^3.4",
+        "symfony/ux-turbo": "^3.4"
     },
     "config": {
         "allow-plugins": {

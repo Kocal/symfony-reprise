@@ -1,0 +1,17 @@
+{% extends 'page.html.twig' %}
+
+{% block content %}
+    <twig:Panel>
+        <p>Turbo Drive already makes every page navigation feel instant. Here, clicking a bundler loads its details into a <code>&lt;turbo-frame&gt;</code> — only the frame updates, the rest of the page stays put.</p>
+        <div class="mt-4 flex flex-wrap gap-8">
+            <ul class="m-0 flex min-w-[140px] list-none flex-col gap-2 p-0">
+                {% for tool in tools %}
+                    <li><a class="font-semibold text-emerald-600" href="{{ path('demo_turbo_frame', { tool: tool }) }}" data-turbo-frame="detail">{{ tool }}</a></li>
+                {% endfor %}
+            </ul>
+            <turbo-frame id="detail" class="min-w-[260px] flex-1">
+                <p class="text-slate-500">← Pick a bundler to load its details here.</p>
+            </turbo-frame>
+        </div>
+    </twig:Panel>
+{% endblock %}

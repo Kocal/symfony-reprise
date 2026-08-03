@@ -1,0 +1,8 @@
+{% extends 'page.html.twig' %}
+
+{% block content %}
+    <twig:Panel>
+        <p>The <code>app</code> entry is <code>assets/app.ts</code> (TypeScript); its styling is <strong>Tailwind CSS v4</strong> (<code>@import "tailwindcss"</code>), compiled by each bundler's official plugin: <code>@tailwindcss/vite</code> for Vite, <code>@rsbuild/plugin-tailwindcss</code> for Rsbuild.</p>
+        <p>The <code>admin</code> entry keeps a <code>.scss</code> file (Sass variables + nesting) so Sass is exercised too. Reprise compiles none of this: the bundlers handle TypeScript, Tailwind, and Sass (via <code>sass-embedded</code> and <code>@rsbuild/plugin-sass</code>) natively.</p>
+    </twig:Panel>
+{% endblock %}

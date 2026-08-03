@@ -1,0 +1,1 @@
+apples: '{count, plural, =0 {aucune pomme 🍏} one {# pomme 🍎} other {# pommes 🍎}}'

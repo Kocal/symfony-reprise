@@ -1,0 +1,13 @@
+{% extends 'page.html.twig' %}
+
+{% block content %}
+    <twig:Panel class="flex flex-wrap items-center gap-6 text-4xl">
+        {{ ux_icon('logos:vitejs') }}
+        {{ ux_icon('logos:react') }}
+        {{ ux_icon('tabler:brand-symfony') }}
+        {{ ux_icon('lucide:rocket') }}
+        {{ ux_icon('lucide:sparkles') }}
+        {{ ux_icon('mdi:map-marker') }}
+    </twig:Panel>
+    <p class="mt-4 text-slate-500">Icons come from several Iconify sets (Logos, Tabler, Lucide, MDI), imported locally with <code>bin/console ux:icons:import</code>.</p>
+{% endblock %}

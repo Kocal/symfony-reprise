@@ -1,0 +1,9 @@
+{% extends 'page.html.twig' %}
+
+{% block content %}
+    <twig:Panel>
+        <p>Click to dynamically <code>import()</code> the confetti module. It ships as a separate chunk — open the Network tab and watch it load on the first click only.</p>
+        <twig:Button class="mt-3" data-confetti="true">🎉 Load &amp; celebrate</twig:Button>
+    </twig:Panel>
+    <p class="mt-4 text-slate-500">In <code>entrypoints.json</code>, that chunk shows up under the entry's <code>dynamic</code> list. Lazy Stimulus controllers (Chart.js, Autocomplete, …) split the same way.</p>
+{% endblock %}

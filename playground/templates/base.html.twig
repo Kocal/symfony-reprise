@@ -1,20 +1,26 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>{% block title %}Welcome!{% endblock %}</title>
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{% block title %}Reprise Playground{% endblock %}</title>
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.1em%22 font-size=%2296%22>🎛️</text></svg>">
         {% block stylesheets %}
-            {{ encore_entry_link_tags('app') }}
             {{ reprise_entry_link_tags('app') }}
         {% endblock %}
-
         {% block javascripts %}
-            {{ encore_entry_script_tags('app') }}
             {{ reprise_entry_script_tags('app') }}
         {% endblock %}
     </head>
-    <body>
+    <body class="min-h-screen bg-slate-50 text-slate-900 antialiased">
+        {% block nav %}
+            <nav class="flex items-center gap-4 bg-slate-900 px-6 py-3 text-white">
+                <a class="text-lg font-bold text-white no-underline" href="{{ path('dashboard') }}">🎛️ Reprise Playground</a>
+                <span class="flex-1"></span>
+                <a class="font-semibold text-white/75 no-underline hover:text-white" href="{{ path('feature_build_contract') }}">Build contract</a>
+                <a class="font-semibold text-white/75 no-underline hover:text-white" href="https://symfony.com/bundles/reprise/current/index.html" target="_blank" rel="noopener">Docs</a>
+            </nav>
+        {% endblock %}
         {% block body %}{% endblock %}
     </body>
 </html>

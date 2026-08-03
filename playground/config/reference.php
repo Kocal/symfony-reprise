@@ -154,7 +154,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         cookie_name?: scalar|Param|null, // The name of the cookie to use when using stateless protection. // Default: "csrf-token"
  *     },
  *     form?: bool|array{ // Form configuration
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *         csrf_protection?: bool|array{
  *             enabled?: scalar|Param|null, // Default: null
  *             token_id?: scalar|Param|null, // Default: null
@@ -305,7 +305,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         },
  *     },
  *     translator?: bool|array{ // Translator configuration
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *         fallbacks?: string|list<scalar|Param|null>,
  *         logging?: bool|Param, // Default: false
  *         formatter?: scalar|Param|null, // Default: "translator.formatter.default"
@@ -333,7 +333,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         }>,
  *     },
  *     validation?: bool|array{ // Validation configuration
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *         enable_attributes?: bool|Param, // Default: true
  *         static_method?: string|list<scalar|Param|null>,
  *         translation_domain?: scalar|Param|null, // Default: "validators"
@@ -369,7 +369,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         }>,
  *     },
  *     property_access?: bool|array{ // Property access configuration
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *         magic_call?: bool|Param, // Default: false
  *         magic_get?: bool|Param, // Default: true
  *         magic_set?: bool|Param, // Default: true
@@ -377,11 +377,11 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         throw_exception_on_invalid_property_path?: bool|Param, // Default: true
  *     },
  *     type_info?: bool|array{ // Type info configuration
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *         aliases?: array<string, scalar|Param|null>,
  *     },
  *     property_info?: bool|array{ // Property info configuration
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *         with_constructor_extractor?: bool|Param, // Registers the constructor extractor. // Default: true
  *     },
  *     cache?: array{ // Cache configuration
@@ -799,7 +799,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     name_glob?: list<scalar|Param|null>,
  * }
  * @psalm-type RepriseConfig = array{
- *     output_path?: scalar|Param|null, // Directory where the @symfony/reprise plugin writes entrypoints.json and manifest.json. // Default: "%kernel.project_dir%/public/build"
+ *     output_path?: scalar|Param|null, // Directory where the @symfony/reprise plugin writes entrypoints.json and manifest.json. Set to false to only use named "builds". // Default: "%kernel.project_dir%/public/build"
+ *     builds?: array<string, scalar|Param|null>,
  *     strict_mode?: bool|Param, // Throw when the entrypoints.json file or a requested entry is missing. // Default: true
  *     cache?: bool|Param, // Cache the parsed entrypoints.json in a compiled PHP file (warmed at cache:warmup). Enable in production; requires symfony/cache. // Default: false
  *     preload?: bool|Param, // Register rendered assets as WebLink Link: headers (HTTP/2 preload). No-op when symfony/web-link is absent. // Default: true
@@ -816,6 +817,60 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     intercept_redirects?: bool|Param, // Default: false
  *     excluded_ajax_paths?: scalar|Param|null, // Default: "^/((index|app(_[\\w]+)?)\\.php/)?_wdt"
  * }
+ * @psalm-type UxIconsConfig = array{
+ *     icon_dir?: scalar|Param|null, // The local directory where icons are stored. // Default: "%kernel.project_dir%/assets/icons"
+ *     default_icon_attributes?: array<string, scalar|Param|null>,
+ *     icon_sets?: array<string, array{ // the icon set prefix (e.g. "acme") // Default: []
+ *         path?: scalar|Param|null, // The local icon set directory path. (cannot be used with 'alias')
+ *         alias?: scalar|Param|null, // The remote icon set identifier. (cannot be used with 'path')
+ *         icon_attributes?: array<string, scalar|Param|null>,
+ *         suffixes?: array<string, array{ // The suffix name (e.g. "solid", "20-solid") // Default: []
+ *             icon_attributes?: array<string, scalar|Param|null>,
+ *         }>,
+ *     }>,
+ *     aliases?: array<string, string|Param>,
+ *     iconify?: bool|array{ // Configuration for the remote icon service.
+ *         enabled?: bool|Param, // Default: true
+ *         on_demand?: bool|Param, // Whether to download icons "on demand". // Default: true
+ *         auto_lock?: bool|Param, // Persist "on demand" icons to the local icon directory (see "icon_dir"). Recommended in dev only. Requires "on_demand" to be enabled. // Default: false
+ *         endpoint?: scalar|Param|null, // The endpoint for the Iconify icons API. // Default: "https://api.iconify.design"
+ *     },
+ *     ignore_not_found?: bool|Param, // Ignore error when an icon is not found. Set to 'true' to fail silently. // Default: false
+ * }
+ * @psalm-type TwigComponentConfig = array{
+ *     defaults?: array<string, string|array{ // Default: []
+ *         template_directory?: scalar|Param|null, // Default: "components"
+ *         name_prefix?: scalar|Param|null, // Default: ""
+ *     }>,
+ *     anonymous_template_directory?: scalar|Param|null, // Defaults to `components`
+ *     profiler?: bool|array{ // Enables the profiler for Twig Component
+ *         enabled?: bool|Param, // Default: "%kernel.debug%"
+ *         collect_components?: bool|Param, // Collect components instances // Default: true
+ *     },
+ * }
+ * @psalm-type LiveComponentConfig = array{
+ *     secret?: scalar|Param|null, // The secret used to compute fingerprints and checksums // Default: "%kernel.secret%"
+ *     fetch_credentials?: "same-origin"|"include"|"omit"|Param, // The default fetch credentials mode for all Live Components ('same-origin', 'include', 'omit') // Default: "same-origin"
+ * }
+ * @psalm-type UxTranslatorConfig = array{
+ *     dump_directory?: scalar|Param|null, // The directory where translations and TypeScript types are dumped. // Default: "%kernel.project_dir%/var/translations"
+ *     dump_typescript?: bool|Param, // Control whether TypeScript types are dumped alongside translations. Disable this if you do not use TypeScript (e.g. in production when using AssetMapper). // Default: true
+ *     domains?: string|array{ // List of domains to include/exclude from the generated translations. Prefix with a `!` to exclude a domain.
+ *         type?: scalar|Param|null,
+ *         elements?: list<scalar|Param|null>,
+ *     },
+ *     keys_patterns?: string|list<scalar|Param|null>,
+ * }
+ * @psalm-type TurboConfig = array{
+ *     broadcast?: bool|array{
+ *         enabled?: bool|Param, // Default: true
+ *         entity_template_prefixes?: list<scalar|Param|null>,
+ *         doctrine_orm?: bool|array{ // Enable the Doctrine ORM integration
+ *             enabled?: bool|Param, // Default: false
+ *         },
+ *     },
+ *     default_transport?: scalar|Param|null, // Default: "default"
+ * }
  * @psalm-type ConfigType = array{
  *     imports?: ImportsConfig,
  *     parameters?: ParametersConfig,
@@ -828,6 +883,11 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     react?: ReactConfig,
  *     vue?: VueConfig,
  *     reprise?: RepriseConfig,
+ *     ux_icons?: UxIconsConfig,
+ *     twig_component?: TwigComponentConfig,
+ *     live_component?: LiveComponentConfig,
+ *     ux_translator?: UxTranslatorConfig,
+ *     turbo?: TurboConfig,
  *     "when@dev"?: array{
  *         imports?: ImportsConfig,
  *         parameters?: ParametersConfig,
@@ -841,6 +901,11 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         vue?: VueConfig,
  *         reprise?: RepriseConfig,
  *         web_profiler?: WebProfilerConfig,
+ *         ux_icons?: UxIconsConfig,
+ *         twig_component?: TwigComponentConfig,
+ *         live_component?: LiveComponentConfig,
+ *         ux_translator?: UxTranslatorConfig,
+ *         turbo?: TurboConfig,
  *     },
  *     "when@prod"?: array{
  *         imports?: ImportsConfig,
@@ -854,6 +919,11 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         react?: ReactConfig,
  *         vue?: VueConfig,
  *         reprise?: RepriseConfig,
+ *         ux_icons?: UxIconsConfig,
+ *         twig_component?: TwigComponentConfig,
+ *         live_component?: LiveComponentConfig,
+ *         ux_translator?: UxTranslatorConfig,
+ *         turbo?: TurboConfig,
  *     },
  *     "when@test"?: array{
  *         imports?: ImportsConfig,
@@ -868,6 +938,11 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         vue?: VueConfig,
  *         reprise?: RepriseConfig,
  *         web_profiler?: WebProfilerConfig,
+ *         ux_icons?: UxIconsConfig,
+ *         twig_component?: TwigComponentConfig,
+ *         live_component?: LiveComponentConfig,
+ *         ux_translator?: UxTranslatorConfig,
+ *         turbo?: TurboConfig,
  *     },
  *     ...<string, ExtensionType|array{ // extra keys must follow the when@%env% pattern or match an extension alias
  *         imports?: ImportsConfig,

@@ -1,0 +1,7 @@
+{% extends 'page.html.twig' %}
+
+{% block content %}
+    <twig:Panel>
+        <div {{ react_component('Contrast', { foreground: foreground, background: background }) }}></div>
+    </twig:Panel>
+{% endblock %}

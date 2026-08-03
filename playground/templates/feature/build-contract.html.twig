@@ -1,0 +1,11 @@
+{% extends 'page.html.twig' %}
+
+{% block content %}
+    <p>Reprise writes two files into <code>public/build/</code>. In dev they point at the running dev server (with the HMR client injected); in a build they point at content-hashed files, plus an <code>integrity</code> map of SRI hashes.</p>
+
+    <h2 class="mt-8 mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">entrypoints.json</h2>
+    <pre class="max-h-[420px] overflow-auto rounded-xl bg-[#0b1020] p-4 text-[0.8rem] leading-relaxed text-[#d6e2ff]">{{ entrypoints ?? 'Not generated yet — run a build or the dev server.' }}</pre>
+
+    <h2 class="mt-8 mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">manifest.json</h2>
+    <pre class="max-h-[420px] overflow-auto rounded-xl bg-[#0b1020] p-4 text-[0.8rem] leading-relaxed text-[#d6e2ff]">{{ manifest ?? 'Not generated yet.' }}</pre>
+{% endblock %}
