@@ -3,6 +3,7 @@ const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#a855f7']
 export function celebrate(): void {
     for (let i = 0; i < 90; i++) {
         const piece = document.createElement('div')
+        piece.dataset.confettiPiece = ''
         piece.style.cssText = `position:fixed;top:-12px;left:${(i * 53) % 100}vw;width:9px;height:9px;`
             + `background:${COLORS[i % COLORS.length]};z-index:9999;pointer-events:none;border-radius:2px`
         document.body.appendChild(piece)
