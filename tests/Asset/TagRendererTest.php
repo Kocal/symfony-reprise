@@ -279,6 +279,68 @@ final class TagRendererTest extends TestCase
         $this->assertSame('style', $byHref['/build/app-c3.css']['as']);
     }
 
+    public function testPreloadLinksCarryIntegrityAndCrossoriginWhenPresent()
+    {
+        $stack = new RequestStack();
+        $stack->push($request = new Request());
+
+        $renderer = $this->renderer(
+            js: ['build/app-a1b2.js'],
+            css: ['build/app-c3.css'],
+            preload: ['build/shared-e5.js'],
+            integrity: [
+                'build/app-a1b2.js' => 'sha384-JS',
+                'build/app-c3.css' => 'sha384-CSS',
+                'build/shared-e5.js' => 'sha384-SHARED',
+            ],
+            requestStack: $stack,
+        );
+        $renderer->renderScriptTags('app');
+        $renderer->renderLinkTags('app');
+
+        $byHref = [];
+        foreach ($request->attributes->get('_links')->getLinks() as $link) {
+            $byHref[$link->getHref()] = $link->getAttributes();
+        }
+
+        $this->assertSame('sha384-SHARED', $byHref['/build/shared-e5.js']['integrity']);
+        $this->assertSame('anonymous', $byHref['/build/shared-e5.js']['crossorigin']);
+        $this->assertSame('sha384-JS', $byHref['/build/app-a1b2.js']['integrity']);
+        $this->assertSame('anonymous', $byHref['/build/app-a1b2.js']['crossorigin']);
+        $this->assertSame('sha384-CSS', $byHref['/build/app-c3.css']['integrity']);
+        $this->assertSame('anonymous', $byHref['/build/app-c3.css']['crossorigin']);
+    }
+
+    public function testPreloadLinksHaveNoIntegrityWhenTheAssetIsNotHashed()
+    {
+        $stack = new RequestStack();
+        $stack->push($request = new Request());
+
+        $this->renderer(js: ['build/app-a1b2.js'], requestStack: $stack)->renderScriptTags('app');
+
+        foreach ($request->attributes->get('_links')->getLinks() as $link) {
+            $this->assertArrayNotHasKey('integrity', $link->getAttributes());
+            $this->assertArrayNotHasKey('crossorigin', $link->getAttributes());
+        }
+    }
+
+    public function testPreloadLinksUseTheConfiguredCrossorigin()
+    {
+        $stack = new RequestStack();
+        $stack->push($request = new Request());
+
+        $this->renderer(
+            js: ['build/app-a1b2.js'],
+            integrity: ['build/app-a1b2.js' => 'sha384-JS'],
+            crossorigin: 'use-credentials',
+            requestStack: $stack,
+        )->renderScriptTags('app');
+
+        foreach ($request->attributes->get('_links')->getLinks() as $link) {
+            $this->assertSame('use-credentials', $link->getAttributes()['crossorigin']);
+        }
+    }
+
     public function testDoesNotRegisterLinksWithoutACurrentRequest()
     {
         $renderer = $this->renderer(js: ['build/app-a1b2.js'], requestStack: new RequestStack());

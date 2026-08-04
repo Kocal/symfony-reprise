@@ -75,7 +75,7 @@ final class TagRenderer implements ResetInterface
             $tagAttributes = ['rel' => 'modulepreload', 'href' => $url];
             $this->applyIntegrity($tagAttributes, $reference, $integrity);
             $tags[] = \sprintf('<link %s>', $this->attributes($tagAttributes));
-            $this->preload($url, 'modulepreload');
+            $this->preload($url, 'modulepreload', null, $reference, $integrity);
         }
 
         foreach ($lookup->getJavaScriptFiles($entryName) as $reference) {
@@ -83,7 +83,7 @@ final class TagRenderer implements ResetInterface
             $tagAttributes = ['src' => $url, 'type' => 'module'] + $attributes + $this->scriptAttributes;
             $this->applyIntegrity($tagAttributes, $reference, $integrity);
             $tags[] = \sprintf('<script %s></script>', $this->attributes($tagAttributes));
-            $this->preload($url, 'preload', 'script');
+            $this->preload($url, 'preload', 'script', $reference, $integrity);
         }
 
         return implode('', $tags);
@@ -103,7 +103,7 @@ final class TagRenderer implements ResetInterface
             $tagAttributes = ['rel' => 'stylesheet', 'href' => $url] + $attributes + $this->linkAttributes;
             $this->applyIntegrity($tagAttributes, $reference, $integrity);
             $tags[] = \sprintf('<link %s>', $this->attributes($tagAttributes));
-            $this->preload($url, 'preload', 'style');
+            $this->preload($url, 'preload', 'style', $reference, $integrity);
         }
 
         return implode('', $tags);
@@ -161,7 +161,10 @@ final class TagRenderer implements ResetInterface
         return $this->packages->getUrl($reference, $packageName ?? $this->defaultPackage);
     }
 
-    private function preload(string $url, string $rel, ?string $as = null): void
+    /**
+     * @param array<string, string> $integrity
+     */
+    private function preload(string $url, string $rel, ?string $as, string $reference, array $integrity): void
     {
         if (!$this->preload || null === $this->requestStack || !class_exists(GenericLinkProvider::class)) {
             return;
@@ -175,6 +178,11 @@ final class TagRenderer implements ResetInterface
         $link = new Link($rel, $url);
         if (null !== $as) {
             $link = $link->withAttribute('as', $as);
+        }
+        // Mirror the tag's SRI onto the preload, or the browser discards the preloaded response as a mismatch.
+        [$hash, $crossorigin] = $this->integrityFor($reference, $integrity);
+        if (null !== $hash) {
+            $link = $link->withAttribute('integrity', $hash)->withAttribute('crossorigin', $crossorigin);
         }
 
         $linkProvider = $request->attributes->get('_links');
@@ -190,11 +198,29 @@ final class TagRenderer implements ResetInterface
      */
     private function applyIntegrity(array &$attributes, string $reference, array $integrity): void
     {
-        if (!isset($integrity[$reference])) {
+        [$hash, $crossorigin] = $this->integrityFor($reference, $integrity);
+        if (null === $hash) {
             return;
         }
-        $attributes['integrity'] = $integrity[$reference];
-        $attributes['crossorigin'] = false === $this->crossorigin ? 'anonymous' : $this->crossorigin;
+        $attributes['integrity'] = $hash;
+        $attributes['crossorigin'] = $crossorigin;
+    }
+
+    /**
+     * Resolves the SRI hash + crossorigin for a reference, so a tag and its preload Link derive them
+     * from one place and can never drift.
+     *
+     * @param array<string, string> $integrity
+     *
+     * @return array{0: ?string, 1: string}
+     */
+    private function integrityFor(string $reference, array $integrity): array
+    {
+        if (!isset($integrity[$reference])) {
+            return [null, ''];
+        }
+
+        return [$integrity[$reference], false === $this->crossorigin ? 'anonymous' : $this->crossorigin];
     }
 
     /**
