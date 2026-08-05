@@ -83,7 +83,9 @@ final class TagRenderer implements ResetInterface
             $tagAttributes = ['src' => $url, 'type' => 'module'] + $attributes + $this->scriptAttributes;
             $this->applyIntegrity($tagAttributes, $reference, $integrity);
             $tags[] = \sprintf('<script %s></script>', $this->attributes($tagAttributes));
-            $this->preload($url, 'preload', 'script', $reference, $integrity);
+            // modulepreload, not `preload as=script`: the tag is a module, and a classic-script preload
+            // mismatches its credentials/CORS mode so the browser discards it.
+            $this->preload($url, 'modulepreload', null, $reference, $integrity);
         }
 
         return implode('', $tags);

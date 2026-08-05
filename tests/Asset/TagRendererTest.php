@@ -273,8 +273,10 @@ final class TagRendererTest extends TestCase
         }
 
         $this->assertSame(['modulepreload'], $byHref['/build/shared-e5.js']['rels']);
-        $this->assertSame(['preload'], $byHref['/build/app-a1b2.js']['rels']);
-        $this->assertSame('script', $byHref['/build/app-a1b2.js']['as']);
+        // The <script type=module> entry is preloaded as modulepreload, not `preload as=script` (whose
+        // classic-script fetch mode mismatches the module and gets discarded by the browser).
+        $this->assertSame(['modulepreload'], $byHref['/build/app-a1b2.js']['rels']);
+        $this->assertNull($byHref['/build/app-a1b2.js']['as']);
         $this->assertSame(['preload'], $byHref['/build/app-c3.css']['rels']);
         $this->assertSame('style', $byHref['/build/app-c3.css']['as']);
     }
