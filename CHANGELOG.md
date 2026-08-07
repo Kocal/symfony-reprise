@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 0.7.0
+
+- Add the `RenderAssetTagEvent`, dispatched before each rendered `<script>`/`<link>` (including the injected dev client and React preamble), so listeners can add, change or remove attributes such as a CSP nonce
+
 ## 0.6.0
 
 - Add a per-call `attributes` argument to the `reprise_entry_script_tags()` and `reprise_entry_link_tags()` Twig functions

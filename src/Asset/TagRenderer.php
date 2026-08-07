@@ -15,7 +15,9 @@ use Symfony\Component\Asset\Packages;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\WebLink\GenericLinkProvider;
 use Symfony\Component\WebLink\Link;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Service\ResetInterface;
+use Symfony\Reprise\Event\RenderAssetTagEvent;
 
 /**
  * Renders the <script>/<link> tags for an entry, resolving each entrypoints.json reference through
@@ -48,6 +50,7 @@ final class TagRenderer implements ResetInterface
         private readonly bool $preload = true,
         private readonly array $scriptAttributes = [],
         private readonly array $linkAttributes = [],
+        private readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {
     }
 
@@ -60,12 +63,15 @@ final class TagRenderer implements ResetInterface
         $lookup = $this->collection->getEntrypointsLookup($build);
         $integrity = $lookup->getIntegrityData();
         $tags = [];
+        $scriptDefaults = $attributes + $this->scriptAttributes;
 
         $devServer = $lookup->getDevServer();
         if (null !== $devServer && null !== $devServer->client && !isset($this->injectedClients[$devServer->client])) {
-            $tags[] = \sprintf('<script type="module" src="%s"></script>', htmlspecialchars($devServer->client, \ENT_QUOTES));
+            $clientAttributes = ['type' => 'module', 'src' => $devServer->client] + $scriptDefaults;
+            $tags[] = $this->tag(RenderAssetTagEvent::TYPE_SCRIPT, $clientAttributes);
             if (null !== $devServer->reactRefresh) {
-                $tags[] = $this->renderReactRefreshPreamble($devServer->reactRefresh);
+                $preambleAttributes = ['type' => 'module'] + $scriptDefaults;
+                $tags[] = $this->tag(RenderAssetTagEvent::TYPE_SCRIPT, $preambleAttributes, $this->reactRefreshPreamble($devServer->reactRefresh));
             }
             $this->injectedClients[$devServer->client] = true;
         }
@@ -80,9 +86,9 @@ final class TagRenderer implements ResetInterface
 
         foreach ($lookup->getJavaScriptFiles($entryName) as $reference) {
             $url = $this->url($reference, $packageName);
-            $tagAttributes = ['src' => $url, 'type' => 'module'] + $attributes + $this->scriptAttributes;
+            $tagAttributes = ['src' => $url, 'type' => 'module'] + $scriptDefaults;
             $this->applyIntegrity($tagAttributes, $reference, $integrity);
-            $tags[] = \sprintf('<script %s></script>', $this->attributes($tagAttributes));
+            $tags[] = $this->tag(RenderAssetTagEvent::TYPE_SCRIPT, $tagAttributes);
             // modulepreload, not `preload as=script`: the tag is a module, and a classic-script preload
             // mismatches its credentials/CORS mode so the browser discards it.
             $this->preload($url, 'modulepreload', null, $reference, $integrity);
@@ -104,7 +110,7 @@ final class TagRenderer implements ResetInterface
             $url = $this->url($reference, $packageName);
             $tagAttributes = ['rel' => 'stylesheet', 'href' => $url] + $attributes + $this->linkAttributes;
             $this->applyIntegrity($tagAttributes, $reference, $integrity);
-            $tags[] = \sprintf('<link %s>', $this->attributes($tagAttributes));
+            $tags[] = $this->tag(RenderAssetTagEvent::TYPE_LINK, $tagAttributes);
             $this->preload($url, 'preload', 'style', $reference, $integrity);
         }
 
@@ -138,22 +144,23 @@ final class TagRenderer implements ResetInterface
     }
 
     /**
-     * Emits Vite's React Fast Refresh preamble. `@vitejs/plugin-react` normally injects this into the
-     * HTML itself, but cannot when Symfony renders the page (backend integration), so we render it here
-     * before the entry. See https://vite.dev/guide/backend-integration.
+     * The inner body of Vite's React Fast Refresh preamble. `@vitejs/plugin-react` normally injects this
+     * into the HTML itself, but cannot when Symfony renders the page (backend integration), so we render
+     * it here before the entry, wrapped in a <script type="module"> by tag(). See
+     * https://vite.dev/guide/backend-integration.
      */
-    private function renderReactRefreshPreamble(string $reactRefreshUrl): string
+    private function reactRefreshPreamble(string $reactRefreshUrl): string
     {
         return \sprintf(
-            <<<'HTML'
-                <script type="module">
+            <<<'JS'
+
                 import RefreshRuntime from "%s";
                 RefreshRuntime.injectIntoGlobalHook(window);
                 window.$RefreshReg$ = () => {};
                 window.$RefreshSig$ = () => (type) => type;
                 window.__vite_plugin_react_preamble_installed__ = true;
-                </script>
-                HTML,
+
+                JS,
             htmlspecialchars($reactRefreshUrl, \ENT_QUOTES),
         );
     }
@@ -223,6 +230,22 @@ final class TagRenderer implements ResetInterface
         }
 
         return [$integrity[$reference], false === $this->crossorigin ? 'anonymous' : $this->crossorigin];
+    }
+
+    /**
+     * @param array<string, bool|string> $attributes
+     */
+    private function tag(string $type, array $attributes, ?string $inlineBody = null): string
+    {
+        if (null !== $this->eventDispatcher) {
+            $event = $this->eventDispatcher->dispatch(new RenderAssetTagEvent($type, $attributes));
+            $attributes = $event->attributes;
+        }
+
+        return match ($type) {
+            RenderAssetTagEvent::TYPE_LINK => \sprintf('<link %s>', $this->attributes($attributes)),
+            default => \sprintf('<script %s>%s</script>', $this->attributes($attributes), $inlineBody ?? ''),
+        };
     }
 
     /**

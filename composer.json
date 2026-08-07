@@ -17,6 +17,7 @@
     "require": {
         "php": ">=8.4",
         "symfony/asset": "^7.4|^8.0",
+        "symfony/event-dispatcher-contracts": "^3",
         "twig/twig": "^3.0"
     },
     "require-dev": {

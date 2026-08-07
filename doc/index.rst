@@ -30,6 +30,7 @@ reimplement any of that. It covers only the Symfony-side glue the bundlers leave
 - **Symfony UX / Stimulus**: registers ``controllers.json`` and local controllers, eager or lazy
 - **CDN support**: serve built assets from an absolute ``publicPath``
 - **Subresource Integrity**: SRI hashes in ``entrypoints.json``
+- **Customizable tag attributes**: ``RenderAssetTagEvent`` lets listeners add, change or remove attributes on every rendered tag
 
 It generates the Encore-compatible ``entrypoints.json`` and ``manifest.json`` that ``RepriseBundle`` reads to render
 the ``<script>`` and ``<link>`` tags, wires up the native dev server, and turns your Stimulus controllers into a
@@ -170,6 +171,33 @@ project needs nothing beyond installing the bundle (see `Configuration`_ below f
 same whether Vite or Rsbuild produced ``entrypoints.json``, and there's nothing to configure for dev either: in dev
 ``reprise_entry_script_tags`` injects the Vite HMR client automatically, while under Rsbuild the client is compiled
 into the bundle.
+
+Customizing rendered tags
+-------------------------
+
+Before Reprise writes any ``<script>`` or ``<link>`` tag (entry files, CSS, and the dev-server tags it injects itself,
+like the Vite HMR client and the React Fast Refresh preamble), it dispatches a ``RenderAssetTagEvent``.
+A listener can read and mutate ``$event->attributes`` to add, change, or remove attributes on that tag.
+
+As one example, stamping a Content-Security-Policy nonce on every tag::
+
+    namespace App\EventListener;
+
+    use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+    use Symfony\Reprise\Event\RenderAssetTagEvent;
+
+    #[AsEventListener]
+    final class CspNonceListener
+    {
+        public function __construct(private NonceGenerator $nonceGenerator)
+        {
+        }
+
+        public function __invoke(RenderAssetTagEvent $event): void
+        {
+            $event->attributes['nonce'] = $this->nonceGenerator->getNonce();
+        }
+    }
 
 Features
 --------

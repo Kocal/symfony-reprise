@@ -155,6 +155,7 @@ final class RepriseBundle extends AbstractBundle
                 $config['preload'],
                 $config['script_attributes'],
                 $config['link_attributes'],
+                service('event_dispatcher')->nullOnInvalid(),
             ])
             ->tag('kernel.reset', ['method' => 'reset'])
         ;

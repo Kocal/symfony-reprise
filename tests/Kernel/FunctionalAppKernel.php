@@ -83,5 +83,11 @@ final class FunctionalAppKernel extends Kernel implements CompilerPassInterface
         if ($container->hasDefinition('assets.packages')) {
             $container->getDefinition('assets.packages')->setPublic(true);
         }
+
+        if ($container->hasAlias('event_dispatcher')) {
+            $container->getAlias('event_dispatcher')->setPublic(true);
+        } elseif ($container->hasDefinition('event_dispatcher')) {
+            $container->getDefinition('event_dispatcher')->setPublic(true);
+        }
     }
 }

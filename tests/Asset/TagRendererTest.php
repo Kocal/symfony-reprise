@@ -16,13 +16,16 @@ use Symfony\Component\Asset\Packages;
 use Symfony\Component\Asset\PathPackage;
 use Symfony\Component\Asset\UrlPackage;
 use Symfony\Component\Asset\VersionStrategy\EmptyVersionStrategy;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\WebLink\GenericLinkProvider;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Symfony\Reprise\Asset\DevServer;
 use Symfony\Reprise\Asset\EntrypointsLookup;
 use Symfony\Reprise\Asset\EntrypointsLookupInterface;
 use Symfony\Reprise\Asset\TagRenderer;
+use Symfony\Reprise\Event\RenderAssetTagEvent;
 use Symfony\Reprise\Exception\UndefinedBuildException;
 use Symfony\Reprise\Tests\BuildCollectionTrait;
 
@@ -42,6 +45,7 @@ final class TagRendererTest extends TestCase
         ?RequestStack $requestStack = null,
         bool $preloadEnabled = true,
         ?Packages $packages = null,
+        ?EventDispatcherInterface $eventDispatcher = null,
     ): TagRenderer {
         $packages ??= new Packages(new PathPackage('/', new EmptyVersionStrategy()));
 
@@ -54,6 +58,7 @@ final class TagRendererTest extends TestCase
             $preloadEnabled,
             $scriptAttributes,
             $linkAttributes,
+            $eventDispatcher,
         );
     }
 
@@ -215,6 +220,19 @@ final class TagRendererTest extends TestCase
 
         $this->assertStringContainsString('import RefreshRuntime from "http://127.0.0.1:5173/build/@react-refresh"', $html);
         $this->assertStringContainsString('window.__vite_plugin_react_preamble_installed__ = true', $html);
+
+        $this->assertStringContainsString(
+            <<<'HTML'
+                <script type="module">
+                import RefreshRuntime from "http://127.0.0.1:5173/build/@react-refresh";
+                RefreshRuntime.injectIntoGlobalHook(window);
+                window.$RefreshReg$ = () => {};
+                window.$RefreshSig$ = () => (type) => type;
+                window.__vite_plugin_react_preamble_installed__ = true;
+                </script>
+                HTML,
+            $html,
+        );
 
         // Order matters: the HMR client, then the preamble, then the entry that imports the components.
         $clientPos = strpos($html, '@vite/client');
@@ -537,16 +555,85 @@ final class TagRendererTest extends TestCase
         );
     }
 
-    public function testPerCallAttributesDoNotLeakIntoTheHmrClient()
+    public function testPerCallAttributesApplyToTheHmrClient()
     {
+        // Unified path: per-call attributes now seed the injected client too (issue #71).
         $html = $this->renderer(
             js: ['http://127.0.0.1:5173/build/app.js'],
             devServer: new DevServer('http://127.0.0.1:5173', 'http://127.0.0.1:5173/build/@vite/client'),
         )->renderScriptTags('app', attributes: ['defer' => true]);
 
-        // The injected client tag is emitted verbatim; only the entry script carries the per-call attribute.
-        $this->assertStringContainsString('<script type="module" src="http://127.0.0.1:5173/build/@vite/client"></script>', $html);
+        $this->assertStringContainsString('<script type="module" src="http://127.0.0.1:5173/build/@vite/client" defer></script>', $html);
         $this->assertStringContainsString('src="http://127.0.0.1:5173/build/app.js" type="module" defer></script>', $html);
+    }
+
+    public function testAListenerCanAddAnAttributeToEveryRenderedTag()
+    {
+        $dispatcher = new EventDispatcher();
+        $dispatcher->addListener(RenderAssetTagEvent::class, static function (RenderAssetTagEvent $event): void {
+            $event->attributes['nonce'] = 'r4nd0m';
+        });
+
+        $renderer = $this->renderer(
+            js: ['http://127.0.0.1:5173/build/app.js'],
+            css: ['build/app.css'],
+            devServer: new DevServer(
+                'http://127.0.0.1:5173',
+                'http://127.0.0.1:5173/build/@vite/client',
+                'http://127.0.0.1:5173/build/@react-refresh',
+            ),
+            eventDispatcher: $dispatcher,
+        );
+
+        $scripts = $renderer->renderScriptTags('app');
+        $links = $renderer->renderLinkTags('app');
+
+        $this->assertStringContainsString('<script type="module" src="http://127.0.0.1:5173/build/@vite/client" nonce="r4nd0m"></script>', $scripts);
+        $this->assertStringContainsString('<script type="module" nonce="r4nd0m">', $scripts); // the preamble
+        $this->assertStringContainsString('src="http://127.0.0.1:5173/build/app.js" type="module" nonce="r4nd0m"></script>', $scripts);
+        $this->assertStringContainsString('<link rel="stylesheet" href="/build/app.css" nonce="r4nd0m">', $links);
+    }
+
+    public function testTheEventReportsScriptOrLinkToTheListener()
+    {
+        $types = [];
+        $dispatcher = new EventDispatcher();
+        $dispatcher->addListener(RenderAssetTagEvent::class, static function (RenderAssetTagEvent $event) use (&$types): void {
+            $types[] = $event->isScript() ? 'script' : ($event->isLink() ? 'link' : 'other');
+        });
+
+        $renderer = $this->renderer(js: ['build/app.js'], css: ['build/app.css'], eventDispatcher: $dispatcher);
+        $renderer->renderScriptTags('app');
+        $renderer->renderLinkTags('app');
+
+        $this->assertSame(['script', 'link'], $types);
+    }
+
+    public function testAListenerCanRemoveAConfiguredAttribute()
+    {
+        $dispatcher = new EventDispatcher();
+        $dispatcher->addListener(RenderAssetTagEvent::class, static function (RenderAssetTagEvent $event): void {
+            unset($event->attributes['defer']);
+        });
+
+        $html = $this->renderer(js: ['build/app.js'], scriptAttributes: ['defer' => true], eventDispatcher: $dispatcher)
+            ->renderScriptTags('app');
+
+        $this->assertSame('<script src="/build/app.js" type="module"></script>', $html);
+    }
+
+    public function testModulepreloadLinksAreNotDispatchedToListeners()
+    {
+        $dispatcher = new EventDispatcher();
+        $dispatcher->addListener(RenderAssetTagEvent::class, static function (RenderAssetTagEvent $event): void {
+            $event->attributes['nonce'] = 'r4nd0m';
+        });
+
+        $html = $this->renderer(js: ['build/app.js'], preload: ['build/shared.js'], eventDispatcher: $dispatcher)
+            ->renderScriptTags('app');
+
+        $this->assertStringContainsString('<link rel="modulepreload" href="/build/shared.js">', $html);
+        $this->assertStringContainsString('<script src="/build/app.js" type="module" nonce="r4nd0m"></script>', $html);
     }
 
     public function testPerCallAttributesCannotSpoofIntegrity()

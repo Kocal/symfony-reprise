@@ -12,17 +12,24 @@
 namespace Symfony\Reprise\Tests\Functional;
 
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Reprise\Asset\TagRenderer;
+use Symfony\Reprise\Event\RenderAssetTagEvent;
 use Symfony\Reprise\Tests\Kernel\FunctionalAppKernel;
 
 final class DevAssetTagsTest extends TestCase
 {
-    private function renderer(string $fixture): TagRenderer
+    private function container(string $fixture): ContainerInterface
     {
         $kernel = new FunctionalAppKernel(__DIR__.'/../fixtures/'.$fixture);
         $kernel->boot();
 
-        return $kernel->getContainer()->get('reprise.tag_renderer');
+        return $kernel->getContainer();
+    }
+
+    private function renderer(string $fixture): TagRenderer
+    {
+        return $this->container($fixture)->get('reprise.tag_renderer');
     }
 
     public function testViteDevInjectsTheHmrClientAndServesFromTheOrigin()
@@ -46,5 +53,22 @@ final class DevAssetTagsTest extends TestCase
             HTML;
 
         $this->assertSame($expected, $this->renderer('dev-rspack')->renderScriptTags('app'));
+    }
+
+    public function testARenderAssetTagListenerCanNonceTheInjectedClientAndScripts()
+    {
+        $container = $this->container('dev');
+
+        $container->get('event_dispatcher')->addListener(
+            RenderAssetTagEvent::class,
+            static function (RenderAssetTagEvent $event): void {
+                $event->attributes['nonce'] = 'test-nonce';
+            },
+        );
+
+        $html = $container->get('reprise.tag_renderer')->renderScriptTags('app');
+
+        $this->assertStringContainsString('src="http://127.0.0.1:5173/build/@vite/client" nonce="test-nonce">', $html);
+        $this->assertStringContainsString('src="http://127.0.0.1:5173/build/app.js" type="module" nonce="test-nonce">', $html);
     }
 }
