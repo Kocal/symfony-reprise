@@ -11,11 +11,11 @@
 
 namespace Symfony\Reprise;
 
+use Symfony\Component\Cache\Adapter\PhpArrayAdapter;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
-use Symfony\Component\VarExporter\VarExporter;
 use Symfony\Reprise\Asset\EntrypointsLookup;
 use Symfony\Reprise\Asset\EntrypointsLookupCollection;
 use Symfony\Reprise\Asset\EntrypointsLookupCollectionInterface;
@@ -91,7 +91,7 @@ final class RepriseBundle extends AbstractBundle
     {
         $services = $container->services();
 
-        if ($config['cache'] && !class_exists(VarExporter::class)) {
+        if ($config['cache'] && !class_exists(PhpArrayAdapter::class)) {
             throw new \LogicException('Enabling "reprise.cache" requires the Symfony Cache component. Run "composer require symfony/cache".');
         }
 

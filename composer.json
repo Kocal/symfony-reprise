@@ -17,17 +17,23 @@
     "require": {
         "php": ">=8.4",
         "symfony/asset": "^7.4|^8.0",
-        "symfony/event-dispatcher-contracts": "^3",
+        "symfony/config": "^7.4|^8.0",
+        "symfony/dependency-injection": "^7.4|^8.0",
+        "symfony/event-dispatcher": "^7.4|^8.0",
+        "symfony/http-foundation": "^7.4|^8.0",
+        "symfony/http-kernel": "^7.4|^8.0",
+        "symfony/service-contracts": "^3",
         "twig/twig": "^3.0"
     },
     "require-dev": {
         "symfony/framework-bundle": "^7.4|^8.0",
+        "symfony/error-handler": "^7.4|^8.0",
+        "symfony/cache": "^7.4|^8.0",
+        "symfony/web-link": "^7.4|^8.0",
         "phpunit/phpunit": "^13.2",
         "phpstan/phpstan": "^2.2",
         "friendsofphp/php-cs-fixer": "^3.95",
-        "symfony/web-link": "^7.4|^8.0",
-        "symfony/cache": "^7.4|^8.0",
-        "symfony/var-exporter": "^7.4|^8.0"
+        "shipmonk/composer-dependency-analyser": "^1.8"
     },
     "autoload": {
         "psr-4": { "Symfony\\Reprise\\": "src/" }

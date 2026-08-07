@@ -274,3 +274,5 @@ jobs:
               run: vendor/bin/phpstan analyse
             - name: PHP-CS-Fixer
               run: vendor/bin/php-cs-fixer fix --dry-run --diff
+            - name: Analyse Composer dependencies
+              run: vendor/bin/composer-dependency-analyser
