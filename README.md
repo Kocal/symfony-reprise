@@ -16,7 +16,9 @@
 
 <p align="center">
   <a href="https://github.com/symfony/webpack-encore">Webpack Encore</a> gave Symfony first-class asset integration for Webpack.<br>
-  Symfony Reprise brings the same to <strong>Vite</strong> and <strong>Rsbuild</strong>.
+  Symfony Reprise brings the same to <strong>Vite</strong> and <strong>Rsbuild</strong>.<br>
+  <br>
+  📣 <a href="https://symfony.com/blog/introducing-symfony-reprise-the-symfony-integration-layer-for-modern-bundlers">Read the announcement blog post</a>
 </p>
 
 > [!WARNING]
