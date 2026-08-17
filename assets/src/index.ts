@@ -1,5 +1,6 @@
 import type { UnpluginFactory } from 'unplugin';
 import type { RspackStats } from './collectors/rspack';
+import type { CopyResult } from './core/copy';
 import type { BuildContext, ManifestJson, NormalizedGraph, Options } from './types';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -237,6 +238,8 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                         // Build: emit copied files into the compilation so Rspack writes/cleans them and
                         // `sourceFilename` lets statsToGraph key them in the manifest. Dev writes them to disk in
                         // `done` instead (served by Symfony, not the dev server), so they aren't in-memory assets.
+                        // Resolved per compilation, so a rebuild picks up edits to the copied files.
+                        let copiedInBuild: CopyResult[] = [];
                         if (!isDev) {
                             c.hooks.thisCompilation.tap('@symfony/reprise:copy', (compilation) => {
                                 compilation.hooks.processAssets.tap(
@@ -245,7 +248,8 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                                         stage: c.rspack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
                                     },
                                     () => {
-                                        for (const file of resolveCopyFiles(resolved.copy, true)) {
+                                        copiedInBuild = resolveCopyFiles(resolved.copy, true);
+                                        for (const file of copiedInBuild) {
                                             compilation.emitAsset(
                                                 file.physicalName,
                                                 new c.rspack.sources.RawSource(file.source),
@@ -290,15 +294,16 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                                     resolved.integrity.algorithms
                                 );
                             }
-                            // Copied files: build emits them into the compilation (statsToGraph keys them); dev isn't
-                            // emitted, so write them to disk and key them here.
+                            // Copied files: build emits them into the compilation, so statsToGraph already keys them,
+                            // but only `copyManifest` knows the `hash: false` version query, hence the overlay. Dev
+                            // isn't emitted, so write them to disk and key them here.
                             let manifest: ManifestJson;
                             if (isDev) {
                                 const copyFiles = resolveCopyFiles(resolved.copy, false);
                                 writeCopyFiles(copyFiles, resolved.outputPath);
                                 manifest = copyManifest(copyFiles, resolved);
                             } else {
-                                manifest = buildManifest(graph, ctx);
+                                manifest = { ...buildManifest(graph, ctx), ...copyManifest(copiedInBuild, resolved) };
                             }
                             try {
                                 writeSymfonyFiles(resolved.outputPath, buildEntrypoints(graph, ctx), manifest);

@@ -31,6 +31,46 @@ describe('vite copy', () => {
         expect(existsSync(join(out, physical))).toBe(true);
     }, 30_000);
 
+    it('build: `hash: false` entries keep their logical path, versioned in the manifest query', async () => {
+        const out = mkdtempSync(join(tmpdir(), 'ups-copy-vite-nohash-'));
+        await build({
+            root: fixture,
+            logLevel: 'silent',
+            build: { emptyOutDir: true, rollupOptions: { input: { app: join(fixture, 'app.js') } } },
+            plugins: [
+                SymfonyVite({
+                    outputPath: out,
+                    publicPath: '/build/',
+                    copy: [{ from: copySrc, to: 'images', hash: false }],
+                }),
+            ],
+        });
+
+        const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
+        expect(manifest['build/images/logo.svg']).toMatch(/^\/build\/images\/logo\.svg\?[0-9a-f]{8}$/);
+        expect(existsSync(join(out, 'images/logo.svg'))).toBe(true);
+    }, 30_000);
+
+    it('build: an empty `to` copies at the root of outputPath', async () => {
+        const out = mkdtempSync(join(tmpdir(), 'ups-copy-vite-root-'));
+        await build({
+            root: fixture,
+            logLevel: 'silent',
+            build: { emptyOutDir: true, rollupOptions: { input: { app: join(fixture, 'app.js') } } },
+            plugins: [
+                SymfonyVite({
+                    outputPath: out,
+                    publicPath: '/build/',
+                    copy: [{ from: copySrc, to: '', hash: false }],
+                }),
+            ],
+        });
+
+        const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
+        expect(manifest['build/logo.svg']).toMatch(/^\/build\/logo\.svg\?[0-9a-f]{8}$/);
+        expect(existsSync(join(out, 'logo.svg'))).toBe(true);
+    }, 30_000);
+
     it('build: no copy option leaves the manifest without image keys', async () => {
         const out = mkdtempSync(join(tmpdir(), 'ups-copy-vite-off-'));
         await build({
@@ -141,6 +181,52 @@ describe('rsbuild copy', () => {
 
         const physical = manifest['build/images/logo.svg'].replace('/build/', '');
         expect(existsSync(join(out, physical))).toBe(true);
+    }, 60_000);
+
+    it('build: `hash: false` entries keep their logical path, versioned in the manifest query', async () => {
+        const out = mkdtempSync(join(tmpdir(), 'ups-copy-rsbuild-nohash-'));
+        const rsbuild = await createRsbuild({
+            cwd: fixture,
+            rsbuildConfig: {
+                mode: 'production',
+                source: { entry: { app: join(fixture, 'app.js') } },
+                plugins: [
+                    SymfonyRsbuild({
+                        outputPath: out,
+                        publicPath: '/build/',
+                        copy: [{ from: copySrc, to: 'images', hash: false }],
+                    }),
+                ],
+            },
+        });
+        await rsbuild.build();
+
+        const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
+        expect(manifest['build/images/logo.svg']).toMatch(/^\/build\/images\/logo\.svg\?[0-9a-f]{8}$/);
+        expect(existsSync(join(out, 'images/logo.svg'))).toBe(true);
+    }, 60_000);
+
+    it('build: an empty `to` copies at the root of outputPath', async () => {
+        const out = mkdtempSync(join(tmpdir(), 'ups-copy-rsbuild-root-'));
+        const rsbuild = await createRsbuild({
+            cwd: fixture,
+            rsbuildConfig: {
+                mode: 'production',
+                source: { entry: { app: join(fixture, 'app.js') } },
+                plugins: [
+                    SymfonyRsbuild({
+                        outputPath: out,
+                        publicPath: '/build/',
+                        copy: [{ from: copySrc, to: '', hash: false }],
+                    }),
+                ],
+            },
+        });
+        await rsbuild.build();
+
+        const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
+        expect(manifest['build/logo.svg']).toMatch(/^\/build\/logo\.svg\?[0-9a-f]{8}$/);
+        expect(existsSync(join(out, 'logo.svg'))).toBe(true);
     }, 60_000);
 
     it('build: no copy option leaves the manifest without image keys', async () => {

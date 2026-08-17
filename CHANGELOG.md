@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 0.8.0
+
+- Add a per-entry `hash` option to `copy` (default `true`): with `hash: false` the file is emitted at its logical path instead of a content-hashed one, and the hash moves to the `manifest.json` value as a `?<contenthash>` query string
+- Support an empty `to` on a `copy` entry, emitting the files at the root of `outputPath`
+
 ## 0.7.0
 
 - Add the `RenderAssetTagEvent`, dispatched before each rendered `<script>`/`<link>` (including the injected dev client and React preamble), so listeners can add, change or remove attributes such as a CSP nonce

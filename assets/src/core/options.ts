@@ -33,6 +33,7 @@ function normalizeCopy(copy: CopyEntry[] | undefined, cwd: string): ResolvedCopy
         to: normalizeCopyTo(entry.to),
         pattern: entry.pattern ?? /.*/,
         includeSubdirectories: entry.includeSubdirectories ?? true,
+        hash: entry.hash ?? true,
     }));
 }
 

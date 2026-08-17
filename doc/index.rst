@@ -324,13 +324,37 @@ manifest (below), the ``asset()`` helper resolves the logical path to the hashed
     })
 
 ``from`` and ``to`` are both required: ``from`` is the source directory (relative to your project root), ``to`` is
-the destination prefix used for the manifest key. Restrict which files are copied with ``pattern``, a regular
-expression tested against each file's path relative to ``from`` (by default every file is copied).
-``includeSubdirectories`` defaults to ``true``; set it to ``false`` to turn off recursion.
+the destination prefix used for the manifest key. Pass an empty ``to`` to copy the files at the root of
+``outputPath``, for things like ``favicon.ico`` or ``site.webmanifest`` that have to live at a fixed URL. Restrict
+which files are copied with ``pattern``, a regular expression tested against each file's path relative to ``from``
+(by default every file is copied). ``includeSubdirectories`` defaults to ``true``; set it to ``false`` to turn off
+recursion.
+
+Some copied files have to keep a stable path on disk: templates referencing them through a hardcoded
+``asset('/build/images/logo.svg')``, code reading them from a predictable location, CDN rules, and so on. Set
+``hash: false`` on the entry and the file keeps its logical path. The content hash then moves to the
+``manifest.json`` value as a query string, so cache-busting through ``asset()`` still works:
+
+.. code-block:: javascript
+
+    copy: [
+      {
+        from: 'assets/images',
+        to: 'images',
+        hash: false,
+      },
+    ],
+
+.. code-block:: json
+
+    { "build/images/logo.svg": "/build/images/logo.svg?87dcc351" }
+
+Be aware that proxies or CDNs configured to ignore query strings will not pick up new versions of these files.
+That is why hashed filenames remain the default.
 
 How copied files are handled depends on the mode:
 
-- **Build**: each file gets a content hash in its filename for cache busting.
+- **Build**: each file gets a content hash in its filename for cache busting, unless the entry sets ``hash: false``.
 - **Dev**: files are copied verbatim, no hash.
 
 Either way they land in ``public/build`` and are served by the Symfony web server, not the Vite/Rsbuild dev server,
