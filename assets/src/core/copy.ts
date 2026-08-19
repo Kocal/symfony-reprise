@@ -7,8 +7,10 @@ import { joinUrl } from './format';
 export interface CopyResult {
     /** Path used for the manifest key, e.g. `images/icons/cat.svg`. */
     logicalName: string;
-    /** Path written under outputPath, hashed in build, verbatim in dev. */
+    /** Path written under outputPath: content-hashed in build, verbatim in dev and for `hash: false` entries. */
     physicalName: string;
+    /** `?<contenthash>` appended to the manifest value for `hash: false` entries in build, `''` otherwise. */
+    versionQuery: string;
     source: Buffer;
 }
 
@@ -25,8 +27,10 @@ function walk(dir: string, includeSubdirectories: boolean): string[] {
     return out;
 }
 
-export function enumerateCopyFiles(entries: ResolvedCopyEntry[]): Array<{ absPath: string; logicalName: string }> {
-    const out: Array<{ absPath: string; logicalName: string }> = [];
+export function enumerateCopyFiles(
+    entries: ResolvedCopyEntry[]
+): Array<{ absPath: string; logicalName: string; hash: boolean }> {
+    const out: Array<{ absPath: string; logicalName: string; hash: boolean }> = [];
     for (const entry of entries) {
         let files: string[];
         try {
@@ -38,7 +42,7 @@ export function enumerateCopyFiles(entries: ResolvedCopyEntry[]): Array<{ absPat
         for (const absPath of files) {
             const rel = relative(entry.from, absPath).split(sep).join('/');
             if (!entry.pattern.test(rel)) continue;
-            out.push({ absPath, logicalName: `${entry.to}/${rel}` });
+            out.push({ absPath, logicalName: entry.to ? `${entry.to}/${rel}` : rel, hash: entry.hash });
         }
     }
     return out;
@@ -54,11 +58,14 @@ export function hashedName(logicalName: string, hash: string): string {
     return `${base}.${hash}${ext}`;
 }
 
-export function resolveCopyFiles(entries: ResolvedCopyEntry[], hashed: boolean): CopyResult[] {
-    return enumerateCopyFiles(entries).map(({ absPath, logicalName }) => {
+export function resolveCopyFiles(entries: ResolvedCopyEntry[], build: boolean): CopyResult[] {
+    return enumerateCopyFiles(entries).map(({ absPath, logicalName, hash }) => {
         const source = readFileSync(absPath);
-        const physicalName = hashed ? hashedName(logicalName, contentHash(source)) : logicalName;
-        return { logicalName, physicalName, source };
+        if (!build) return { logicalName, physicalName: logicalName, versionQuery: '', source };
+        const version = contentHash(source);
+        return hash
+            ? { logicalName, physicalName: hashedName(logicalName, version), versionQuery: '', source }
+            : { logicalName, physicalName: logicalName, versionQuery: `?${version}`, source };
     });
 }
 
@@ -68,7 +75,8 @@ export function copyManifest(
 ): Record<string, string> {
     const manifest: Record<string, string> = {};
     for (const file of files) {
-        manifest[opts.manifestKeyPrefix + file.logicalName] = joinUrl(opts.publicPath, file.physicalName);
+        manifest[opts.manifestKeyPrefix + file.logicalName] =
+            joinUrl(opts.publicPath, file.physicalName) + file.versionQuery;
     }
     return manifest;
 }

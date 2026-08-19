@@ -115,7 +115,13 @@ describe('normalizeOptions', () => {
     it('resolves a relative copy `from` against cwd and applies defaults', () => {
         const r = normalizeOptions({ copy: [{ from: 'assets/images', to: 'images' }] }, '/app');
         expect(r.copy).toEqual([
-            { from: join('/app', 'assets/images'), to: 'images', pattern: /.*/, includeSubdirectories: true },
+            {
+                from: join('/app', 'assets/images'),
+                to: 'images',
+                pattern: /.*/,
+                includeSubdirectories: true,
+                hash: true,
+            },
         ]);
     });
 
@@ -128,6 +134,11 @@ describe('normalizeOptions', () => {
         expect(r.copy[0].to).toBe('images');
         expect(r.copy[0].pattern).toEqual(/\.svg$/);
         expect(r.copy[0].includeSubdirectories).toBe(false);
+    });
+
+    it('honors `hash: false` on a copy entry', () => {
+        const r = normalizeOptions({ copy: [{ from: '/src/img', to: 'images', hash: false }] }, '/app');
+        expect(r.copy[0].hash).toBe(false);
     });
 
     it('normalizes a `to` with a leading "./" and trailing slash to a clean prefix', () => {

@@ -7,7 +7,7 @@ const src = join(import.meta.dirname, '../fixtures/copy-src');
 const binSrc = join(import.meta.dirname, '../fixtures/copy-binary');
 
 function entry(over: Partial<ResolvedCopyEntry> = {}): ResolvedCopyEntry {
-    return { from: src, to: 'images', pattern: /.*/, includeSubdirectories: true, ...over };
+    return { from: src, to: 'images', pattern: /.*/, includeSubdirectories: true, hash: true, ...over };
 }
 
 describe('enumerateCopyFiles', () => {
@@ -36,10 +36,17 @@ describe('enumerateCopyFiles', () => {
         expect(enumerateCopyFiles([entry({ from: join(src, 'does-not-exist') })])).toEqual([]);
     });
 
+    it('copies at the root of outputPath when `to` is empty', () => {
+        const names = enumerateCopyFiles([entry({ to: '', pattern: /\.txt$/ })])
+            .map((f) => f.logicalName)
+            .sort();
+        expect(names).toEqual(['notes.txt']);
+    });
+
     it('aggregates multiple entries under their own `to` prefixes', () => {
         const names = enumerateCopyFiles([
             entry({ to: 'a', pattern: /\.svg$/ }),
-            { from: binSrc, to: 'b', pattern: /.*/, includeSubdirectories: true },
+            { from: binSrc, to: 'b', pattern: /.*/, includeSubdirectories: true, hash: true },
         ])
             .map((f) => f.logicalName)
             .sort();
@@ -67,6 +74,21 @@ describe('resolveCopyFiles', () => {
     it('uses verbatim physical names when hashed=false', () => {
         const logo = resolveCopyFiles([entry()], false).find((f) => f.logicalName === 'images/logo.svg')!;
         expect(logo.physicalName).toBe('images/logo.svg');
+        expect(logo.versionQuery).toBe('');
+    });
+
+    it('keeps the logical path and moves the hash to versionQuery for `hash: false` entries in build', () => {
+        const logo = resolveCopyFiles([entry({ hash: false })], true).find((f) => f.logicalName === 'images/logo.svg')!;
+        expect(logo.physicalName).toBe('images/logo.svg');
+        expect(logo.versionQuery).toMatch(/^\?[0-9a-f]{8}$/);
+    });
+
+    it('does not version `hash: false` entries in dev', () => {
+        const logo = resolveCopyFiles([entry({ hash: false })], false).find(
+            (f) => f.logicalName === 'images/logo.svg'
+        )!;
+        expect(logo.physicalName).toBe('images/logo.svg');
+        expect(logo.versionQuery).toBe('');
     });
 });
 
@@ -76,6 +98,12 @@ describe('copyManifest', () => {
         const manifest = copyManifest(files, { publicPath: '/build/', manifestKeyPrefix: 'build/' });
         expect(manifest['build/images/logo.svg']).toMatch(/^\/build\/images\/logo\.[0-9a-f]{8}\.svg$/);
         expect(manifest['build/images/icons/cat.svg']).toMatch(/^\/build\/images\/icons\/cat\.[0-9a-f]{8}\.svg$/);
+    });
+
+    it('appends the version query for `hash: false` entries', () => {
+        const files = resolveCopyFiles([entry({ hash: false })], true);
+        const manifest = copyManifest(files, { publicPath: '/build/', manifestKeyPrefix: 'build/' });
+        expect(manifest['build/images/logo.svg']).toMatch(/^\/build\/images\/logo\.svg\?[0-9a-f]{8}$/);
     });
 });
 

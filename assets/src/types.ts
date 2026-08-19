@@ -139,12 +139,18 @@ export interface ResolvedStimulusOptions {
 export interface CopyEntry {
     /** Source directory, relative to the project root (cwd) or absolute. */
     from: string;
-    /** Logical destination prefix used for the manifest key (e.g. `images`). */
+    /** Logical destination prefix used for the manifest key (e.g. `images`); `''` copies at the root of `outputPath`. */
     to: string;
     /** Only files whose path relative to `from` matches this regex are copied. Default: every file. */
     pattern?: RegExp;
     /** Recurse into subdirectories of `from`. Default: true. */
     includeSubdirectories?: boolean;
+    /**
+     * Content-hash the emitted filename. Default: true. Set it to false for files referenced by a
+     * stable path outside the manifest: the file keeps its logical path and the hash moves to the
+     * manifest value as a query string, as Encore's `copyFiles()` allowed.
+     */
+    hash?: boolean;
 }
 
 export interface ResolvedCopyEntry {
@@ -152,6 +158,7 @@ export interface ResolvedCopyEntry {
     to: string;
     pattern: RegExp;
     includeSubdirectories: boolean;
+    hash: boolean;
 }
 
 /** Map of Stimulus identifier -> controller class (registered eagerly). */
