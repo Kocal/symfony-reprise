@@ -36,12 +36,26 @@ describe('statsToGraph', () => {
         expect(graph.assets).toContainEqual({ logicalName: 'images/logo.svg', fileName: 'logo.e5.svg' });
     });
 
+    it('strips a url() query or fragment from the manifest key', () => {
+        const graph = statsToGraph({
+            assets: [
+                { name: 'font.e5.woff2', info: { sourceFilename: 'fonts/font.woff2?v=1' } },
+                { name: 'icon.f6.svg', info: { sourceFilename: 'images/icon.svg#frag' } },
+            ],
+        });
+        expect(graph.assets).toContainEqual({ logicalName: 'fonts/font.woff2', fileName: 'font.e5.woff2' });
+        expect(graph.assets).toContainEqual({ logicalName: 'images/icon.svg', fileName: 'icon.f6.svg' });
+    });
+
     it('tolerates empty/absent stats sections', () => {
         expect(statsToGraph({})).toEqual({ entryPoints: {}, assets: [] });
     });
 
-    it('strips a query string before reading the extension', () => {
-        const graph = statsToGraph({ entrypoints: { app: { assets: [{ name: 'app.a1.js?v=1.2.3' }] } } });
+    it('strips a query string or fragment before reading the extension', () => {
+        const graph = statsToGraph({
+            entrypoints: { app: { assets: [{ name: 'app.a1.js?v=1.2.3' }, { name: 'app.b2.css#frag' }] } },
+        });
         expect(graph.entryPoints.app.js).toEqual(['app.a1.js?v=1.2.3']);
+        expect(graph.entryPoints.app.css).toEqual(['app.b2.css#frag']);
     });
 });
