@@ -25,15 +25,9 @@ jobs:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
                   persist-credentials: false
-            - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-            - name: Set node
-              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+            - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
               with:
-                  node-version-file: .nvmrc
-                  cache: pnpm
-                  cache-dependency-path: pnpm-lock.yaml
-            - name: Install
-              run: pnpm install --frozen-lockfile
+                  cache: true
             - name: Lint
               run: pnpm run lint
             - name: Format check
@@ -55,15 +49,10 @@ jobs:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
                   persist-credentials: false
-            - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-            - name: Set node
-              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+            - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
               with:
-                  node-version: ${{ matrix.node-version }}
-                  cache: pnpm
-                  cache-dependency-path: pnpm-lock.yaml
-            - name: Install
-              run: pnpm install --frozen-lockfile
+                  runtime: node@${{ matrix.node-version }}
+                  cache: true
             - name: Build
               run: pnpm build
             - name: Test
@@ -93,15 +82,9 @@ jobs:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
                   persist-credentials: false
-            - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-            - name: Set node
-              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+            - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
               with:
-                  node-version-file: .nvmrc
-                  cache: pnpm
-                  cache-dependency-path: pnpm-lock.yaml
-            - name: Install
-              run: pnpm install --frozen-lockfile
+                  cache: true
             - name: Pin ${{ matrix.name }}
               run: pnpm --filter @symfony/reprise add -D ${{ matrix.add }}
             - name: Build
@@ -218,15 +201,9 @@ jobs:
                   dependency-versions: highest
                   composer-options: --prefer-dist
                   custom-cache-suffix: ${{ matrix.symfony-version }}
-            - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-            - name: Set node
-              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+            - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
               with:
-                  node-version-file: .nvmrc
-                  cache: pnpm
-                  cache-dependency-path: pnpm-lock.yaml
-            - name: Install JS dependencies
-              run: pnpm install --frozen-lockfile
+                  cache: true
             - name: Pin ${{ matrix.name }}
               if: matrix.add
               run: pnpm -C playground add -D ${{ matrix.add }}
