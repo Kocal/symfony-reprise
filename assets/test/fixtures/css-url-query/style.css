@@ -1,0 +1,12 @@
+@font-face {
+    font-family: "Query";
+    src: url("./fonts/query.woff2?v=1") format("woff2");
+}
+@font-face {
+    font-family: "Plain";
+    src: url("./fonts/plain.woff2") format("woff2");
+}
+.a {
+    font-family: "Query", "Plain";
+    background: url("./media/icon.svg#frag");
+}

@@ -8,8 +8,13 @@ export interface RspackStats {
     assets?: { name: string; info?: { sourceFilename?: string } }[];
 }
 
+// Rspack keeps the `url()` query/fragment (`./x.woff2?v=1`) in `sourceFilename`, Vite doesn't.
+function stripUrlSuffix(name: string): string {
+    return name.replace(/[?#].*$/, '');
+}
+
 function fileExt(name: string): string {
-    return extname(name.split('?')[0]).slice(1);
+    return extname(stripUrlSuffix(name)).slice(1);
 }
 
 function isHotUpdate(name: string): boolean {
@@ -38,7 +43,8 @@ export function statsToGraph(stats: RspackStats): NormalizedGraph {
     }
     for (const asset of stats.assets ?? []) {
         const logical = asset.info?.sourceFilename;
-        if (logical && !isHotUpdate(asset.name)) assets.push({ logicalName: logical, fileName: asset.name });
+        if (!logical || isHotUpdate(asset.name)) continue;
+        assets.push({ logicalName: stripUrlSuffix(logical), fileName: asset.name });
     }
 
     return { entryPoints, assets };

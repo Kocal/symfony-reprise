@@ -195,6 +195,7 @@ export interface DevServer {
 }
 
 export interface AssetEntry {
+    /** Manifest key before `manifestKeyPrefix`: source path relative to the project root, forward slashes, no query or fragment. */
     logicalName: string;
     fileName: string;
 }
