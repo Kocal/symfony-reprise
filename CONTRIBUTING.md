@@ -34,12 +34,11 @@ $ git remote add upstream git@github.com:symfony/reprise.git
 - **PHP 8.4 or higher**
 - **Composer**
 - **Node.js 22 or higher**
-- **Corepack**
-- **pnpm 11.10 or higher**
+- **[pnpm](https://pnpm.io/installation) 11.10 or higher**
 
 ```shell
 $ composer install
-$ corepack enable && pnpm install
+$ pnpm install
 ```
 
 > [!IMPORTANT]

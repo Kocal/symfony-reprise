@@ -33,8 +33,9 @@ jobs:
                   fi
                   echo "Tag ${GITHUB_REF_NAME} verified as ancestor of main."
 
-            # Pinned explicitly to avoid pulling a compromised "latest" at release time; bump via dedicated PR.
-            - run: npm i -g corepack@0.35.0 && corepack enable
+            - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+              # setup-node is kept here (instead of pnpm/setup) because its `registry-url` input is
+              # what wires npm OIDC trusted publishing.
               # setup-node does not enable any package-manager cache here (no `cache:` input),
               # so cache poisoning is not a concern on this release workflow.
             - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # zizmor: ignore[cache-poisoning] v7.0.0
