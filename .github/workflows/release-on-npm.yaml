@@ -33,22 +33,20 @@ jobs:
                   fi
                   echo "Tag ${GITHUB_REF_NAME} verified as ancestor of main."
 
-            - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-              # setup-node is kept here (instead of pnpm/setup) because its `registry-url` input is
-              # what wires npm OIDC trusted publishing.
+            - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+
+              # setup-node is kept here only for its `registry-url` input, which is what wires
+              # npm OIDC trusted publishing. It gets no `node-version`, so it installs nothing:
+              # pnpm/setup already provisioned Node from `devEngines.runtime`.
               # setup-node does not enable any package-manager cache here (no `cache:` input),
               # so cache poisoning is not a concern on this release workflow.
             - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # zizmor: ignore[cache-poisoning] v7.0.0
               with:
                   registry-url: 'https://registry.npmjs.org'
-                  node-version-file: '.nvmrc'
 
               # npm 11.5.1 or later is required for OIDC. Pinned explicitly to avoid
               # pulling a compromised "latest" at release time; bump via dedicated PR.
             - run: npm install -g npm@11.16.0
-
-            - name: Install root JS dependencies
-              run: pnpm install --frozen-lockfile
 
             - name: Publish on NPM
               run: pnpm publish --recursive --access public --no-git-checks --provenance
