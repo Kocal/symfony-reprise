@@ -3,7 +3,7 @@
 </a></p>
 
 <h3 align="center">
-    <img src="https://raw.githubusercontent.com/symfony/reprise/main/doc/symfony-reprise.svg" alt="Symfony Reprise" height="32" align="center"> Symfony Reprise: Webpack Encore's heritage, for modern bundlers
+    <img src="https://raw.githubusercontent.com/symfony/reprise/main/doc/symfony-reprise.svg" alt="Symfony Reprise" height="48" align="center" valign="middle"> Symfony Reprise: Webpack Encore's heritage, for modern bundlers
 </h3>
 
 <p align="center">
