@@ -7,6 +7,7 @@ import { build, createServer } from 'vite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import SymfonyRsbuild from '../../src/rsbuild';
 import SymfonyVite from '../../src/vite';
+import { createSymfonyWriteWaiter } from './support';
 
 const fixture = join(import.meta.dirname, '../fixtures/basic');
 const copySrc = join(import.meta.dirname, '../fixtures/copy-src');
@@ -317,24 +318,7 @@ describe('rsbuild copy', () => {
 
     it('dev: copies files verbatim on disk and keys them with relative URLs in manifest.json', async () => {
         const out = mkdtempSync(join(tmpdir(), 'ups-copy-rsbuild-dev-'));
-        let resolveWritten: () => void;
-        const symfonyWritten = new Promise<void>((resolve) => {
-            resolveWritten = resolve;
-        });
-        const waitForSymfonyWrite: RsbuildPlugin = {
-            name: 'test-wait-for-symfony-write',
-            setup(api) {
-                api.onAfterCreateCompiler(({ compiler }) => {
-                    const compilers = 'compilers' in compiler ? compiler.compilers : [compiler];
-                    // Resolves `symfonyWritten` on the first compile only. Fine for this single-compile
-                    // dev test; an HMR/rebuild test reusing this pattern would need to re-arm the
-                    // promise per compile instead of resolving once.
-                    for (const c of compilers) {
-                        c.hooks.done.tap('test-wait-for-symfony-write', () => resolveWritten());
-                    }
-                });
-            },
-        };
+        const { plugin: waitForSymfonyWrite, written: symfonyWritten } = createSymfonyWriteWaiter();
         const rsbuild = await createRsbuild({
             cwd: fixture,
             rsbuildConfig: {

@@ -14,10 +14,28 @@ describe('normalizeOptions', () => {
         expect(r.outputPath).toBe('/tmp/out');
     });
 
-    it('applies defaults (outputPath, publicPath)', () => {
+    it('applies defaults (outputPath, metadataPath, publicPath)', () => {
         const r = normalizeOptions(undefined, '/app');
         expect(r.outputPath).toBe(join('/app', 'public/build'));
+        expect(r.metadataPath).toBe(join('/app', 'public/build'));
         expect(r.publicPath).toBe('/build/');
+    });
+
+    it('defaults metadataPath to custom outputPath when metadataPath is not set', () => {
+        const r = normalizeOptions({ outputPath: 'dist' }, '/app');
+        expect(r.outputPath).toBe(join('/app', 'dist'));
+        expect(r.metadataPath).toBe(join('/app', 'dist'));
+    });
+
+    it('resolves a relative metadataPath against cwd', () => {
+        const r = normalizeOptions({ outputPath: 'dist', metadataPath: 'var/reprise' }, '/app');
+        expect(r.outputPath).toBe(join('/app', 'dist'));
+        expect(r.metadataPath).toBe(join('/app', 'var/reprise'));
+    });
+
+    it('keeps an absolute metadataPath as-is', () => {
+        const r = normalizeOptions({ metadataPath: '/tmp/metadata' }, '/app');
+        expect(r.metadataPath).toBe('/tmp/metadata');
     });
 
     it('derives manifestKeyPrefix from publicPath by stripping the leading slash', () => {

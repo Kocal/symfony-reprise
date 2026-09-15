@@ -1,28 +1,13 @@
 import type { RsbuildPlugin } from '@rsbuild/core';
 import { mkdtempSync, readdirSync, readFileSync } from 'node:fs';
-import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRsbuild } from '@rsbuild/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import Symfony from '../../src/rsbuild';
+import { getFreePort } from './support';
 
 const fixture = join(import.meta.dirname, '../fixtures/basic');
-
-function getFreePort(): Promise<number> {
-    return new Promise((resolve, reject) => {
-        const srv = createServer();
-        srv.listen(0, () => {
-            const addr = srv.address();
-            if (addr && typeof addr === 'object') {
-                const { port } = addr;
-                srv.close(() => resolve(port));
-            } else {
-                srv.close(() => reject(new Error('no port')));
-            }
-        });
-    });
-}
 
 describe('rsbuild dev writes absolute dev-server URLs and no HTML', () => {
     let server: Awaited<ReturnType<Awaited<ReturnType<typeof createRsbuild>>['startDevServer']>>;

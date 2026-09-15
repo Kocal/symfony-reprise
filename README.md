@@ -27,6 +27,7 @@ Symfony Reprise covers only the Symfony-side glue the bundlers leave out:
 - 🎨 **Style entries**: point an entry straight at a `.scss`/`.css` file and get CSS only, no stray `<script>`
 - 📄 **`entrypoints.json`**: generated in both build and dev-server modes
 - 🗺️ **`manifest.json`**: maps each logical filename to its hashed URL
+- 🗂️ **Metadata path**: write `entrypoints.json`/`manifest.json` outside the public build dir, e.g. for private storage
 - 🔖 **Asset versioning**: content-hash cache busting, wired into the manifest
 - 📁 **File copy**: copy static files (images, fonts…) into the build, keyed in the manifest
 - 🔥 **Dev server & HMR**: points Twig at the running Vite/Rsbuild server

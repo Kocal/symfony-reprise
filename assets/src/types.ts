@@ -10,6 +10,20 @@ export interface Options {
     outputPath?: string;
 
     /**
+     * The directory where "entrypoints.json" and "manifest.json" should be written.
+     *
+     * Defaults to "outputPath".
+     *
+     * If relative (e.g. var/reprise), it will be set relative
+     * to the directory where your package.json lives.
+     *
+     * Useful when deploying compiled assets to public object storage (CDN/S3)
+     * where entrypoints.json and manifest.json should not be publicly exposed
+     * or uploaded.
+     */
+    metadataPath?: string;
+
+    /**
      * The public version of "outputPath": the public path to "outputPath".
      *
      * For example, if "public" is your document root, then:
@@ -168,6 +182,7 @@ export type LazyControllersCollection = Record<string, () => Promise<{ default: 
 
 export interface ResolvedOptions {
     outputPath: string;
+    metadataPath: string;
     publicPath: string;
     manifestKeyPrefix: string;
     devServerOrigin?: string;
