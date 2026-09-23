@@ -487,6 +487,67 @@ CDN:
 still have to upload the built files to the CDN yourself, or set up origin pull. For a CDN subdirectory, include it
 in the URL (``https://my-cool-app.com.global.prod.fastly.net/awesome-website/build/``).
 
+Separating metadata from public assets
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default, Reprise writes ``entrypoints.json`` and ``manifest.json`` into ``outputPath``. If you want to keep these
+files separate from your compiled assets (for example, to avoid uploading them to public object storage), set
+``metadataPath``:
+
+.. code-block:: javascript
+
+    // vite.config.ts
+    import { defineConfig } from 'vite'
+    import Symfony from '@symfony/reprise/vite'
+
+    export default defineConfig({
+      plugins: [
+        Symfony({
+          outputPath: 'public/build',
+          metadataPath: 'var/reprise',
+        }),
+      ],
+    })
+
+.. code-block:: javascript
+
+    // rsbuild.config.ts
+    import { defineConfig } from '@rsbuild/core'
+    import Symfony from '@symfony/reprise/rsbuild'
+
+    export default defineConfig({
+      plugins: [
+        Symfony({
+          outputPath: 'public/build',
+          metadataPath: 'var/reprise',
+        }),
+      ],
+    })
+
+Then point Symfony at that directory:
+
+.. code-block:: yaml
+
+    # config/packages/reprise.yaml
+    reprise:
+        output_path: '%kernel.project_dir%/var/reprise'
+
+And, if you rely on ``manifest.json`` for ``asset()`` calls:
+
+.. code-block:: yaml
+
+    # config/packages/framework.yaml
+    framework:
+        assets:
+            json_manifest_path: '%kernel.project_dir%/var/reprise/manifest.json'
+
+.. warning::
+
+    If two builds share the same ``metadataPath``, the second one silently overwrites the first, since each write
+    replaces ``entrypoints.json`` and ``manifest.json`` whole rather than merging them. This used to be impossible
+    because every build had its own ``outputPath``, so give each build its own subdirectory instead, for example
+    ``var/reprise/app`` and ``var/reprise/widget``. See `Multiple builds`_ for the full setup.
+
 Subresource Integrity
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -666,9 +727,9 @@ Reprise exposes a few optional settings under its own configuration, all shown h
         script_attributes: []
         link_attributes: []
 
-- ``output_path``: filesystem directory holding ``entrypoints.json`` and ``manifest.json``. Must match the plugin's
-  own ``outputPath``. Accepts ``false`` to disable the default build entirely (requires at least one entry under
-  ``builds``).
+- ``output_path``: the filesystem directory holding ``entrypoints.json`` and ``manifest.json``. Must match wherever
+  the plugin actually writes them: its ``outputPath`` by default, or its ``metadataPath`` when that option is set.
+  Accepts ``false`` to disable the default build entirely, which then requires at least one entry under ``builds``.
 - ``builds``: a map of build name -> output directory for additional bundles. Each named build is addressed by passing
   ``build='<name>'`` to the tag and file functions. See `Multiple builds`_.
 - ``strict_mode``: when ``true`` (the default), throws a clear exception on a missing file or an unknown entry; when

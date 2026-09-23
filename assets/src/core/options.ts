@@ -55,6 +55,9 @@ export function normalizeOptions(options: Options | undefined, cwd: string): Res
     let outputPath = options?.outputPath ?? 'public/build';
     outputPath = path.isAbsolute(outputPath) ? outputPath : path.join(cwd, outputPath);
 
+    let metadataPath = options?.metadataPath ?? outputPath;
+    metadataPath = path.isAbsolute(metadataPath) ? metadataPath : path.join(cwd, metadataPath);
+
     const publicPath = options?.publicPath ?? '/build/';
 
     let manifestKeyPrefix = options?.manifestKeyPrefix ?? null;
@@ -70,6 +73,7 @@ export function normalizeOptions(options: Options | undefined, cwd: string): Res
 
     return {
         outputPath,
+        metadataPath,
         publicPath,
         manifestKeyPrefix,
         devServerOrigin: options?.devServerOrigin,

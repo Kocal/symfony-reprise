@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.2.0
+
+- Add `metadataPath` option to write `entrypoints.json` and `manifest.json` to a directory separate from `outputPath`
+
 ## 1.1.3
 
 - Properly support CSS entries: an entry pointing straight at a stylesheet builds to CSS only, with no `<script>` tag and no JavaScript file listed in `entrypoints.json` or `manifest.json`
