@@ -19,7 +19,7 @@ export function referencedFileNames(entryPoints: Record<string, EntryFiles>): st
     return [...seen];
 }
 
-/** Integrity of each file read back from disk (Rspack path; raw bytes, so binary assets work). */
+/** Integrity of each file read back from disk (raw bytes, so binary assets work). */
 export function integrityFromDisk(
     fileNames: string[],
     outputPath: string,

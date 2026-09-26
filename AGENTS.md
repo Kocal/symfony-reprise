@@ -19,15 +19,15 @@ Package manager is **pnpm** (enforced via `packageManager` field). Node 22 (`.nv
 - `pnpm build` — delegates to `assets`, build via `tsdown` (bundles every `assets/src/*.ts` to `assets/dist/`)
 - `pnpm dev` — delegates to `assets`, `tsdown -w`, watch/rebuild
 - `pnpm typecheck` — delegates to `assets`, `tsc --noEmit` via `assets/tsconfig.typecheck.json` (bundler resolution + DOM libs, so it type-checks the sources the way tsdown/Vite/Rspack resolve them; the build `tsconfig.json` stays `nodenext`). tsdown does not type-check, so CI runs this in the `lint` job.
-- `pnpm lint` — `oxlint` at the root (config in `.oxlintrc.json`); `pnpm lint:fix` auto-fixes. `playground/`, `assets/test/fixtures/` and `docs/` are ignored (not library source)
+- `pnpm lint` — `oxlint` at the root (config in `.oxlintrc.json`); `pnpm lint:fix` auto-fixes. `playground/` and `assets/test/fixtures/` are ignored (not library source)
 - `pnpm fmt` / `pnpm fmt:check` — `oxfmt` at the root (config in `.oxfmtrc.json`); `fmt:check` is the read-only variant CI runs
-- `pnpm test` — delegates to `assets`, run tests (vitest, scoped to `assets/test/` via `vitest.config.ts` so it never picks up `.references/` clones)
-- `pnpm vitest run assets/test/index.test.ts` — run a single test file
-- `pnpm vitest run -t "hi vitest"` — run a single test by name
+- `pnpm test` — delegates to `assets`, run tests (vitest, scoped to `assets/test/` via `assets/vitest.config.ts`)
+- `pnpm test test/core/format.test.ts` — run a single test file (path relative to `assets/`)
+- `pnpm test -t "<test name>"` — run a single test by name
 
 ### Playground (manual end-to-end verification)
 
-`playground/` is a **full Symfony 7 PHP app** used to exercise the plugin against a real backend. It defines two entries (`app`, `admin`) and imports the plugin directly from `../assets/src` (Vite via `playground/vite.config.ts`, Rsbuild via `playground/rsbuild.config.ts`). `nodemon` rebuilds on `assets/src/**/*.ts` changes.
+`playground/` is a **full Symfony 7 PHP app** used to exercise the plugin against a real backend. It defines two entries (`app`, `admin`) and imports the plugin directly from `../assets/src` (Vite via `playground/vite.config.ts`, Rsbuild via `playground/rsbuild.config.ts`).
 
 Run from the playground dir (there is no root wrapper script):
 
@@ -40,7 +40,7 @@ Bundler-agnostic core + per-bundler adapters, all under `assets/src/`:
 
 - `assets/src/core/` — pure, no bundler imports: `options.ts` (`normalizeOptions` + CDN guard + `resolvePublicPath`), `dev-server.ts` (`resolveDevOrigin`), `format.ts` (`buildEntrypoints`/`buildManifest` in the frozen v1 format), `emit.ts` (`writeSymfonyFiles`).
 - `assets/src/collectors/` — turn a bundler's output into the shared `NormalizedGraph`: `vite.ts` (`bundleToGraph` from the Rollup bundle in build, `configToDevGraph` from the resolved config in serve) and `rspack.ts` (`statsToGraph` from the Rspack stats JSON).
-- `assets/src/index.ts` — the `unpluginFactory` (Vite + Rsbuild) + `createUnplugin` default export. Universal `resolveId`/`load` serve the Stimulus virtual module for both bundlers. Its `vite` hooks call the collectors + core: `config()` sets `base`/`outDir` and disables Vite's own manifest/publicDir copy; `generateBundle` collects the graph and `writeBundle` writes the two files into `metadataPath` on build; `configureServer` writes the dev-flavoured files pointing at the dev-server origin. Its `rsbuild` hook's `setup(api)` does the same job for Rsbuild — `api.modifyRsbuildConfig` forces `tools.htmlPlugin = false` (no per-entry HTML), disables the public-dir copy (output lives under `public/build`), and sets the output paths + dev origin; `api.onAfterCreateCompiler` taps `compiler.hooks.done` to run `statsToGraph` + core. `@rsbuild/core` is an optional peer, so it is `await import()`ed lazily inside `setup` (never a static import) to keep it out of the Vite bundle.
+- `assets/src/index.ts` — the `unpluginFactory` (Vite + Rsbuild) + `createUnplugin` default export. Universal `resolveId`/`load` serve the Stimulus virtual module for both bundlers. Its `vite` hooks call the collectors + core: `config()` sets `base`/`outDir` and disables Vite's own manifest/publicDir copy; `generateBundle` collects the graph and `writeBundle` writes the two files into `metadataPath` on build; `configureServer` writes the dev-flavoured files pointing at the dev-server origin. Its `rsbuild` hook's `setup(api)` does the same job for Rsbuild — `api.modifyRsbuildConfig` forces `tools.htmlPlugin = false` (no per-entry HTML), disables the public-dir copy (output lives under `public/build`), and sets the output paths + dev origin; `api.onAfterCreateCompiler` taps `compiler.hooks.done` to run `statsToGraph` + core. `@rsbuild/core` is an optional peer, so it is never imported: the `rspack` namespace the hooks need is read off the compiler instance (`c.rspack`), which keeps it out of the Vite bundle.
 - `assets/src/vite.ts` — one-line unplugin adapter `createVitePlugin(unpluginFactory)` (`@symfony/reprise/vite`).
 - `assets/src/rsbuild.ts` — one-line unplugin adapter `createRsbuildPlugin(unpluginFactory)` (`@symfony/reprise/rsbuild`). unplugin's Rsbuild adapter forwards the real Rsbuild plugin `api` to the factory's `rsbuild.setup` hook (so full config-level control is preserved) and injects the raw plugin into the Rspack config via `api.modifyRspackConfig`, which is how the universal `resolveId`/`load` reach Rspack.
 - `assets/src/types.ts` — public `Options` (`outputPath`, `metadataPath`, `publicPath`, `manifestKeyPrefix`, `devServerOrigin`) + the frozen `EntrypointsJson`/`ManifestJson`/`EntryFiles` shapes (`js`/`css`/`preload`/`dynamic`).

@@ -29,9 +29,7 @@ updates:
           - dependency-name: '@rspack/core'
           - dependency-name: '@types/node'
           - dependency-name: 'jsdom'
-          - dependency-name: 'nodemon'
           - dependency-name: 'tsdown'
-          - dependency-name: 'tsx'
           - dependency-name: 'typescript'
           - dependency-name: 'vitest'
       cooldown:

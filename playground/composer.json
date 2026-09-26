@@ -1,5 +1,5 @@
 {
-    "name": "kocal/unplugin-symfony-playground",
+    "name": "symfony/reprise-playground",
     "type": "project",
     "license": "MIT",
     "autoload": {
