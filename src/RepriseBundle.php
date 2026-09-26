@@ -23,7 +23,6 @@ use Symfony\Reprise\Asset\EntrypointsLookupInterface;
 use Symfony\Reprise\Asset\TagRenderer;
 use Symfony\Reprise\EventListener\ResetAssetsEventListener;
 use Symfony\Reprise\Twig\AssetExtension;
-use Symfony\Reprise\Twig\AssetRuntime;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service_locator;
@@ -158,17 +157,13 @@ final class RepriseBundle extends AbstractBundle
                 service('event_dispatcher')->nullOnInvalid(),
             ])
             ->tag('kernel.reset', ['method' => 'reset'])
+            ->tag('twig.runtime')
         ;
 
         $resettables[] = service('reprise.tag_renderer');
         $services->set('reprise.reset_assets_listener', ResetAssetsEventListener::class)
             ->args([$resettables])
             ->tag('kernel.event_subscriber')
-        ;
-
-        $services->set('reprise.asset_runtime', AssetRuntime::class)
-            ->args([service('reprise.tag_renderer')])
-            ->tag('twig.runtime')
         ;
 
         $services->set('reprise.twig_extension', AssetExtension::class)

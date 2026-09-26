@@ -62,37 +62,22 @@ final class TagRenderer implements ResetInterface
     {
         $lookup = $this->collection->getEntrypointsLookup($build);
         $integrity = $lookup->getIntegrityData();
-        $tags = [];
         $scriptDefaults = $attributes + $this->scriptAttributes;
-
-        $devServer = $lookup->getDevServer();
-        if (null !== $devServer && null !== $devServer->client && !isset($this->injectedClients[$devServer->client])) {
-            $clientAttributes = ['type' => 'module', 'src' => $devServer->client] + $scriptDefaults;
-            $tags[] = $this->tag(RenderAssetTagEvent::TYPE_SCRIPT, $clientAttributes);
-            if (null !== $devServer->reactRefresh) {
-                $preambleAttributes = ['type' => 'module'] + $scriptDefaults;
-                $tags[] = $this->tag(RenderAssetTagEvent::TYPE_SCRIPT, $preambleAttributes, $this->reactRefreshPreamble($devServer->reactRefresh));
-            }
-            $this->injectedClients[$devServer->client] = true;
-        }
+        $tags = $this->devClientTags($lookup->getDevServer(), $scriptDefaults);
 
         foreach ($lookup->getPreloadFiles($entryName) as $reference) {
             $url = $this->url($reference, $packageName);
             // Only the scripts' nonce applies: CSP checks a modulepreload against script-src like the scripts.
             $tagAttributes = ['rel' => 'modulepreload', 'href' => $url] + array_intersect_key($scriptDefaults, ['nonce' => true]);
-            $this->applyIntegrity($tagAttributes, $reference, $integrity);
-            $tags[] = $this->tag(RenderAssetTagEvent::TYPE_MODULEPRELOAD, $tagAttributes);
-            $this->preload($url, 'modulepreload', null, $reference, $integrity, $tagAttributes);
+            $tags[] = $this->fileTag(RenderAssetTagEvent::TYPE_MODULEPRELOAD, $url, $tagAttributes, $integrity[$reference] ?? null, 'modulepreload');
         }
 
         foreach ($lookup->getJavaScriptFiles($entryName) as $reference) {
             $url = $this->url($reference, $packageName);
             $tagAttributes = ['src' => $url, 'type' => 'module'] + $scriptDefaults;
-            $this->applyIntegrity($tagAttributes, $reference, $integrity);
-            $tags[] = $this->tag(RenderAssetTagEvent::TYPE_SCRIPT, $tagAttributes);
             // modulepreload, not `preload as=script`: the tag is a module, and a classic-script preload
             // mismatches its credentials/CORS mode so the browser discards it.
-            $this->preload($url, 'modulepreload', null, $reference, $integrity, $tagAttributes);
+            $tags[] = $this->fileTag(RenderAssetTagEvent::TYPE_SCRIPT, $url, $tagAttributes, $integrity[$reference] ?? null, 'modulepreload');
         }
 
         return implode('', $tags);
@@ -110,9 +95,7 @@ final class TagRenderer implements ResetInterface
         foreach ($lookup->getCssFiles($entryName) as $reference) {
             $url = $this->url($reference, $packageName);
             $tagAttributes = ['rel' => 'stylesheet', 'href' => $url] + $attributes + $this->linkAttributes;
-            $this->applyIntegrity($tagAttributes, $reference, $integrity);
-            $tags[] = $this->tag(RenderAssetTagEvent::TYPE_LINK, $tagAttributes);
-            $this->preload($url, 'preload', 'style', $reference, $integrity, $tagAttributes);
+            $tags[] = $this->fileTag(RenderAssetTagEvent::TYPE_LINK, $url, $tagAttributes, $integrity[$reference] ?? null, 'preload', 'style');
         }
 
         return implode('', $tags);
@@ -145,6 +128,28 @@ final class TagRenderer implements ResetInterface
     }
 
     /**
+     * @param array<string, bool|string> $scriptDefaults
+     *
+     * @return list<string>
+     */
+    private function devClientTags(?DevServer $devServer, array $scriptDefaults): array
+    {
+        if (null === $devServer || null === $devServer->client || isset($this->injectedClients[$devServer->client])) {
+            return [];
+        }
+
+        $clientAttributes = ['type' => 'module', 'src' => $devServer->client] + $scriptDefaults;
+        $tags = [$this->tag(RenderAssetTagEvent::TYPE_SCRIPT, $clientAttributes)];
+        if (null !== $devServer->reactRefresh) {
+            $preambleAttributes = ['type' => 'module'] + $scriptDefaults;
+            $tags[] = $this->tag(RenderAssetTagEvent::TYPE_SCRIPT, $preambleAttributes, $this->reactRefreshPreamble($devServer->reactRefresh));
+        }
+        $this->injectedClients[$devServer->client] = true;
+
+        return $tags;
+    }
+
+    /**
      * The inner body of Vite's React Fast Refresh preamble. `@vitejs/plugin-react` normally injects this
      * into the HTML itself, but cannot when Symfony renders the page (backend integration), so we render
      * it here before the entry, wrapped in a <script type="module"> by tag(). See
@@ -172,10 +177,24 @@ final class TagRenderer implements ResetInterface
     }
 
     /**
-     * @param array<string, string>      $integrity
+     * @param array<string, bool|string> $attributes
+     */
+    private function fileTag(string $type, string $url, array $attributes, ?string $integrity, string $preloadRel, ?string $preloadAs = null): string
+    {
+        if (null !== $integrity) {
+            $attributes['integrity'] = $integrity;
+            $attributes['crossorigin'] = false === $this->crossorigin ? 'anonymous' : $this->crossorigin;
+        }
+        $tag = $this->tag($type, $attributes);
+        $this->preload($url, $preloadRel, $preloadAs, $attributes);
+
+        return $tag;
+    }
+
+    /**
      * @param array<string, bool|string> $tagAttributes
      */
-    private function preload(string $url, string $rel, ?string $as, string $reference, array $integrity, array $tagAttributes): void
+    private function preload(string $url, string $rel, ?string $as, array $tagAttributes): void
     {
         if (!$this->preload || null === $this->requestStack || !class_exists(GenericLinkProvider::class)) {
             return;
@@ -190,14 +209,11 @@ final class TagRenderer implements ResetInterface
         if (null !== $as) {
             $link = $link->withAttribute('as', $as);
         }
-        // Mirror the tag's SRI onto the preload, or the browser discards the preloaded response as a mismatch.
-        [$hash, $crossorigin] = $this->integrityFor($reference, $integrity);
-        if (null !== $hash) {
-            $link = $link->withAttribute('integrity', $hash)->withAttribute('crossorigin', $crossorigin);
-        }
-        // A nonce-based CSP blocks a preload lacking the tag's nonce.
-        if (\is_string($tagAttributes['nonce'] ?? null)) {
-            $link = $link->withAttribute('nonce', $tagAttributes['nonce']);
+        // Mirror the final tag, or the browser discards a mismatched preload and a nonce-based CSP blocks it.
+        foreach (['integrity', 'crossorigin', 'nonce'] as $name) {
+            if (false !== ($tagAttributes[$name] ?? false)) {
+                $link = $link->withAttribute($name, $tagAttributes[$name]);
+            }
         }
 
         $linkProvider = $request->attributes->get('_links');
@@ -205,37 +221,6 @@ final class TagRenderer implements ResetInterface
             $linkProvider = new GenericLinkProvider();
         }
         $request->attributes->set('_links', $linkProvider->withLink($link));
-    }
-
-    /**
-     * @param array<string, bool|string> $attributes
-     * @param array<string, string>      $integrity
-     */
-    private function applyIntegrity(array &$attributes, string $reference, array $integrity): void
-    {
-        [$hash, $crossorigin] = $this->integrityFor($reference, $integrity);
-        if (null === $hash) {
-            return;
-        }
-        $attributes['integrity'] = $hash;
-        $attributes['crossorigin'] = $crossorigin;
-    }
-
-    /**
-     * Resolves the SRI hash + crossorigin for a reference, so a tag and its preload Link derive them
-     * from one place and can never drift.
-     *
-     * @param array<string, string> $integrity
-     *
-     * @return array{0: ?string, 1: string}
-     */
-    private function integrityFor(string $reference, array $integrity): array
-    {
-        if (!isset($integrity[$reference])) {
-            return [null, ''];
-        }
-
-        return [$integrity[$reference], false === $this->crossorigin ? 'anonymous' : $this->crossorigin];
     }
 
     /**
