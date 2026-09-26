@@ -69,8 +69,9 @@ export function createCompileWaiter(): { plugin: RsbuildPlugin; next: () => Prom
  * Concurrent tests must pass their context: the global `onTestFinished` cannot tell them apart.
  */
 export function tmpDir(prefix: string, context?: Pick<TestContext, 'onTestFinished'>): string {
-    // macOS's tmpdir is a symlink, which breaks Rspack's virtual modules.
-    const dir = realpathSync(mkdtempSync(join(tmpdir(), `ups-${prefix}-`)));
+    // macOS's tmpdir is a symlink, which breaks Rspack's virtual modules. Windows' can be an 8.3 short
+    // path that Vite's resolver expands on rebuilds, so the root would no longer prefix its module ids.
+    const dir = realpathSync.native(mkdtempSync(join(tmpdir(), `ups-${prefix}-`)));
     (context?.onTestFinished ?? onTestFinished)(() => {
         try {
             rmSync(dir, { recursive: true, force: true, maxRetries: 5 });

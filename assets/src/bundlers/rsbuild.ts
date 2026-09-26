@@ -125,8 +125,14 @@ export function rsbuildHooks(
                                       { override: resolved.devServerOrigin, https: devServer.https }
                                   )
                                 : null;
+                        // Only what statsToGraph reads; `cachedAssets` keeps the files a watch rebuild didn't re-emit.
                         const graph = statsToGraph(
-                            stats.toJson({ assets: true, entrypoints: true }) as RspackStats,
+                            stats.toJson({
+                                all: false,
+                                assets: true,
+                                cachedAssets: true,
+                                entrypoints: true,
+                            }) as RspackStats,
                             styleEntries
                         );
                         try {
