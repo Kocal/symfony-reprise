@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.3.0
+
+- Dispatch `RenderAssetTagEvent` for `<link rel="modulepreload">` tags too (new `modulepreload` type: `RenderAssetTagEvent::TYPE_MODULEPRELOAD`, `isModulepreload()`)
+- Give `<link rel="modulepreload">` tags the `nonce` passed to the script tags through `attributes` or `script_attributes`, and copy each tag's nonce onto its HTTP `Link:` preload header, so modulepreload no longer gets blocked under a nonce-based CSP
+
 ## 1.2.0
 
 - Add `metadataPath` option to write `entrypoints.json` and `manifest.json` to a directory separate from `outputPath`

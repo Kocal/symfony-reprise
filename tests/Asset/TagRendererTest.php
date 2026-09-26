@@ -20,6 +20,7 @@ use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\WebLink\GenericLinkProvider;
+use Symfony\Component\WebLink\HttpHeaderSerializer;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Symfony\Reprise\Asset\DevServer;
 use Symfony\Reprise\Asset\EntrypointsLookup;
@@ -577,6 +578,7 @@ final class TagRendererTest extends TestCase
         $renderer = $this->renderer(
             js: ['http://127.0.0.1:5173/build/app.js'],
             css: ['build/app.css'],
+            preload: ['build/shared.js'],
             devServer: new DevServer(
                 'http://127.0.0.1:5173',
                 'http://127.0.0.1:5173/build/@vite/client',
@@ -590,23 +592,24 @@ final class TagRendererTest extends TestCase
 
         $this->assertStringContainsString('<script type="module" src="http://127.0.0.1:5173/build/@vite/client" nonce="r4nd0m"></script>', $scripts);
         $this->assertStringContainsString('<script type="module" nonce="r4nd0m">', $scripts); // the preamble
+        $this->assertStringContainsString('<link rel="modulepreload" href="/build/shared.js" nonce="r4nd0m">', $scripts);
         $this->assertStringContainsString('src="http://127.0.0.1:5173/build/app.js" type="module" nonce="r4nd0m"></script>', $scripts);
         $this->assertStringContainsString('<link rel="stylesheet" href="/build/app.css" nonce="r4nd0m">', $links);
     }
 
-    public function testTheEventReportsScriptOrLinkToTheListener()
+    public function testTheEventReportsTheTagTypeToTheListener()
     {
         $types = [];
         $dispatcher = new EventDispatcher();
         $dispatcher->addListener(RenderAssetTagEvent::class, static function (RenderAssetTagEvent $event) use (&$types): void {
-            $types[] = $event->isScript() ? 'script' : ($event->isLink() ? 'link' : 'other');
+            $types[] = $event->isScript() ? 'script' : ($event->isLink() ? 'link' : ($event->isModulepreload() ? 'modulepreload' : 'other'));
         });
 
-        $renderer = $this->renderer(js: ['build/app.js'], css: ['build/app.css'], eventDispatcher: $dispatcher);
+        $renderer = $this->renderer(js: ['build/app.js'], css: ['build/app.css'], preload: ['build/shared.js'], eventDispatcher: $dispatcher);
         $renderer->renderScriptTags('app');
         $renderer->renderLinkTags('app');
 
-        $this->assertSame(['script', 'link'], $types);
+        $this->assertSame(['modulepreload', 'script', 'link'], $types);
     }
 
     public function testAListenerCanRemoveAConfiguredAttribute()
@@ -622,18 +625,52 @@ final class TagRendererTest extends TestCase
         $this->assertSame('<script src="/build/app.js" type="module"></script>', $html);
     }
 
-    public function testModulepreloadLinksAreNotDispatchedToListeners()
+    public function testModulepreloadLinksTakeTheNonceGivenToTheScripts()
     {
+        $stack = new RequestStack();
+        $stack->push($request = new Request());
+
+        $html = $this->renderer(js: ['build/app.js'], preload: ['build/shared.js'], requestStack: $stack)
+            ->renderScriptTags('app', attributes: ['nonce' => 'r4nd0m', 'data-turbo-track' => 'reload']);
+
+        $this->assertSame(
+            '<link rel="modulepreload" href="/build/shared.js" nonce="r4nd0m">'
+            .'<script src="/build/app.js" type="module" nonce="r4nd0m" data-turbo-track="reload"></script>',
+            $html,
+        );
+        $this->assertSame(
+            '</build/shared.js>; rel="modulepreload"; nonce="r4nd0m",</build/app.js>; rel="modulepreload"; nonce="r4nd0m"',
+            new HttpHeaderSerializer()->serialize($request->attributes->get('_links')->getLinks()),
+        );
+    }
+
+    public function testPreloadHeadersCarryTheNonceAListenerSetOnTheirTag()
+    {
+        $stack = new RequestStack();
+        $stack->push($request = new Request());
         $dispatcher = new EventDispatcher();
         $dispatcher->addListener(RenderAssetTagEvent::class, static function (RenderAssetTagEvent $event): void {
-            $event->attributes['nonce'] = 'r4nd0m';
+            if (!$event->isLink()) {
+                $event->attributes['nonce'] = 'r4nd0m';
+            }
         });
 
-        $html = $this->renderer(js: ['build/app.js'], preload: ['build/shared.js'], eventDispatcher: $dispatcher)
-            ->renderScriptTags('app');
+        $renderer = $this->renderer(
+            js: ['build/app.js'],
+            css: ['build/app.css'],
+            preload: ['build/shared.js'],
+            requestStack: $stack,
+            eventDispatcher: $dispatcher,
+        );
+        $renderer->renderScriptTags('app');
+        $renderer->renderLinkTags('app');
 
-        $this->assertStringContainsString('<link rel="modulepreload" href="/build/shared.js">', $html);
-        $this->assertStringContainsString('<script src="/build/app.js" type="module" nonce="r4nd0m"></script>', $html);
+        $this->assertSame(
+            '</build/shared.js>; rel="modulepreload"; nonce="r4nd0m",'
+            .'</build/app.js>; rel="modulepreload"; nonce="r4nd0m",'
+            .'</build/app.css>; rel="preload"; as="style"',
+            new HttpHeaderSerializer()->serialize($request->attributes->get('_links')->getLinks()),
+        );
     }
 
     public function testPerCallAttributesCannotSpoofIntegrity()

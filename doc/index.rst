@@ -159,6 +159,11 @@ fourth argument; since it follows the optional package name, pass it as a Twig n
     {{ reprise_entry_script_tags('app', attributes={ 'data-turbo-track': 'reload' }) }}
     {{ reprise_entry_link_tags('app', attributes={ media: 'print' }) }}
 
+A ``nonce`` passed to ``reprise_entry_script_tags`` this way, or set in the global ``script_attributes``, also reaches
+the ``<link rel="modulepreload">`` tags for that entry and their HTTP ``Link:`` preload header, since a nonce-based CSP
+would otherwise block the preload. The rest of ``attributes`` (``data-turbo-track``, ``defer``, and so on) stays off
+those links.
+
 **Nothing to set up for the common case.** The tags resolve against Symfony's default asset package, so a standard
 project needs nothing beyond installing the bundle (see `Configuration`_ below for the options). The snippet is the
 same whether Vite or Rsbuild produced ``entrypoints.json``, and there's nothing to configure for dev either: in dev
@@ -168,9 +173,10 @@ into the bundle.
 Customizing rendered tags
 -------------------------
 
-Before Reprise writes any ``<script>`` or ``<link>`` tag (entry files, CSS, and the dev-server tags it injects itself,
-like the Vite HMR client and the React Fast Refresh preamble), it dispatches a ``RenderAssetTagEvent``.
-A listener can read and mutate ``$event->attributes`` to add, change, or remove attributes on that tag.
+Before Reprise writes any ``<script>`` or ``<link>`` tag (entry files, CSS, ``modulepreload`` links, and the
+dev-server tags it injects itself, like the Vite HMR client and the React Fast Refresh preamble), it dispatches a
+``RenderAssetTagEvent``. A listener can read and mutate ``$event->attributes`` to add, change, or remove attributes
+on that tag.
 
 As one example, stamping a Content-Security-Policy nonce on every tag::
 
@@ -191,6 +197,11 @@ As one example, stamping a Content-Security-Policy nonce on every tag::
             $event->attributes['nonce'] = $this->nonceGenerator->getNonce();
         }
     }
+
+Whatever nonce a tag ends up with is also copied onto its HTTP ``Link:`` preload header, since a CSP blocks a preload
+that lacks it. If your policy uses separate script and style nonces, a ``modulepreload`` link needs the script nonce
+because the browser fetches it as a script. ``$event->isModulepreload()`` identifies those tags; ``isScript()`` and
+``isLink()`` both return false for them.
 
 Features
 --------
