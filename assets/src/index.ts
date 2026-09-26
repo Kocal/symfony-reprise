@@ -250,8 +250,9 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                             const metadataDir = trimTrailingSlash(slash(resolved.metadataPath));
                             const metadataFiles = [`${metadataDir}/entrypoints.json`, `${metadataDir}/manifest.json`];
                             const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            // The metadata files are written through a temporary sibling that changes their directory too.
                             const own = new RegExp(
-                                `^(?:${escape(outputDir)}(?:/|$)|${metadataFiles.map(escape).join('|')}$)`
+                                `^(?:${escape(outputDir)}(?:/|$)|${escape(metadataDir)}(?:/(?:entrypoints|manifest)\\.json(?:\\.[^/]+\\.tmp)?)?$)`
                             );
 
                             rspackConfig.watchOptions ??= {};
@@ -272,6 +273,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                                     outputDir,
                                     `${outputDir}/**`,
                                     metadataFiles,
+                                    metadataFiles.map((file) => `${file}.*.tmp`),
                                 ].flat();
                             }
                         },

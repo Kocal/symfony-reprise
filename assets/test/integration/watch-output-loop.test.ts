@@ -13,11 +13,13 @@ import { createSymfonyWriteWaiter, getFreePort } from './support';
 
 const SETTLE_MS = 3_000;
 
-function app(): { dir: string; publicDir: string; out: string; dependency: string } {
+function app(): { dir: string; publicDir: string; varDir: string; out: string; dependency: string } {
     const dir = realpathSync(mkdtempSync(join(tmpdir(), 'ups-watch-loop-')));
     const publicDir = join(dir, 'public');
+    const varDir = join(dir, 'var');
     const dependencyDir = join(dir, 'node_modules/dep');
     mkdirSync(publicDir);
+    mkdirSync(varDir);
     mkdirSync(dependencyDir, { recursive: true });
     writeFileSync(join(dependencyDir, 'package.json'), '{ "name": "dep", "main": "index.js" }\n');
     writeFileSync(join(dependencyDir, 'index.js'), 'export default 1\n');
@@ -31,12 +33,13 @@ function app(): { dir: string; publicDir: string; out: string; dependency: strin
         dependencyDir,
         join(dir, 'node_modules'),
         publicDir,
+        varDir,
         dir,
     ];
     for (const path of created) {
         utimesSync(path, past, past);
     }
-    return { dir, publicDir, out: join(publicDir, 'build'), dependency: join(dependencyDir, 'index.js') };
+    return { dir, publicDir, varDir, out: join(publicDir, 'build'), dependency: join(dependencyDir, 'index.js') };
 }
 
 // Stands in for Tailwind CSS v4, which watches the project's directories, the one holding outputPath included.
@@ -63,10 +66,14 @@ function rsbuildWatching(dir: string): { plugin: RsbuildPlugin; rebuildTriggers:
 
 async function expectSingleRsbuildBuild(
     action: 'dev' | 'build',
-    ignored?: RegExp | string | ((path: string) => boolean)
+    {
+        ignored,
+        metadataOutsideOutput = false,
+    }: { ignored?: RegExp | string | ((path: string) => boolean); metadataOutsideOutput?: boolean } = {}
 ): Promise<void> {
-    const { dir, publicDir, out, dependency } = app();
-    const tool = rsbuildWatching(publicDir);
+    const { dir, publicDir, varDir, out, dependency } = app();
+    const metadataPath = metadataOutsideOutput ? join(varDir, 'reprise') : undefined;
+    const tool = rsbuildWatching(metadataPath ? varDir : publicDir);
     const firstWrite = createSymfonyWriteWaiter();
     const rsbuild = await createRsbuild({
         cwd: dir,
@@ -75,7 +82,11 @@ async function expectSingleRsbuildBuild(
             source: { entry: { app: join(dir, 'app.js') } },
             server: { port: await getFreePort() },
             tools: ignored ? { rspack: { watchOptions: { ignored } } } : {},
-            plugins: [SymfonyRsbuild({ outputPath: out, publicPath: '/build/' }), tool.plugin, firstWrite.plugin],
+            plugins: [
+                SymfonyRsbuild({ outputPath: out, metadataPath, publicPath: '/build/' }),
+                tool.plugin,
+                firstWrite.plugin,
+            ],
         },
     });
     const running = action === 'dev' ? (await rsbuild.startDevServer()).server : await rsbuild.build({ watch: true });
@@ -96,16 +107,26 @@ describe.concurrent('writing the Symfony files does not retrigger a build watchi
     it('rsbuild build --watch', () => expectSingleRsbuildBuild('build'), 30_000);
 
     it(
-        'rsbuild dev, with a user-set RegExp ignore',
-        () => expectSingleRsbuildBuild('dev', /[\\/](?:node_modules|\.cache)[\\/]/),
+        'rsbuild dev, with metadataPath outside outputPath',
+        () => expectSingleRsbuildBuild('dev', { metadataOutsideOutput: true }),
         30_000
     );
 
-    it('rsbuild dev, with a user-set glob ignore', () => expectSingleRsbuildBuild('dev', '**/node_modules/**'), 30_000);
+    it(
+        'rsbuild dev, with a user-set RegExp ignore',
+        () => expectSingleRsbuildBuild('dev', { ignored: /[\\/](?:node_modules|\.cache)[\\/]/ }),
+        30_000
+    );
+
+    it(
+        'rsbuild dev, with a user-set glob ignore',
+        () => expectSingleRsbuildBuild('dev', { ignored: '**/node_modules/**' }),
+        30_000
+    );
 
     it(
         'rsbuild dev, with a user-set function ignore',
-        () => expectSingleRsbuildBuild('dev', (path) => /[\\/]node_modules[\\/]/.test(path)),
+        () => expectSingleRsbuildBuild('dev', { ignored: (path) => /[\\/]node_modules[\\/]/.test(path) }),
         30_000
     );
 
