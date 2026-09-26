@@ -43,7 +43,7 @@ interface ResolvedController {
 // (line/block comment, either quotes, `/*!...*/` survives minification), like @symfony/stimulus-bridge.
 // The marker is not tied to a class: a dummy controller exporting a plain value opts in the same way.
 const LAZY_COMMENT_RE = /\/\*!?\s*stimulusFetch:\s*['"]lazy['"]\s*\*\/|\/\/\s*stimulusFetch:\s*['"]lazy['"]/i;
-const LOCAL_CONTROLLER_RE = /[-_]controller\.[jt]s$/;
+const LOCAL_CONTROLLER_RE = /[-_]controller\.[jt]sx?$/;
 
 // Every other failure in this module reports a `@symfony/reprise:` error; a missing or malformed
 // controllers.json must not slip through as a raw Node ENOENT/SyntaxError.
@@ -212,6 +212,6 @@ function listLocalControllers(dir: string): string[] {
 }
 
 function localIdentifier(rel: string): string {
-    const base = slash(rel).replace(/[-_]controller\.[jt]s$/, '');
+    const base = slash(rel).replace(LOCAL_CONTROLLER_RE, '');
     return normalizeIdentifier(base);
 }
