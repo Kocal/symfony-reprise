@@ -272,7 +272,6 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                         }
 
                         c.hooks.done.tap('@symfony/reprise', (stats) => {
-                            const isDev = c.watchMode;
                             // Derive the dev origin ourselves from `api.context.devServer` + our `publicPath`, rather
                             // than reading back `compiler.options.output.publicPath` (whose dev value depends on Rsbuild's merge).
                             const devServer = api.context.devServer;
