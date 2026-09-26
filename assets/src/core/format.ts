@@ -1,12 +1,8 @@
 import type { BuildContext, EntryFiles, EntrypointsJson, ManifestJson, NormalizedGraph } from '../types';
 
-export function joinUrl(prefix: string, name: string): string {
-    return prefix.endsWith('/') ? prefix + name : `${prefix}/${name}`;
-}
-
 function toReference(prefix: string, name: string): string {
     // Docroot-relative reference (ADR 0001): strips the leading slash (dev-server URLs have none).
-    return joinUrl(prefix, name).replace(/^\//, '');
+    return (prefix + name).replace(/^\//, '');
 }
 
 export function buildEntrypoints(graph: NormalizedGraph, ctx: BuildContext): EntrypointsJson {
@@ -37,7 +33,7 @@ export function buildEntrypoints(graph: NormalizedGraph, ctx: BuildContext): Ent
 export function buildManifest(graph: NormalizedGraph, ctx: BuildContext): ManifestJson {
     const manifest: ManifestJson = {};
     for (const { logicalName, fileName } of graph.assets) {
-        manifest[ctx.manifestKeyPrefix + logicalName] = joinUrl(ctx.urlPrefix, fileName);
+        manifest[ctx.manifestKeyPrefix + logicalName] = ctx.urlPrefix + fileName;
     }
     return Object.fromEntries(Object.entries(manifest).sort(([a], [b]) => a.localeCompare(b, 'en')));
 }
