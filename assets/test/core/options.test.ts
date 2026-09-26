@@ -38,13 +38,22 @@ describe('normalizeOptions', () => {
         expect(r.metadataPath).toBe('/tmp/metadata');
     });
 
-    it('derives manifestKeyPrefix from publicPath by stripping the leading slash', () => {
-        const r = normalizeOptions({ publicPath: '/build/' }, '/app');
-        expect(r.manifestKeyPrefix).toBe('build/');
-    });
+    it.each(['/build/', '/build'])(
+        'normalizes publicPath %s to "/build/" and derives manifestKeyPrefix "build/" from it',
+        (publicPath) => {
+            const r = normalizeOptions({ publicPath }, '/app');
+            expect(r.publicPath).toBe('/build/');
+            expect(r.manifestKeyPrefix).toBe('build/');
+        }
+    );
 
     it('honors an explicit manifestKeyPrefix', () => {
         const r = normalizeOptions({ publicPath: '/assets/', manifestKeyPrefix: 'build/' }, '/app');
+        expect(r.manifestKeyPrefix).toBe('build/');
+    });
+
+    it('guarantees a single trailing slash on an explicit manifestKeyPrefix, like Encore', () => {
+        const r = normalizeOptions({ publicPath: '/assets/', manifestKeyPrefix: 'build' }, '/app');
         expect(r.manifestKeyPrefix).toBe('build/');
     });
 
@@ -61,7 +70,7 @@ describe('normalizeOptions', () => {
 
     it('accepts an absolute publicPath when manifestKeyPrefix is set', () => {
         const r = normalizeOptions({ publicPath: 'https://cdn.example.com/x', manifestKeyPrefix: 'build/' }, '/app');
-        expect(r.publicPath).toBe('https://cdn.example.com/x');
+        expect(r.publicPath).toBe('https://cdn.example.com/x/');
         expect(r.manifestKeyPrefix).toBe('build/');
     });
 
@@ -71,7 +80,7 @@ describe('normalizeOptions', () => {
 
     it('accepts a protocol-relative publicPath when manifestKeyPrefix is set', () => {
         const r = normalizeOptions({ publicPath: '//cdn.example.com/x', manifestKeyPrefix: 'build/' }, '/app');
-        expect(r.publicPath).toBe('//cdn.example.com/x');
+        expect(r.publicPath).toBe('//cdn.example.com/x/');
         expect(r.manifestKeyPrefix).toBe('build/');
     });
 
