@@ -21,24 +21,34 @@ export function getFreePort(): Promise<number> {
  * awaiting `written` guarantees they are on disk. `startDevServer()` alone only guarantees the HTTP
  * server is listening, which races ahead of the first compilation.
  *
- * Resolves on the first compile only. Fine for a single-compile dev test; an HMR/rebuild test reusing
- * this pattern would need to re-arm the promise per compile instead of resolving once.
+ * Resolves on the first compile only; rebuild tests use `createCompileWaiter()`.
  */
 export function createSymfonyWriteWaiter(): { plugin: RsbuildPlugin; written: Promise<void> } {
-    let resolveWritten: () => void;
-    const written = new Promise<void>((resolve) => {
-        resolveWritten = resolve;
-    });
+    const { plugin, next } = createCompileWaiter();
+    return { plugin, written: next().then(() => undefined) };
+}
+
+/** Re-armable: `next()` resolves with the next compilation's error messages; call it before the change. */
+export function createCompileWaiter(): { plugin: RsbuildPlugin; next: () => Promise<string[]> } {
+    let resolveNext: ((errors: string[]) => void) | null = null;
     const plugin: RsbuildPlugin = {
-        name: 'test-wait-for-symfony-write',
+        name: 'test-wait-for-compile',
         setup(api) {
             api.onAfterCreateCompiler(({ compiler }) => {
                 const compilers = 'compilers' in compiler ? compiler.compilers : [compiler];
                 for (const c of compilers) {
-                    c.hooks.done.tap('test-wait-for-symfony-write', () => resolveWritten());
+                    c.hooks.done.tap('test-wait-for-compile', (stats) => {
+                        const errors = (stats.toJson({ all: false, errors: true }).errors ?? []).map((e) => e.message);
+                        resolveNext?.(errors);
+                        resolveNext = null;
+                    });
                 }
             });
         },
     };
-    return { plugin, written };
+    const next = (): Promise<string[]> =>
+        new Promise((resolve) => {
+            resolveNext = resolve;
+        });
+    return { plugin, next };
 }

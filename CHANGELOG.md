@@ -4,6 +4,7 @@
 
 - Dispatch `RenderAssetTagEvent` for `<link rel="modulepreload">` tags too (new `modulepreload` type: `RenderAssetTagEvent::TYPE_MODULEPRELOAD`, `isModulepreload()`)
 - Give `<link rel="modulepreload">` tags the `nonce` passed to the script tags through `attributes` or `script_attributes`, and copy each tag's nonce onto its HTTP `Link:` preload header, so modulepreload no longer gets blocked under a nonce-based CSP
+- Reload the page in dev when a local controller or its `stimulusFetch: 'lazy'` comment is added or removed, or when `controllers.json` changes
 
 ## 1.2.0
 

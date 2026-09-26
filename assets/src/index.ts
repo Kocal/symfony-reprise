@@ -12,7 +12,13 @@ import { writeSymfonyFiles } from './core/emit';
 import { buildEntrypoints, buildManifest, joinUrl } from './core/format';
 import { integrityFromDisk, referencedFileNames } from './core/integrity';
 import { isAbsolutePublicPath, normalizeOptions, resolvePublicPath } from './core/options';
-import { generateControllersModule, STIMULUS_NOT_ENABLED_MESSAGE, VIRTUAL_CONTROLLERS_ID } from './core/stimulus';
+import {
+    affectsControllersModule,
+    generateControllersModule,
+    STIMULUS_NOT_ENABLED_MESSAGE,
+    stimulusWatchFiles,
+    VIRTUAL_CONTROLLERS_ID,
+} from './core/stimulus';
 
 const VIRTUAL_ID = VIRTUAL_CONTROLLERS_ID;
 const RESOLVED_VIRTUAL_ID = `\0${VIRTUAL_ID}`;
@@ -46,8 +52,12 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
         },
 
         load(id) {
-            if (resolved.stimulus && id === RESOLVED_VIRTUAL_ID)
-                return generateControllersModule(resolved.stimulus, cwd, isDev);
+            if (!resolved.stimulus || id !== RESOLVED_VIRTUAL_ID) return;
+            for (const file of stimulusWatchFiles(resolved.stimulus)) this.addWatchFile(file);
+            const native = this.getNativeBuildContext?.();
+            if (native?.framework === 'rspack')
+                native.loaderContext?.addContextDependency(resolved.stimulus.controllersDir);
+            return generateControllersModule(resolved.stimulus, cwd, isDev);
         },
 
         vite: {
@@ -103,6 +113,19 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
             },
 
             configureServer(server) {
+                const stimulus = resolved.stimulus;
+                if (stimulus) {
+                    // `addWatchFile()` can't cover a controller that doesn't exist yet.
+                    server.watcher.add([stimulus.controllersJson, stimulus.controllersDir]);
+                    server.watcher.on('all', (_event, file) => {
+                        if (!affectsControllersModule(file, stimulus)) return;
+                        const client = server.environments.client;
+                        const mod = client.moduleGraph.getModuleById(RESOLVED_VIRTUAL_ID);
+                        if (mod) client.moduleGraph.invalidateModule(mod);
+                        client.hot.send({ type: 'full-reload' });
+                    });
+                }
+
                 // Middleware mode has no `httpServer`; only the standalone dev server is supported.
                 server.httpServer?.once('listening', () => {
                     const address = server.httpServer?.address();

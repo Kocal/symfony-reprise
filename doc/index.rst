@@ -267,6 +267,12 @@ block or a single-line comment both work, even on dummy controllers that export 
 (``// stimulusFetch: 'lazy'`` works too, and so does a preserved ``/*! stimulusFetch: 'lazy' */`` comment: the form
 tsc and esbuild keep through minification.)
 
+**In dev.** While the Vite or Rsbuild dev server runs, Reprise regenerates the controllers module and reloads the
+page when a local controller is added or removed, when a controller's ``stimulusFetch: 'lazy'`` comment is added or
+removed, or when ``controllers.json`` itself changes (for example right after Symfony Flex updates it following a
+``composer require symfony/ux-*``), no dev-server restart needed. This is a full page reload, not hot replacement of
+the controller.
+
 **Third-party UX packages.** Controllers declared in ``controllers.json`` are resolved from ``node_modules``, so
 install them with your package manager, the same as you would with Webpack Encore. For example, with Stimulus and
 UX Leaflet Map:
