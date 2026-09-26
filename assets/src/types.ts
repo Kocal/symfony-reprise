@@ -232,7 +232,7 @@ export interface NormalizedGraph {
 export interface BuildContext {
     isProd: boolean;
     devServer: DevServer | null;
-    /** Prefix for entry/asset URLs. Equals publicPath in build; origin+publicPath in dev. */
+    /** Prefix for entry URLs. Equals publicPath in build; origin+publicPath in dev. */
     urlPrefix: string;
     /** The configured publicPath, emitted as the top-level `publicPath` field. */
     publicPath: string;

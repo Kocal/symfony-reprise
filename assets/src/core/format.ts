@@ -1,4 +1,4 @@
-import type { BuildContext, EntryFiles, EntrypointsJson, ManifestJson, NormalizedGraph } from '../types';
+import type { AssetEntry, BuildContext, EntryFiles, EntrypointsJson, ManifestJson, NormalizedGraph } from '../types';
 
 function toReference(prefix: string, name: string): string {
     // Docroot-relative reference (ADR 0001): strips the leading slash (dev-server URLs have none).
@@ -30,10 +30,13 @@ export function buildEntrypoints(graph: NormalizedGraph, ctx: BuildContext): Ent
     return out;
 }
 
-export function buildManifest(graph: NormalizedGraph, ctx: BuildContext): ManifestJson {
+export function buildManifest(
+    assets: AssetEntry[],
+    ctx: Pick<BuildContext, 'publicPath' | 'manifestKeyPrefix'>
+): ManifestJson {
     const manifest: ManifestJson = {};
-    for (const { logicalName, fileName } of graph.assets) {
-        manifest[ctx.manifestKeyPrefix + logicalName] = ctx.urlPrefix + fileName;
+    for (const { logicalName, fileName } of assets) {
+        manifest[ctx.manifestKeyPrefix + logicalName] = ctx.publicPath + fileName;
     }
     return Object.fromEntries(Object.entries(manifest).sort(([a], [b]) => a.localeCompare(b, 'en')));
 }

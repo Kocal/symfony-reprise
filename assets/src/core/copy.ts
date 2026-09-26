@@ -68,17 +68,6 @@ export function resolveCopyFiles(entries: ResolvedCopyEntry[], build: boolean): 
     });
 }
 
-export function copyManifest(
-    files: CopyResult[],
-    opts: { publicPath: string; manifestKeyPrefix: string }
-): Record<string, string> {
-    const manifest: Record<string, string> = {};
-    for (const file of files) {
-        manifest[opts.manifestKeyPrefix + file.logicalName] = opts.publicPath + file.physicalName + file.versionQuery;
-    }
-    return manifest;
-}
-
 export function writeCopyFiles(files: CopyResult[], outputPath: string): void {
     for (const file of files) {
         const dest = join(outputPath, file.physicalName);
