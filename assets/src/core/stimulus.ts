@@ -180,6 +180,21 @@ function render(controllers: ResolvedController[], isDev: boolean): string {
     return lines.join('\n');
 }
 
+// Local controllers too: the module depends on their lazy marker.
+export function stimulusWatchFiles(opts: ResolvedStimulusOptions): string[] {
+    return [
+        opts.controllersJson,
+        ...listLocalControllers(opts.controllersDir).map((rel) => path.join(opts.controllersDir, rel)),
+    ];
+}
+
+export function affectsControllersModule(file: string, opts: ResolvedStimulusOptions): boolean {
+    return (
+        file === opts.controllersJson ||
+        (file.startsWith(opts.controllersDir + path.sep) && LOCAL_CONTROLLER_RE.test(file))
+    );
+}
+
 function listLocalControllers(dir: string): string[] {
     let entries: string[];
     try {
