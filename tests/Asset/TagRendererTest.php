@@ -673,6 +673,53 @@ final class TagRendererTest extends TestCase
         );
     }
 
+    public function testPreloadHeadersFollowTheIntegrityAndCrossoriginAListenerSetOnTheirTag()
+    {
+        $stack = new RequestStack();
+        $stack->push($request = new Request());
+        $dispatcher = new EventDispatcher();
+        $dispatcher->addListener(RenderAssetTagEvent::class, static function (RenderAssetTagEvent $event): void {
+            if ($event->isLink()) {
+                unset($event->attributes['integrity'], $event->attributes['crossorigin']);
+            } else {
+                $event->attributes['integrity'] = 'sha384-REWRITTEN';
+                $event->attributes['crossorigin'] = 'use-credentials';
+            }
+        });
+
+        $renderer = $this->renderer(
+            js: ['build/app.js'],
+            css: ['build/app.css'],
+            preload: ['build/shared.js'],
+            integrity: ['build/app.js' => 'sha384-JS', 'build/app.css' => 'sha384-CSS', 'build/shared.js' => 'sha384-SHARED'],
+            requestStack: $stack,
+            eventDispatcher: $dispatcher,
+        );
+        $renderer->renderScriptTags('app');
+        $renderer->renderLinkTags('app');
+
+        $this->assertSame(
+            '</build/shared.js>; rel="modulepreload"; integrity="sha384-REWRITTEN"; crossorigin="use-credentials",'
+            .'</build/app.js>; rel="modulepreload"; integrity="sha384-REWRITTEN"; crossorigin="use-credentials",'
+            .'</build/app.css>; rel="preload"; as="style"',
+            new HttpHeaderSerializer()->serialize($request->attributes->get('_links')->getLinks()),
+        );
+    }
+
+    public function testPreloadHeadersCarryACrossoriginConfiguredOnTheTagWithoutIntegrity()
+    {
+        $stack = new RequestStack();
+        $stack->push($request = new Request());
+
+        $this->renderer(js: ['build/app.js'], scriptAttributes: ['crossorigin' => 'anonymous'], requestStack: $stack)
+            ->renderScriptTags('app');
+
+        $this->assertSame(
+            '</build/app.js>; rel="modulepreload"; crossorigin="anonymous"',
+            new HttpHeaderSerializer()->serialize($request->attributes->get('_links')->getLinks()),
+        );
+    }
+
     public function testPerCallAttributesCannotSpoofIntegrity()
     {
         $html = $this->renderer(

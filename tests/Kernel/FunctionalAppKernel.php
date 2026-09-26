@@ -12,6 +12,7 @@
 namespace Symfony\Reprise\Tests\Kernel;
 
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
+use Symfony\Bundle\TwigBundle\TwigBundle;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -41,7 +42,7 @@ final class FunctionalAppKernel extends Kernel implements CompilerPassInterface
 
     public function registerBundles(): iterable
     {
-        return [new FrameworkBundle(), new RepriseBundle()];
+        return [new FrameworkBundle(), new TwigBundle(), new RepriseBundle()];
     }
 
     public function registerContainerConfiguration(LoaderInterface $loader): void
@@ -74,6 +75,7 @@ final class FunctionalAppKernel extends Kernel implements CompilerPassInterface
     {
         $container->getAlias(EntrypointsLookupInterface::class)->setPublic(true);
         $container->getDefinition('reprise.tag_renderer')->setPublic(true);
+        $container->getDefinition('twig')->setPublic(true);
         $container->getDefinition('reprise.reset_assets_listener')->setPublic(true);
 
         if ($container->hasDefinition('reprise.entrypoints_cache_warmer')) {

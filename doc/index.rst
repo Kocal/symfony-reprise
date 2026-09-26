@@ -198,8 +198,9 @@ As one example, stamping a Content-Security-Policy nonce on every tag::
         }
     }
 
-Whatever nonce a tag ends up with is also copied onto its HTTP ``Link:`` preload header, since a CSP blocks a preload
-that lacks it. If your policy uses separate script and style nonces, a ``modulepreload`` link needs the script nonce
+After the ``RenderAssetTagEvent`` listeners run, the tag's final ``nonce``, ``integrity`` and ``crossorigin`` attributes
+are all copied onto its HTTP ``Link:`` preload header: a nonce-based CSP blocks a preload without the nonce, and the
+browser discards a preloaded response whose integrity or CORS mode does not match the tag's. If your policy uses separate script and style nonces, a ``modulepreload`` link needs the script nonce
 because the browser fetches it as a script. ``$event->isModulepreload()`` identifies those tags; ``isScript()`` and
 ``isLink()`` both return false for them.
 

@@ -11,12 +11,13 @@
 
 namespace Symfony\Reprise\Twig;
 
+use Symfony\Reprise\Asset\TagRenderer;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
 
 /**
- * Declares the reprise_entry_* Twig functions, each delegating to the lazily-loaded AssetRuntime so
- * the TagRenderer is built only when a template actually renders Reprise tags.
+ * Declares the reprise_entry_* Twig functions, each delegating to the TagRenderer as a lazily-loaded
+ * Twig runtime, so it is built only when a template actually renders Reprise tags.
  *
  * @author Hugo Alliaume <hugo@alliau.me>
  *
@@ -27,11 +28,11 @@ final class AssetExtension extends AbstractExtension
     public function getFunctions(): array
     {
         return [
-            new TwigFunction('reprise_entry_script_tags', [AssetRuntime::class, 'renderScriptTags'], ['is_safe' => ['html']]),
-            new TwigFunction('reprise_entry_link_tags', [AssetRuntime::class, 'renderLinkTags'], ['is_safe' => ['html']]),
-            new TwigFunction('reprise_entry_js_files', [AssetRuntime::class, 'getJsFiles']),
-            new TwigFunction('reprise_entry_css_files', [AssetRuntime::class, 'getCssFiles']),
-            new TwigFunction('reprise_entry_exists', [AssetRuntime::class, 'entryExists']),
+            new TwigFunction('reprise_entry_script_tags', [TagRenderer::class, 'renderScriptTags'], ['is_safe' => ['html']]),
+            new TwigFunction('reprise_entry_link_tags', [TagRenderer::class, 'renderLinkTags'], ['is_safe' => ['html']]),
+            new TwigFunction('reprise_entry_js_files', [TagRenderer::class, 'getJsFiles']),
+            new TwigFunction('reprise_entry_css_files', [TagRenderer::class, 'getCssFiles']),
+            new TwigFunction('reprise_entry_exists', [TagRenderer::class, 'entryExists']),
         ];
     }
 }

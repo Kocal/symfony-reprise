@@ -21,7 +21,6 @@ use Symfony\Reprise\Asset\EntrypointsLookupInterface;
 use Symfony\Reprise\Asset\TagRenderer;
 use Symfony\Reprise\Tests\BuildCollectionTrait;
 use Symfony\Reprise\Twig\AssetExtension;
-use Symfony\Reprise\Twig\AssetRuntime;
 use Twig\Environment;
 use Twig\Loader\ArrayLoader;
 use Twig\RuntimeLoader\FactoryRuntimeLoader;
@@ -34,18 +33,20 @@ final class AssetExtensionTest extends TestCase
     {
         $built = 0;
         $twig = new Environment(new ArrayLoader([
+            'plain' => 'Hello {{ name }}',
             'page' => "{{ reprise_entry_script_tags('app') }}",
         ]));
         $twig->addExtension(new AssetExtension());
         $twig->addRuntimeLoader(new FactoryRuntimeLoader([
-            AssetRuntime::class => function () use (&$built): AssetRuntime {
+            TagRenderer::class => function () use (&$built): TagRenderer {
                 ++$built;
 
-                return new AssetRuntime($this->tagRenderer(['build/app.js']));
+                return $this->tagRenderer(['build/app.js']);
             },
         ]));
 
-        // Registering the extension must not build the runtime (nor the TagRenderer behind it).
+        // Registering the extension, or rendering a template without Reprise functions, must not build the TagRenderer.
+        $this->assertSame('Hello World', $twig->render('plain', ['name' => 'World']));
         $this->assertSame(0, $built);
 
         $html = $twig->render('page');
@@ -64,9 +65,7 @@ final class AssetExtensionTest extends TestCase
         ]));
         $twig->addExtension(new AssetExtension());
         $twig->addRuntimeLoader(new FactoryRuntimeLoader([
-            AssetRuntime::class => fn (): AssetRuntime => new AssetRuntime(
-                $this->tagRenderer(['build/app.js'], ['build/app.css']),
-            ),
+            TagRenderer::class => fn (): TagRenderer => $this->tagRenderer(['build/app.js'], ['build/app.css']),
         ]));
 
         $this->assertSame(
@@ -84,7 +83,7 @@ final class AssetExtensionTest extends TestCase
         ]));
         $twig->addExtension(new AssetExtension());
         $twig->addRuntimeLoader(new FactoryRuntimeLoader([
-            AssetRuntime::class => fn (): AssetRuntime => new AssetRuntime($this->tagRenderer(['build/app.js'])),
+            TagRenderer::class => fn (): TagRenderer => $this->tagRenderer(['build/app.js']),
         ]));
 
         $this->assertSame(
@@ -101,10 +100,10 @@ final class AssetExtensionTest extends TestCase
         ]));
         $twig->addExtension(new AssetExtension());
         $twig->addRuntimeLoader(new FactoryRuntimeLoader([
-            AssetRuntime::class => static fn (): AssetRuntime => new AssetRuntime(new TagRenderer(
+            TagRenderer::class => static fn (): TagRenderer => new TagRenderer(
                 $collection,
                 new Packages(new PathPackage('/', new EmptyVersionStrategy())),
-            )),
+            ),
         ]));
 
         $this->assertSame('yes|no', $twig->render('page'));
