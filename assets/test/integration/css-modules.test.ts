@@ -1,11 +1,7 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createRsbuild } from '@rsbuild/core';
-import { build } from 'vite';
 import { describe, expect, it } from 'vitest';
-import SymfonyRsbuild from '../../src/rsbuild';
-import SymfonyVite from '../../src/vite';
+import { readJson, rsbuildBuild, tmpDir, viteBuild } from './support';
 
 // The other side of `style-entry.test.ts`: a CSS Module imported *from* a JS entry, which is how CSS Modules
 // are meant to be used. The entry keeps its script (it carries the class-name mapping) and the extracted CSS
@@ -35,43 +31,30 @@ function expectScopedBadge(out: string, entrypoints: Entrypoints): void {
 
 describe('CSS Modules imported from a JS entry (Vite/Rsbuild parity)', () => {
     it('vite keeps the entry js and lists the scoped css', async () => {
-        const out = mkdtempSync(join(tmpdir(), 'ups-cssmod-vite-'));
-        await build({
-            root: fixture,
-            logLevel: 'silent',
-            build: { emptyOutDir: true, rollupOptions: { input } },
-            plugins: [SymfonyVite({ outputPath: out, publicPath: '/build/' })],
-        });
+        const out = tmpDir('cssmod-vite');
+        await viteBuild(fixture, input, { outputPath: out, publicPath: '/build/' });
 
-        const entrypoints: Entrypoints = JSON.parse(readFileSync(join(out, 'entrypoints.json'), 'utf8'));
+        const entrypoints: Entrypoints = readJson(out, 'entrypoints.json');
         expect(entrypoints.entryPoints.app.js).toHaveLength(1);
         expect(entrypoints.entryPoints.app.css).toHaveLength(1);
         expectScopedBadge(out, entrypoints);
 
-        const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
+        const manifest = readJson(out, 'manifest.json');
         expect(manifest['build/app.js']).toMatch(/\.js$/);
         expect(manifest['build/app.css']).toMatch(/\.css$/);
-    }, 30_000);
+    });
 
     it('rsbuild keeps the entry js and lists the scoped css', async () => {
-        const out = mkdtempSync(join(tmpdir(), 'ups-cssmod-rsbuild-'));
-        const rsbuild = await createRsbuild({
-            cwd: fixture,
-            rsbuildConfig: {
-                mode: 'production',
-                source: { entry: input },
-                plugins: [SymfonyRsbuild({ outputPath: out, publicPath: '/build/' })],
-            },
-        });
-        await rsbuild.build();
+        const out = tmpDir('cssmod-rsbuild');
+        await rsbuildBuild(fixture, input, { outputPath: out, publicPath: '/build/' });
 
-        const entrypoints: Entrypoints = JSON.parse(readFileSync(join(out, 'entrypoints.json'), 'utf8'));
+        const entrypoints: Entrypoints = readJson(out, 'entrypoints.json');
         expect(entrypoints.entryPoints.app.js).toHaveLength(1);
         expect(entrypoints.entryPoints.app.css).toHaveLength(1);
         expectScopedBadge(out, entrypoints);
 
-        const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
+        const manifest = readJson(out, 'manifest.json');
         expect(manifest['build/app.js']).toMatch(/\.js$/);
         expect(manifest['build/app.css']).toMatch(/\.css$/);
-    }, 60_000);
+    });
 });

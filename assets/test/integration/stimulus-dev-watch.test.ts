@@ -1,19 +1,18 @@
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createRsbuild } from '@rsbuild/core';
 import { createServer } from 'vite';
 import { describe, expect, it, vi } from 'vitest';
 import SymfonyRsbuild from '../../src/rsbuild';
 import SymfonyVite from '../../src/vite';
-import { createCompileWaiter, getFreePort } from './support';
+import { createCompileWaiter, getFreePort, tmpDir } from './support';
 
 const LAZY_GREET = "/* stimulusFetch: 'lazy' */\nexport default class {}\n";
 const GREET_IS_LAZY = /"greet":\s*\(\)\s*=>/;
 const WAIT = { timeout: 10_000 };
 
 function stimulusApp(): string {
-    const dir = realpathSync(mkdtempSync(join(tmpdir(), 'ups-stim-watch-')));
+    const dir = tmpDir('stim-watch');
     mkdirSync(join(dir, 'controllers'));
     writeFileSync(
         join(dir, 'app.js'),
@@ -64,7 +63,7 @@ describe('the dev server picks up Stimulus changes without a restart', () => {
         } finally {
             await server.close();
         }
-    }, 60_000);
+    });
 
     it('rsbuild', async () => {
         const dir = stimulusApp();
@@ -113,5 +112,5 @@ describe('the dev server picks up Stimulus changes without a restart', () => {
         } finally {
             await server.server.close();
         }
-    }, 60_000);
+    });
 });

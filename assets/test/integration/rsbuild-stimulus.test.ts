@@ -1,16 +1,16 @@
 import type { RsbuildPlugin } from '@rsbuild/core';
-import { mkdtempSync, readdirSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createRsbuild } from '@rsbuild/core';
 import { describe, expect, it } from 'vitest';
 import Symfony from '../../src/rsbuild';
+import { tmpDir } from './support';
 
 const fixture = join(import.meta.dirname, '../fixtures/stimulus-app');
 
 describe('rsbuild build resolves virtual:symfony/controllers', () => {
     it('bundles local controllers via VirtualModulesPlugin', async () => {
-        const out = mkdtempSync(join(tmpdir(), 'ups-rstim-'));
+        const out = tmpDir('rstim');
         const rsbuild = await createRsbuild({
             cwd: fixture,
             rsbuildConfig: {
@@ -28,10 +28,10 @@ describe('rsbuild build resolves virtual:symfony/controllers', () => {
             .join('\n');
         expect(code).toContain('greet');
         expect(code).toContain('heavy');
-    }, 60_000);
+    });
 
     it('fails with a clear message when the virtual module is imported but stimulus is off', async () => {
-        const out = mkdtempSync(join(tmpdir(), 'ups-rstim-off-'));
+        const out = tmpDir('rstim-off');
 
         // Rspack wraps the plugin's throw as a generic "Rspack build failed." rejection, but records the
         // real module error on `stats.compilation.errors`. Tap `done` to read it and assert our guidance
@@ -68,5 +68,5 @@ describe('rsbuild build resolves virtual:symfony/controllers', () => {
 
         expect(failed).toBe(true);
         expect(errors.join('\n')).toMatch(/Stimulus integration is not enabled/);
-    }, 60_000);
+    });
 });

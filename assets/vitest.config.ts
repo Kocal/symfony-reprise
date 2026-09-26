@@ -14,5 +14,6 @@ export default defineConfig({
     test: {
         // Only the plugin's own tests; keep vitest out of .references/ and playground/.
         include: ['test/**/*.{test,spec}.ts'],
+        testTimeout: 60_000,
     },
 });

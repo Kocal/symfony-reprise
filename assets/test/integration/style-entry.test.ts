@@ -1,12 +1,8 @@
-import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { createRsbuild } from '@rsbuild/core';
-import { build } from 'vite';
 import { describe, expect, it } from 'vitest';
 import { referencedFileNames } from '../../src/core/integrity';
-import SymfonyRsbuild from '../../src/rsbuild';
-import SymfonyVite from '../../src/vite';
+import { readJson, rsbuildBuild, tmpDir, viteBuild } from './support';
 
 // A *style entry* — an entry pointing straight at a stylesheet (`{ theme: 'theme.scss' }`), Encore's
 // `addStyleEntry` — compiles to CSS and nothing else. Vite drops the empty JS chunk it produces, so any
@@ -24,15 +20,10 @@ function jsFilesOnDisk(dir: string): string[] {
 
 describe('style entries advertise CSS only (Vite/Rsbuild parity)', () => {
     it('vite emits no js for the style entry, and SRI survives', async () => {
-        const out = mkdtempSync(join(tmpdir(), 'ups-style-vite-'));
-        await build({
-            root: fixture,
-            logLevel: 'silent',
-            build: { emptyOutDir: true, rollupOptions: { input } },
-            plugins: [SymfonyVite({ outputPath: out, publicPath: '/build/', integrity: { enabled: true } })],
-        });
+        const out = tmpDir('style-vite');
+        await viteBuild(fixture, input, { outputPath: out, publicPath: '/build/', integrity: { enabled: true } });
 
-        const entrypoints = JSON.parse(readFileSync(join(out, 'entrypoints.json'), 'utf8'));
+        const entrypoints = readJson(out, 'entrypoints.json');
         expect(entrypoints.entryPoints.theme.js).toEqual([]);
         expect(entrypoints.entryPoints.theme.css).toHaveLength(1);
 
@@ -48,25 +39,17 @@ describe('style entries advertise CSS only (Vite/Rsbuild parity)', () => {
         // The normal entry is untouched.
         expect(entrypoints.entryPoints.app.js).toHaveLength(1);
 
-        const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
+        const manifest = readJson(out, 'manifest.json');
         expect(manifest['build/theme.css']).toMatch(/\.css$/);
         expect(manifest['build/theme.js']).toBeUndefined();
         expect(manifest['build/app.js']).toMatch(/\.js$/);
-    }, 30_000);
+    });
 
     it('rsbuild deletes the runtime-only js of the style entry', async () => {
-        const out = mkdtempSync(join(tmpdir(), 'ups-style-rsbuild-'));
-        const rsbuild = await createRsbuild({
-            cwd: fixture,
-            rsbuildConfig: {
-                mode: 'production',
-                source: { entry: input },
-                plugins: [SymfonyRsbuild({ outputPath: out, publicPath: '/build/' })],
-            },
-        });
-        await rsbuild.build();
+        const out = tmpDir('style-rsbuild');
+        await rsbuildBuild(fixture, input, { outputPath: out, publicPath: '/build/' });
 
-        const entrypoints = JSON.parse(readFileSync(join(out, 'entrypoints.json'), 'utf8'));
+        const entrypoints = readJson(out, 'entrypoints.json');
         expect(entrypoints.entryPoints.theme.js).toEqual([]);
         expect(entrypoints.entryPoints.theme.css).toHaveLength(1);
         expect(entrypoints.entryPoints.app.js).toHaveLength(1);
@@ -74,9 +57,9 @@ describe('style entries advertise CSS only (Vite/Rsbuild parity)', () => {
         // Deleted from the compilation, so the app entry's is the only JS in the build.
         expect(jsFilesOnDisk(out)).toHaveLength(1);
 
-        const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
+        const manifest = readJson(out, 'manifest.json');
         expect(manifest['build/theme.css']).toMatch(/\.css$/);
         expect(manifest['build/theme.js']).toBeUndefined();
         expect(manifest['build/app.js']).toMatch(/\.js$/);
-    }, 60_000);
+    });
 });
