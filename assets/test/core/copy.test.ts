@@ -93,7 +93,7 @@ describe('resolveCopyFiles', () => {
 });
 
 describe('copyManifest', () => {
-    it('keys by manifestKeyPrefix + logicalName, values by joinUrl(publicPath, physicalName)', () => {
+    it('keys by manifestKeyPrefix + logicalName, values by publicPath + physicalName', () => {
         const files = resolveCopyFiles([entry()], true);
         const manifest = copyManifest(files, { publicPath: '/build/', manifestKeyPrefix: 'build/' });
         expect(manifest['build/images/logo.svg']).toMatch(/^\/build\/images\/logo\.[0-9a-f]{8}\.svg$/);

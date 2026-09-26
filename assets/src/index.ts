@@ -9,7 +9,7 @@ import { bundleToGraph, configToDevGraph } from './collectors/vite';
 import { copyManifest, resolveCopyFiles, writeCopyFiles } from './core/copy';
 import { resolveDevOrigin, urlHost } from './core/dev-server';
 import { writeSymfonyFiles } from './core/emit';
-import { buildEntrypoints, buildManifest, joinUrl } from './core/format';
+import { buildEntrypoints, buildManifest } from './core/format';
 import { integrityFromDisk, referencedFileNames } from './core/integrity';
 import { isAbsolutePublicPath, normalizeOptions, resolvePublicPath } from './core/options';
 import { slash, trimTrailingSlash } from './core/paths';
@@ -151,8 +151,8 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                         isProd: false,
                         devServer: {
                             origin,
-                            client: joinUrl(urlPrefix, '@vite/client'),
-                            reactRefresh: usesReactPlugin ? joinUrl(urlPrefix, '@react-refresh') : null,
+                            client: `${urlPrefix}@vite/client`,
+                            reactRefresh: usesReactPlugin ? `${urlPrefix}@react-refresh` : null,
                         },
                         publicPath: resolved.publicPath,
                         urlPrefix,

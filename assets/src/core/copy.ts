@@ -2,7 +2,6 @@ import type { ResolvedCopyEntry } from '../types';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, relative, sep } from 'node:path';
-import { joinUrl } from './format';
 
 export interface CopyResult {
     /** Path used for the manifest key, e.g. `images/icons/cat.svg`. */
@@ -75,8 +74,7 @@ export function copyManifest(
 ): Record<string, string> {
     const manifest: Record<string, string> = {};
     for (const file of files) {
-        manifest[opts.manifestKeyPrefix + file.logicalName] =
-            joinUrl(opts.publicPath, file.physicalName) + file.versionQuery;
+        manifest[opts.manifestKeyPrefix + file.logicalName] = opts.publicPath + file.physicalName + file.versionQuery;
     }
     return manifest;
 }

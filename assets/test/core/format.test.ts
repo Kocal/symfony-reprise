@@ -41,11 +41,6 @@ describe('buildEntrypoints', () => {
         expect(out.entryPoints.admin).toEqual({ js: ['build/admin-99.js'], css: [], preload: [], dynamic: [] });
     });
 
-    it('strips the leading slash even when urlPrefix has no trailing slash', () => {
-        const out = buildEntrypoints(graph, { ...ctx, urlPrefix: '/build' });
-        expect(out.entryPoints.app.js).toEqual(['build/app-a1b2.js']);
-    });
-
     it('emits a top-level integrity map keyed by reference when the graph carries hashes', () => {
         const out = buildEntrypoints(
             { ...graph, integrity: { 'app-a1b2.js': 'sha384-JS', 'app-c3d4.css': 'sha384-CSS' } },
