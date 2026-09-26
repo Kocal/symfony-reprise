@@ -93,6 +93,10 @@ final class EntrypointsLookup implements EntrypointsLookupInterface
     public function reset(): void
     {
         $this->returnedFiles = [];
+        // A missing entrypoints.json may have been built since: look again on the next request.
+        if (null === $this->entrypoints) {
+            $this->loaded = false;
+        }
     }
 
     /**
@@ -148,16 +152,17 @@ final class EntrypointsLookup implements EntrypointsLookupInterface
         }
 
         $item = $this->cache->getItem($this->cacheKey);
-        if ($item->isHit()) {
-            $entrypoints = $item->get();
-
-            return $this->entrypoints = $entrypoints instanceof Entrypoints ? $entrypoints : null;
+        $cached = $item->get();
+        if ($cached instanceof Entrypoints) {
+            return $this->entrypoints = $cached;
         }
 
-        $entrypoints = $this->load();
-        $this->cache->save($item->set($entrypoints));
+        $this->entrypoints = $this->load();
+        if (null !== $this->entrypoints) {
+            $this->cache->save($item->set($this->entrypoints));
+        }
 
-        return $this->entrypoints = $entrypoints;
+        return $this->entrypoints;
     }
 
     private function load(): ?Entrypoints

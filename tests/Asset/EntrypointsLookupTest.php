@@ -152,4 +152,39 @@ final class EntrypointsLookupTest extends TestCase
         $this->assertTrue($item->isHit());
         $this->assertInstanceOf(Entrypoints::class, $item->get());
     }
+
+    public function testAMissingFileIsNotCached()
+    {
+        $cache = new ArrayAdapter();
+
+        $this->assertSame([], new EntrypointsLookup('/does/not/exist/entrypoints.json', false, $cache)->getJavaScriptFiles('app'));
+        $this->assertFalse($cache->getItem('reprise.entrypoints')->isHit());
+    }
+
+    public function testACachedNullIsIgnoredAndTheFileRead()
+    {
+        $cache = new ArrayAdapter();
+        $cache->save($cache->getItem('reprise.entrypoints')->set(null));
+
+        $lookup = new EntrypointsLookup(__DIR__.'/../fixtures/build/entrypoints.json', true, $cache);
+
+        $this->assertSame(['build/app-a1b2.js'], $lookup->getJavaScriptFiles('app'));
+    }
+
+    public function testResetForgetsAMissingFileSoALaterBuildIsPickedUp()
+    {
+        $path = sys_get_temp_dir().'/reprise_entrypoints_'.uniqid('', true).'.json';
+        $lookup = new EntrypointsLookup($path, false);
+
+        try {
+            $this->assertSame([], $lookup->getJavaScriptFiles('app'));
+
+            copy(__DIR__.'/../fixtures/build/entrypoints.json', $path);
+            $lookup->reset();
+
+            $this->assertSame(['build/app-a1b2.js'], $lookup->getJavaScriptFiles('app'));
+        } finally {
+            @unlink($path);
+        }
+    }
 }
