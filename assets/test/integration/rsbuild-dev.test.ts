@@ -136,6 +136,28 @@ describe('rsbuild dev pins the HMR client to the dev-server host', () => {
         expect(origin.rsbuildConfig.dev?.assetPrefix).toBe('http://127.0.0.1:<port>/build/');
     });
 
+    it.each([
+        ['0.0.0.0', 'localhost'],
+        ['::', 'localhost'],
+        ['::1', '[::1]'],
+    ])('maps server.host %s to %s for the client + asset prefix', async (host, expected) => {
+        const out = mkdtempSync(join(tmpdir(), 'ups-rsbuild-devhost-'));
+        const rsbuild = await createRsbuild({
+            cwd: fixture,
+            rsbuildConfig: {
+                mode: 'development',
+                server: { host },
+                source: { entry: { app: join(fixture, 'app.js') } },
+                plugins: [Symfony({ outputPath: out, publicPath: '/build/' })],
+            },
+        });
+
+        const { origin } = await rsbuild.inspectConfig();
+
+        expect(origin.rsbuildConfig.dev?.client).toMatchObject({ host: expected });
+        expect(origin.rsbuildConfig.dev?.assetPrefix).toBe(`http://${expected}:<port>/build/`);
+    });
+
     it('follows devServerOrigin for the client + asset prefix', async () => {
         const out = mkdtempSync(join(tmpdir(), 'ups-rsbuild-devorigin-'));
         const rsbuild = await createRsbuild({

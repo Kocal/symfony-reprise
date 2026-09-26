@@ -7,7 +7,7 @@ import { createUnplugin } from 'unplugin';
 import { statsToGraph, styleEntryNames } from './collectors/rspack';
 import { bundleToGraph, configToDevGraph } from './collectors/vite';
 import { copyManifest, resolveCopyFiles, writeCopyFiles } from './core/copy';
-import { resolveDevOrigin } from './core/dev-server';
+import { resolveDevOrigin, urlHost } from './core/dev-server';
 import { writeSymfonyFiles } from './core/emit';
 import { buildEntrypoints, buildManifest, joinUrl } from './core/format';
 import { integrityFromDisk, referencedFileNames } from './core/integrity';
@@ -206,11 +206,8 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
 
                     // The advertised dev host must be the one the server binds to: Rsbuild's default `localhost`
                     // binds `::1` only, so a literal `127.0.0.1` isn't listening and refuses HMR/lazy/chunk requests.
-                    // Same `0.0.0.0`/unset -> `localhost` mapping as the `done` tap, so client + origin stay in sync.
-                    const devHost =
-                        typeof config.server.host === 'string' && config.server.host !== '0.0.0.0'
-                            ? config.server.host
-                            : 'localhost';
+                    // Same wildcard/unset -> `localhost` mapping as the `done` tap, so client + origin stay in sync.
+                    const devHost = urlHost(typeof config.server.host === 'string' ? config.server.host : 'localhost');
                     const secure = publicOrigin ? publicOrigin.protocol === 'https:' : Boolean(config.server.https);
 
                     // Pin the HMR/lazy-compilation client to the dev server: by default it derives its WS URL from
@@ -336,12 +333,12 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                             // Derive the dev origin ourselves from `api.context.devServer` + our `publicPath`, rather
                             // than reading back `compiler.options.output.publicPath` (whose dev value depends on Rsbuild's merge).
                             const devServer = api.context.devServer;
-                            // A browser can't dial 0.0.0.0, so substitute localhost for the advertised URL.
-                            const hostname = devServer?.hostname === '0.0.0.0' ? 'localhost' : devServer?.hostname;
                             const origin =
                                 isDev && devServer
-                                    ? (resolved.devServerOrigin ??
-                                      `${devServer.https ? 'https' : 'http'}://${hostname}:${devServer.port}`)
+                                    ? resolveDevOrigin(
+                                          { address: devServer.hostname, port: devServer.port },
+                                          { override: resolved.devServerOrigin, https: devServer.https }
+                                      )
                                     : null;
                             const urlPrefix = origin
                                 ? resolvePublicPath(resolved.publicPath, origin)
