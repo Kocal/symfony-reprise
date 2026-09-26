@@ -1,20 +1,32 @@
-import type { RsbuildPlugin } from '@rsbuild/core';
-import { mkdtempSync, readdirSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import type { RsbuildConfig, RsbuildPlugin } from '@rsbuild/core';
+import type { Options } from '../../src/types';
+import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { createRsbuild } from '@rsbuild/core';
+import { createRsbuild, mergeRsbuildConfig } from '@rsbuild/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import Symfony from '../../src/rsbuild';
-import { getFreePort } from './support';
+import { getFreePort, readJson, tmpDir } from './support';
 
 const fixture = join(import.meta.dirname, '../fixtures/basic');
+
+async function inspectDevConfig(options: Options, config: RsbuildConfig = {}) {
+    const rsbuild = await createRsbuild({
+        cwd: fixture,
+        rsbuildConfig: mergeRsbuildConfig(
+            { mode: 'development', source: { entry: { app: join(fixture, 'app.js') } }, plugins: [Symfony(options)] },
+            config
+        ),
+    });
+    const { origin } = await rsbuild.inspectConfig();
+    return origin.rsbuildConfig;
+}
 
 describe('rsbuild dev writes absolute dev-server URLs and no HTML', () => {
     let server: Awaited<ReturnType<Awaited<ReturnType<typeof createRsbuild>>['startDevServer']>>;
     let out: string;
 
     beforeEach(async () => {
-        out = mkdtempSync(join(tmpdir(), 'ups-rsbuild-dev-'));
+        out = tmpDir('rsbuild-dev');
         const port = await getFreePort();
 
         // The `done` hook writes entrypoints.json synchronously as part of Rspack's `done` tap
@@ -56,7 +68,7 @@ describe('rsbuild dev writes absolute dev-server URLs and no HTML', () => {
     });
 
     it('points entries at the dev-server origin, client:null, no HTML', async () => {
-        const entry = JSON.parse(readFileSync(join(out, 'entrypoints.json'), 'utf8'));
+        const entry = readJson(out, 'entrypoints.json');
 
         expect(entry.isProd).toBe(false);
         expect(entry.publicPath).toBe('/build/');
@@ -74,27 +86,17 @@ describe('rsbuild dev writes absolute dev-server URLs and no HTML', () => {
 
         // In dev the manifest is empty (assets come from the dev server, no on-disk hash lookups),
         // matching the Vite dev path.
-        const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
+        const manifest = readJson(out, 'manifest.json');
         expect(manifest).toEqual({});
 
         const htmlFiles = readdirSync(out, { recursive: true }).filter((f) => String(f).endsWith('.html'));
         expect(htmlFiles).toEqual([]);
-    }, 60_000);
+    });
 });
 
 describe('rsbuild dev pins the HMR client to the dev-server host', () => {
     it('sets dev.client host/port/protocol so HMR and lazy compilation target the dev server', async () => {
-        const out = mkdtempSync(join(tmpdir(), 'ups-rsbuild-devclient-'));
-        const rsbuild = await createRsbuild({
-            cwd: fixture,
-            rsbuildConfig: {
-                mode: 'development',
-                source: { entry: { app: join(fixture, 'app.js') } },
-                plugins: [Symfony({ outputPath: out, publicPath: '/build/' })],
-            },
-        });
-
-        const { origin } = await rsbuild.inspectConfig();
+        const { dev } = await inspectDevConfig({ outputPath: tmpDir('rsbuild-devclient'), publicPath: '/build/' });
 
         // Without this, the compiled HMR client derives its socket URL from window.location (the
         // Symfony page) and 404s. `<port>` is substituted with the real port at server start; `ws`
@@ -104,7 +106,7 @@ describe('rsbuild dev pins the HMR client to the dev-server host', () => {
         // lazy-compilation / async-chunk request to it would be refused. `localhost` is also
         // "potentially trustworthy", so `ws://`/`http://` stay allowed from an HTTPS Symfony page.
         // Lazy compilation reads the same config.
-        expect(origin.rsbuildConfig.dev?.client).toMatchObject({
+        expect(dev?.client).toMatchObject({
             host: 'localhost',
             port: '<port>',
             protocol: 'ws',
@@ -113,27 +115,19 @@ describe('rsbuild dev pins the HMR client to the dev-server host', () => {
         // Async chunks build their URLs from the dev runtime publicPath; it must point at the dev
         // server host + publicPath (verbatim, `<port>` resolved at start), not the page origin, and
         // uses the same host as the client so it lands where the server actually listens.
-        expect(origin.rsbuildConfig.dev?.assetPrefix).toBe('http://localhost:<port>/build/');
+        expect(dev?.assetPrefix).toBe('http://localhost:<port>/build/');
     });
 
     it('honours a custom server.host for the client + asset prefix', async () => {
-        const out = mkdtempSync(join(tmpdir(), 'ups-rsbuild-devhost-'));
-        const rsbuild = await createRsbuild({
-            cwd: fixture,
-            rsbuildConfig: {
-                mode: 'development',
-                server: { host: '127.0.0.1' },
-                source: { entry: { app: join(fixture, 'app.js') } },
-                plugins: [Symfony({ outputPath: out, publicPath: '/build/' })],
-            },
-        });
-
-        const { origin } = await rsbuild.inspectConfig();
+        const { dev } = await inspectDevConfig(
+            { outputPath: tmpDir('rsbuild-devhost'), publicPath: '/build/' },
+            { server: { host: '127.0.0.1' } }
+        );
 
         // A user who pins the dev server to a specific host must have the advertised URLs follow it,
         // so they still match where the server binds (here IPv4 loopback, explicitly requested).
-        expect(origin.rsbuildConfig.dev?.client).toMatchObject({ host: '127.0.0.1' });
-        expect(origin.rsbuildConfig.dev?.assetPrefix).toBe('http://127.0.0.1:<port>/build/');
+        expect(dev?.client).toMatchObject({ host: '127.0.0.1' });
+        expect(dev?.assetPrefix).toBe('http://127.0.0.1:<port>/build/');
     });
 
     it.each([
@@ -141,47 +135,27 @@ describe('rsbuild dev pins the HMR client to the dev-server host', () => {
         ['::', 'localhost'],
         ['::1', '[::1]'],
     ])('maps server.host %s to %s for the client + asset prefix', async (host, expected) => {
-        const out = mkdtempSync(join(tmpdir(), 'ups-rsbuild-devhost-'));
-        const rsbuild = await createRsbuild({
-            cwd: fixture,
-            rsbuildConfig: {
-                mode: 'development',
-                server: { host },
-                source: { entry: { app: join(fixture, 'app.js') } },
-                plugins: [Symfony({ outputPath: out, publicPath: '/build/' })],
-            },
-        });
+        const { dev } = await inspectDevConfig(
+            { outputPath: tmpDir('rsbuild-devhost'), publicPath: '/build/' },
+            { server: { host } }
+        );
 
-        const { origin } = await rsbuild.inspectConfig();
-
-        expect(origin.rsbuildConfig.dev?.client).toMatchObject({ host: expected });
-        expect(origin.rsbuildConfig.dev?.assetPrefix).toBe(`http://${expected}:<port>/build/`);
+        expect(dev?.client).toMatchObject({ host: expected });
+        expect(dev?.assetPrefix).toBe(`http://${expected}:<port>/build/`);
     });
 
     it('follows devServerOrigin for the client + asset prefix', async () => {
-        const out = mkdtempSync(join(tmpdir(), 'ups-rsbuild-devorigin-'));
-        const rsbuild = await createRsbuild({
-            cwd: fixture,
-            rsbuildConfig: {
-                mode: 'development',
-                source: { entry: { app: join(fixture, 'app.js') } },
-                plugins: [
-                    Symfony({
-                        outputPath: out,
-                        publicPath: '/build/',
-                        devServerOrigin: 'https://assets.example.test/',
-                    }),
-                ],
-            },
+        const { dev } = await inspectDevConfig({
+            outputPath: tmpDir('rsbuild-devorigin'),
+            publicPath: '/build/',
+            devServerOrigin: 'https://assets.example.test/',
         });
 
-        const { origin } = await rsbuild.inspectConfig();
-
-        expect(origin.rsbuildConfig.dev?.client).toMatchObject({
+        expect(dev?.client).toMatchObject({
             host: 'assets.example.test',
             port: '443',
             protocol: 'wss',
         });
-        expect(origin.rsbuildConfig.dev?.assetPrefix).toBe('https://assets.example.test/build/');
+        expect(dev?.assetPrefix).toBe('https://assets.example.test/build/');
     });
 });

@@ -1,13 +1,10 @@
 import type { Options } from '../../src/types';
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { createRsbuild } from '@rsbuild/core';
-import { build } from 'vite';
 import { describe, expect, it } from 'vitest';
 import SymfonyRsbuild from '../../src/rsbuild';
-import SymfonyVite from '../../src/vite';
-import { createSymfonyWriteWaiter } from './support';
+import { createSymfonyWriteWaiter, readJson, tmpDir, viteBuild } from './support';
 
 const fixture = join(import.meta.dirname, '../fixtures/basic');
 const entry = { app: join(fixture, 'app.js') };
@@ -26,10 +23,6 @@ function options(out: string): Options {
     };
 }
 
-function readJson(dir: string, file: string): Record<string, never> {
-    return JSON.parse(readFileSync(join(dir, file), 'utf8'));
-}
-
 function expectBuildOutput(out: string): void {
     const entrypoints = readJson(out, 'entrypoints.json');
     expect(entrypoints.isProd).toBe(true);
@@ -44,13 +37,8 @@ function expectBuildOutput(out: string): void {
 
 describe('build --watch writes the same Symfony files as a one-off build', () => {
     it('vite build --watch', async () => {
-        const out = mkdtempSync(join(tmpdir(), 'ups-watch-vite-'));
-        const watcher = (await build({
-            root: fixture,
-            logLevel: 'silent',
-            build: { emptyOutDir: true, watch: {}, rollupOptions: { input: entry } },
-            plugins: [SymfonyVite(options(out))],
-        })) as unknown as Watcher;
+        const out = tmpDir('watch-vite');
+        const watcher = (await viteBuild(fixture, entry, options(out), { build: { watch: {} } })) as unknown as Watcher;
 
         try {
             await new Promise<void>((resolve, reject) => {
@@ -63,10 +51,10 @@ describe('build --watch writes the same Symfony files as a one-off build', () =>
         } finally {
             await watcher.close();
         }
-    }, 30_000);
+    });
 
     it('rsbuild build --watch', async () => {
-        const out = mkdtempSync(join(tmpdir(), 'ups-watch-rsbuild-'));
+        const out = tmpDir('watch-rsbuild');
         const waiter = createSymfonyWriteWaiter();
         const rsbuild = await createRsbuild({
             cwd: fixture,
@@ -84,5 +72,5 @@ describe('build --watch writes the same Symfony files as a one-off build', () =>
         } finally {
             await result.close();
         }
-    }, 60_000);
+    });
 });

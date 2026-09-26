@@ -1,7 +1,7 @@
 import type { RsbuildPlugin } from '@rsbuild/core';
 import type { Plugin } from 'vite';
-import { mkdirSync, mkdtempSync, realpathSync, utimesSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import type { TestContext } from 'vitest';
+import { mkdirSync, utimesSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { createRsbuild } from '@rsbuild/core';
@@ -9,12 +9,18 @@ import { build, createServer } from 'vite';
 import { describe, expect, it, vi } from 'vitest';
 import SymfonyRsbuild from '../../src/rsbuild';
 import SymfonyVite from '../../src/vite';
-import { createSymfonyWriteWaiter, getFreePort } from './support';
+import { createSymfonyWriteWaiter, getFreePort, tmpDir } from './support';
 
 const SETTLE_MS = 3_000;
 
-function app(): { dir: string; publicDir: string; varDir: string; out: string; dependency: string } {
-    const dir = realpathSync(mkdtempSync(join(tmpdir(), 'ups-watch-loop-')));
+function app(context: TestContext): {
+    dir: string;
+    publicDir: string;
+    varDir: string;
+    out: string;
+    dependency: string;
+} {
+    const dir = tmpDir('watch-loop', context);
     const publicDir = join(dir, 'public');
     const varDir = join(dir, 'var');
     const dependencyDir = join(dir, 'node_modules/dep');
@@ -65,13 +71,14 @@ function rsbuildWatching(dir: string): { plugin: RsbuildPlugin; rebuildTriggers:
 }
 
 async function expectSingleRsbuildBuild(
+    context: TestContext,
     action: 'dev' | 'build',
     {
         ignored,
         metadataOutsideOutput = false,
     }: { ignored?: RegExp | string | ((path: string) => boolean); metadataOutsideOutput?: boolean } = {}
 ): Promise<void> {
-    const { dir, publicDir, varDir, out, dependency } = app();
+    const { dir, publicDir, varDir, out, dependency } = app(context);
     const metadataPath = metadataOutsideOutput ? join(varDir, 'reprise') : undefined;
     const tool = rsbuildWatching(metadataPath ? varDir : publicDir);
     const firstWrite = createSymfonyWriteWaiter();
@@ -102,36 +109,24 @@ async function expectSingleRsbuildBuild(
 }
 
 describe.concurrent('writing the Symfony files does not retrigger a build watching their directory', () => {
-    it('rsbuild dev', () => expectSingleRsbuildBuild('dev'), 30_000);
+    it('rsbuild dev', (context) => expectSingleRsbuildBuild(context, 'dev'));
 
-    it('rsbuild build --watch', () => expectSingleRsbuildBuild('build'), 30_000);
+    it('rsbuild build --watch', (context) => expectSingleRsbuildBuild(context, 'build'));
 
-    it(
-        'rsbuild dev, with metadataPath outside outputPath',
-        () => expectSingleRsbuildBuild('dev', { metadataOutsideOutput: true }),
-        30_000
-    );
+    it('rsbuild dev, with metadataPath outside outputPath', (context) =>
+        expectSingleRsbuildBuild(context, 'dev', { metadataOutsideOutput: true }));
 
-    it(
-        'rsbuild dev, with a user-set RegExp ignore',
-        () => expectSingleRsbuildBuild('dev', { ignored: /[\\/](?:node_modules|\.cache)[\\/]/ }),
-        30_000
-    );
+    it('rsbuild dev, with a user-set RegExp ignore', (context) =>
+        expectSingleRsbuildBuild(context, 'dev', { ignored: /[\\/](?:node_modules|\.cache)[\\/]/ }));
 
-    it(
-        'rsbuild dev, with a user-set glob ignore',
-        () => expectSingleRsbuildBuild('dev', { ignored: '**/node_modules/**' }),
-        30_000
-    );
+    it('rsbuild dev, with a user-set glob ignore', (context) =>
+        expectSingleRsbuildBuild(context, 'dev', { ignored: '**/node_modules/**' }));
 
-    it(
-        'rsbuild dev, with a user-set function ignore',
-        () => expectSingleRsbuildBuild('dev', { ignored: (path) => /[\\/]node_modules[\\/]/.test(path) }),
-        30_000
-    );
+    it('rsbuild dev, with a user-set function ignore', (context) =>
+        expectSingleRsbuildBuild(context, 'dev', { ignored: (path) => /[\\/]node_modules[\\/]/.test(path) }));
 
-    it('vite dev', async () => {
-        const { dir, publicDir, out } = app();
+    it('vite dev', async (context) => {
+        const { dir, publicDir, out } = app(context);
         const watching: Plugin = {
             name: 'test-watch-dir',
             configureServer(server) {
@@ -152,10 +147,10 @@ describe.concurrent('writing the Symfony files does not retrigger a build watchi
         } finally {
             await server.close();
         }
-    }, 30_000);
+    });
 
-    it('vite build --watch', async () => {
-        const { dir, publicDir, out } = app();
+    it('vite build --watch', async (context) => {
+        const { dir, publicDir, out } = app(context);
         let builds = 0;
         const watching: Plugin = {
             name: 'test-watch-dir',
@@ -179,5 +174,5 @@ describe.concurrent('writing the Symfony files does not retrigger a build watchi
         } finally {
             await watcher.close();
         }
-    }, 30_000);
+    });
 });

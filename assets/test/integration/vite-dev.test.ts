@@ -1,28 +1,26 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import type { ViteDevServer } from 'vite';
 import { join } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { createServer } from 'vite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import Symfony from '../../src/vite';
 import { hasTopLevelInput } from '../vite-version';
+import { readJson, tmpDir, viteDev } from './support';
 
 const fixture = join(import.meta.dirname, '../fixtures/basic');
 
 describe('vite serve writes a dev entrypoints.json', () => {
-    let server: Awaited<ReturnType<typeof createServer>>;
+    let server: ViteDevServer;
     let out: string;
 
     beforeEach(async () => {
-        out = mkdtempSync(join(tmpdir(), 'ups-dev-'));
-        server = await createServer({
-            root: fixture,
-            logLevel: 'silent',
-            server: { port: 0, host: '127.0.0.1' },
-            build: { rollupOptions: { input: { app: join(fixture, 'app.js'), admin: join(fixture, 'admin.js') } } },
-            plugins: [Symfony({ outputPath: out, publicPath: '/build/' })],
-        });
-        await server.listen();
+        out = tmpDir('dev');
+        server = await viteDev(
+            fixture,
+            { app: join(fixture, 'app.js'), admin: join(fixture, 'admin.js') },
+            { outputPath: out, publicPath: '/build/' },
+            { server: { host: '127.0.0.1' } }
+        );
     });
 
     afterEach(async () => {
@@ -30,7 +28,7 @@ describe('vite serve writes a dev entrypoints.json', () => {
     });
 
     it('points entries at the dev-server origin and marks the mode', () => {
-        const entry = JSON.parse(readFileSync(join(out, 'entrypoints.json'), 'utf8'));
+        const entry = readJson(out, 'entrypoints.json');
 
         expect(entry.isProd).toBe(false);
         expect(entry.publicPath).toBe('/build/');
@@ -47,17 +45,15 @@ describe('vite serve writes a dev entrypoints.json', () => {
     });
 
     it('exposes the React Fast Refresh URL when a React plugin is present', async () => {
-        const reactOut = mkdtempSync(join(tmpdir(), 'ups-dev-react-'));
-        const reactServer = await createServer({
-            root: fixture,
-            logLevel: 'silent',
-            server: { port: 0, host: '127.0.0.1' },
-            build: { rollupOptions: { input: { app: join(fixture, 'app.js') } } },
-            plugins: [react(), Symfony({ outputPath: reactOut, publicPath: '/build/' })],
-        });
-        await reactServer.listen();
+        const reactOut = tmpDir('dev-react');
+        const reactServer = await viteDev(
+            fixture,
+            { app: join(fixture, 'app.js') },
+            { outputPath: reactOut, publicPath: '/build/' },
+            { server: { host: '127.0.0.1' }, plugins: [react()] }
+        );
         try {
-            const entry = JSON.parse(readFileSync(join(reactOut, 'entrypoints.json'), 'utf8'));
+            const entry = readJson(reactOut, 'entrypoints.json');
             expect(entry.devServer.reactRefresh).toBe(`${entry.devServer.origin}/build/@react-refresh`);
         } finally {
             await reactServer.close();
@@ -67,7 +63,7 @@ describe('vite serve writes a dev entrypoints.json', () => {
 
 describe('vite top-level input', () => {
     it.skipIf(!hasTopLevelInput)('writes dev entries from the top-level input', async () => {
-        const out = mkdtempSync(join(tmpdir(), 'ups-dev-top-level-input-'));
+        const out = tmpDir('dev-top-level-input');
         const server = await createServer({
             root: fixture,
             logLevel: 'silent',
@@ -77,7 +73,7 @@ describe('vite top-level input', () => {
         });
         await server.listen();
         try {
-            const entry = JSON.parse(readFileSync(join(out, 'entrypoints.json'), 'utf8'));
+            const entry = readJson(out, 'entrypoints.json');
             expect(Object.keys(entry.entryPoints).sort()).toEqual(['admin', 'app']);
         } finally {
             await server.close();
