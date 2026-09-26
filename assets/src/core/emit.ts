@@ -37,14 +37,27 @@ export function writeSymfonyFiles(metadataPath: string, entrypoints: Entrypoints
     writeFileAtomic(join(metadataPath, MANIFEST_FILE), `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
-export function metadataWatchIgnore(metadataPath: string): { pattern: RegExp; globs: string[] } {
+export interface WatchIgnoreRule {
+    pattern: RegExp;
+    globs: string[];
+}
+
+export function watchIgnore({
+    outputPath,
+    metadataPath,
+}: Pick<ResolvedOptions, 'outputPath' | 'metadataPath'>): WatchIgnoreRule {
+    const outputDir = trimTrailingSlash(slash(outputPath));
     const dir = trimTrailingSlash(slash(metadataPath));
-    const names = [ENTRYPOINTS_FILE, MANIFEST_FILE];
-    const files = names.map((name) => `${dir}/${name}`);
+    const files = [ENTRYPOINTS_FILE, MANIFEST_FILE].map((name) => `${dir}/${name}`);
     // The metadata files are written through a temporary sibling that changes their directory too.
+    const alternatives = [
+        `${escapeRegExp(outputDir)}(?:/.*)?`,
+        escapeRegExp(dir),
+        ...files.map((file) => `${escapeRegExp(file)}(?:\\.[^/]+\\.tmp)?`),
+    ];
     return {
-        pattern: new RegExp(`^${escapeRegExp(dir)}(?:/(?:${names.map(escapeRegExp).join('|')})(?:\\.[^/]+\\.tmp)?)?$`),
-        globs: [...files, ...files.map((file) => `${file}.*.tmp`)],
+        pattern: new RegExp(`^(?:${alternatives.join('|')})$`),
+        globs: [outputDir, `${outputDir}/**`, ...files, ...files.map((file) => `${file}.*.tmp`)],
     };
 }
 

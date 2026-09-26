@@ -4,7 +4,7 @@ import { mkdtempSync, readdirSync, readFileSync, renameSync, statSync, writeFile
 import { tmpdir } from 'node:os';
 import { join, posix } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { metadataWatchIgnore, writeMetadata, writeSymfonyFiles } from '../../src/core/emit';
+import { watchIgnore, writeMetadata, writeSymfonyFiles } from '../../src/core/emit';
 import { computeIntegrity } from '../../src/core/integrity';
 import { normalizeOptions } from '../../src/core/options';
 import { slash } from '../../src/core/paths';
@@ -62,8 +62,8 @@ describe('writeSymfonyFiles', () => {
     });
 });
 
-describe('metadataWatchIgnore', () => {
-    it('covers every path writeSymfonyFiles touches, and nothing else', () => {
+describe('watchIgnore', () => {
+    it('covers the output dir and every path writeSymfonyFiles touches, and nothing else', () => {
         const dir = mkdtempSync(join(tmpdir(), 'reprise-emit-'));
         vi.mocked(renameSync).mockClear();
         writeSymfonyFiles(dir, entrypoints('/build/'), {});
@@ -71,18 +71,19 @@ describe('metadataWatchIgnore', () => {
             .mocked(renameSync)
             .mock.calls.flat()
             .map((path) => slash(String(path)));
-        const { pattern, globs } = metadataWatchIgnore(dir);
+        const outputDir = `${slash(dir)}/build`;
+        const { pattern, globs } = watchIgnore({ outputPath: `${outputDir}/`, metadataPath: dir });
         const globbed = (path: string): boolean => globs.some((glob) => posix.matchesGlob(path, glob));
 
         expect(written).toHaveLength(4);
         expect(pattern.test(slash(dir))).toBe(true);
-        for (const path of written) {
-            expect(pattern.test(path)).toBe(true);
-            expect(globbed(path)).toBe(true);
+        for (const path of [...written, outputDir, `${outputDir}/app.js`]) {
+            expect(pattern.test(path), path).toBe(true);
+            expect(globbed(path), path).toBe(true);
         }
-        for (const path of [`${slash(dir)}/app.js`, `${slash(dir)}.old/manifest.json`]) {
-            expect(pattern.test(path)).toBe(false);
-            expect(globbed(path)).toBe(false);
+        for (const path of [`${slash(dir)}/app.js`, `${slash(dir)}.old/manifest.json`, `${outputDir}er/app.js`]) {
+            expect(pattern.test(path), path).toBe(false);
+            expect(globbed(path), path).toBe(false);
         }
     });
 });

@@ -22,6 +22,7 @@ interface ControllersJson {
 
 /** The virtual module the runtime helper imports; provided by each bundler adapter. */
 export const VIRTUAL_CONTROLLERS_ID = 'virtual:symfony/controllers';
+export const RESOLVED_VIRTUAL_CONTROLLERS_ID = `\0${VIRTUAL_CONTROLLERS_ID}`;
 
 /** Shown when the virtual module is imported while the `stimulus` option is unset. */
 export const STIMULUS_NOT_ENABLED_MESSAGE =

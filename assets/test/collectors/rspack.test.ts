@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { statsToGraph } from '../../src/collectors/rspack';
+import { statsToGraph, styleEntryNames } from '../../src/collectors/rspack';
 
 describe('statsToGraph', () => {
     it('extracts js/css per entry and skips hot-update files', () => {
@@ -80,14 +80,14 @@ describe('statsToGraph with style entries', () => {
     };
 
     it('drops the runtime-only js of a stylesheet entry from the entry and the manifest', () => {
-        const graph = statsToGraph(stats, entryConfig);
+        const graph = statsToGraph(stats, styleEntryNames(entryConfig));
         expect(graph.entryPoints.theme).toEqual({ js: [], css: ['theme.b2.css'], preload: [], dynamic: [] });
         expect(graph.assets).toContainEqual({ logicalName: 'theme.css', fileName: 'theme.b2.css' });
         expect(graph.assets).not.toContainEqual({ logicalName: 'theme.js', fileName: 'theme.a1.js' });
     });
 
     it('keeps the js of entries not built purely from stylesheets', () => {
-        const graph = statsToGraph(stats, entryConfig);
+        const graph = statsToGraph(stats, styleEntryNames(entryConfig));
         expect(graph.entryPoints.mixed.js).toEqual(['mixed.c3.js']);
         expect(graph.entryPoints.empty.js).toEqual(['empty.e5.js']);
     });

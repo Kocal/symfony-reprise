@@ -25,16 +25,15 @@ export type RspackEntry = Record<string, { import?: string[] }>;
  * file for them, where Vite prunes its equivalent; hiding it on both sides matches Encore's `addStyleEntry`,
  * which shipped CSS and no `<script>`. A build deletes the file itself; dev keeps it, simply unreferenced.
  */
-export function styleEntryNames(entry: RspackEntry | undefined): Set<string> {
+export function styleEntryNames(entry: RspackEntry): Set<string> {
     const names = new Set<string>();
-    for (const [name, { import: sources = [] }] of Object.entries(entry ?? {})) {
+    for (const [name, { import: sources = [] }] of Object.entries(entry)) {
         if (sources.length > 0 && sources.every(isStylesheet)) names.add(name);
     }
     return names;
 }
 
-export function statsToGraph(stats: RspackStats, entryConfig?: RspackEntry): NormalizedGraph {
-    const styleEntries = styleEntryNames(entryConfig);
+export function statsToGraph(stats: RspackStats, styleEntries: ReadonlySet<string> = new Set()): NormalizedGraph {
     const entryPoints: Record<string, EntryFiles> = {};
     for (const [name, entry] of Object.entries(stats.entrypoints ?? {})) {
         const files: EntryFiles = { js: [], css: [], preload: [], dynamic: [] };
