@@ -78,10 +78,11 @@ final class TagRenderer implements ResetInterface
 
         foreach ($lookup->getPreloadFiles($entryName) as $reference) {
             $url = $this->url($reference, $packageName);
-            $tagAttributes = ['rel' => 'modulepreload', 'href' => $url];
+            // Only the scripts' nonce applies: CSP checks a modulepreload against script-src like the scripts.
+            $tagAttributes = ['rel' => 'modulepreload', 'href' => $url] + array_intersect_key($scriptDefaults, ['nonce' => true]);
             $this->applyIntegrity($tagAttributes, $reference, $integrity);
-            $tags[] = \sprintf('<link %s>', $this->attributes($tagAttributes));
-            $this->preload($url, 'modulepreload', null, $reference, $integrity);
+            $tags[] = $this->tag(RenderAssetTagEvent::TYPE_MODULEPRELOAD, $tagAttributes);
+            $this->preload($url, 'modulepreload', null, $reference, $integrity, $tagAttributes);
         }
 
         foreach ($lookup->getJavaScriptFiles($entryName) as $reference) {
@@ -91,7 +92,7 @@ final class TagRenderer implements ResetInterface
             $tags[] = $this->tag(RenderAssetTagEvent::TYPE_SCRIPT, $tagAttributes);
             // modulepreload, not `preload as=script`: the tag is a module, and a classic-script preload
             // mismatches its credentials/CORS mode so the browser discards it.
-            $this->preload($url, 'modulepreload', null, $reference, $integrity);
+            $this->preload($url, 'modulepreload', null, $reference, $integrity, $tagAttributes);
         }
 
         return implode('', $tags);
@@ -111,7 +112,7 @@ final class TagRenderer implements ResetInterface
             $tagAttributes = ['rel' => 'stylesheet', 'href' => $url] + $attributes + $this->linkAttributes;
             $this->applyIntegrity($tagAttributes, $reference, $integrity);
             $tags[] = $this->tag(RenderAssetTagEvent::TYPE_LINK, $tagAttributes);
-            $this->preload($url, 'preload', 'style', $reference, $integrity);
+            $this->preload($url, 'preload', 'style', $reference, $integrity, $tagAttributes);
         }
 
         return implode('', $tags);
@@ -171,9 +172,10 @@ final class TagRenderer implements ResetInterface
     }
 
     /**
-     * @param array<string, string> $integrity
+     * @param array<string, string>      $integrity
+     * @param array<string, bool|string> $tagAttributes
      */
-    private function preload(string $url, string $rel, ?string $as, string $reference, array $integrity): void
+    private function preload(string $url, string $rel, ?string $as, string $reference, array $integrity, array $tagAttributes): void
     {
         if (!$this->preload || null === $this->requestStack || !class_exists(GenericLinkProvider::class)) {
             return;
@@ -192,6 +194,10 @@ final class TagRenderer implements ResetInterface
         [$hash, $crossorigin] = $this->integrityFor($reference, $integrity);
         if (null !== $hash) {
             $link = $link->withAttribute('integrity', $hash)->withAttribute('crossorigin', $crossorigin);
+        }
+        // A nonce-based CSP blocks a preload lacking the tag's nonce.
+        if (\is_string($tagAttributes['nonce'] ?? null)) {
+            $link = $link->withAttribute('nonce', $tagAttributes['nonce']);
         }
 
         $linkProvider = $request->attributes->get('_links');
@@ -235,7 +241,7 @@ final class TagRenderer implements ResetInterface
     /**
      * @param array<string, bool|string> $attributes
      */
-    private function tag(string $type, array $attributes, ?string $inlineBody = null): string
+    private function tag(string $type, array &$attributes, ?string $inlineBody = null): string
     {
         if (null !== $this->eventDispatcher) {
             $event = $this->eventDispatcher->dispatch(new RenderAssetTagEvent($type, $attributes));
@@ -243,7 +249,7 @@ final class TagRenderer implements ResetInterface
         }
 
         return match ($type) {
-            RenderAssetTagEvent::TYPE_LINK => \sprintf('<link %s>', $this->attributes($attributes)),
+            RenderAssetTagEvent::TYPE_LINK, RenderAssetTagEvent::TYPE_MODULEPRELOAD => \sprintf('<link %s>', $this->attributes($attributes)),
             default => \sprintf('<script %s>%s</script>', $this->attributes($attributes), $inlineBody ?? ''),
         };
     }
