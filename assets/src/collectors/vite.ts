@@ -3,11 +3,6 @@ import type { AssetEntry, EntryFiles, NormalizedGraph } from '../types';
 import { relative, resolve } from 'node:path';
 import { isStylesheet, slash } from '../core/paths';
 
-interface ViteChunkMetadata {
-    importedCss: Set<string>;
-}
-type ViteOutputChunk = Rollup.OutputChunk & { viteMetadata?: ViteChunkMetadata };
-
 export function bundleToGraph(bundle: Rollup.OutputBundle, root: string): NormalizedGraph {
     const entryPoints: Record<string, EntryFiles> = {};
     const assets: AssetEntry[] = [];
@@ -16,9 +11,8 @@ export function bundleToGraph(bundle: Rollup.OutputBundle, root: string): Normal
     const entryCss = new Set<string>();
     const asyncCss = new Set<string>();
 
-    for (const file of Object.values(bundle)) {
-        if (file.type !== 'chunk') continue;
-        const chunk = file as ViteOutputChunk;
+    for (const chunk of Object.values(bundle)) {
+        if (chunk.type !== 'chunk') continue;
         if (chunk.isEntry) {
             // Rollup can emit the entry as a thin *facade* that just re-imports the real chunk (e.g. when the
             // entry module uses top-level await); the CSS then rides on that statically-imported chunk, not the
@@ -84,7 +78,7 @@ function collectEntryCss(names: readonly string[], bundle: Rollup.OutputBundle):
     for (const name of names) {
         const output = bundle[name];
         if (output?.type !== 'chunk') continue;
-        for (const file of (output as ViteOutputChunk).viteMetadata?.importedCss ?? []) css.add(file);
+        for (const file of output.viteMetadata?.importedCss ?? []) css.add(file);
     }
     return [...css];
 }
