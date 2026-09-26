@@ -98,6 +98,12 @@ describe('generateControllersModule — local', () => {
         expect(src).toContain(posix(join(root, 'controllers/dummy_controller.js')));
     });
 
+    it('emits .jsx and .tsx local controllers', () => {
+        const src = generateControllersModule(localOpts, root, false);
+        expect(src).toContain(posix(join(root, 'controllers/jsx_widget_controller.jsx')));
+        expect(src).toContain(posix(join(root, 'controllers/tsx_widget_controller.tsx')));
+    });
+
     it('maps nested controllers with a double-dash identifier', () => {
         const src = generateControllersModule(localOpts, root, false);
         expect(src).toMatch(/"admin--user": controller_\d+/);
@@ -121,6 +127,8 @@ describe('generateControllersModule — local', () => {
             'acme--ux-hello--hello',
             'admin--user',
             'greet',
+            'jsx-widget',
+            'tsx-widget',
             // lazyControllers: third-party first, then local controllers sorted by filename
             'acme--ux-map--map',
             'above-imports',

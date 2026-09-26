@@ -252,7 +252,7 @@ controllers directory, the same way you would with Webpack Encore:
 
     app.register('clipboard', Clipboard)
 
-**Local controllers.** Any ``assets/controllers/*_controller.{js,ts}`` is registered automatically. The filename
+**Local controllers.** Any ``assets/controllers/*_controller.{js,jsx,ts,tsx}`` is registered automatically. The filename
 becomes the identifier (``hello_controller.js`` becomes ``hello``, ``admin/user_controller.js`` becomes
 ``admin--user``). To load a controller on demand, put a ``stimulusFetch: 'lazy'`` comment anywhere in the file; a
 block or a single-line comment both work, even on dummy controllers that export a plain value instead of a class.
