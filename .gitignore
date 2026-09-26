@@ -4,6 +4,9 @@
 # Subagent-driven-development scratch (briefs, reports, ledger, diffs)
 .superpowers/
 
+# Brainstorming specs and implementation plans, kept local
+/docs/superpowers/
+
 # Node / npm
 node_modules/
 /assets/dist/

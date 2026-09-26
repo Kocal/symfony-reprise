@@ -23,7 +23,7 @@ export type RspackEntry = Record<string, { import?: string[] }>;
 /**
  * Entries built purely from stylesheets (`{ theme: 'theme.scss' }`). Rspack always emits a runtime-only JS
  * file for them, where Vite prunes its equivalent; hiding it on both sides matches Encore's `addStyleEntry`,
- * which shipped CSS and no `<script>`. The file itself stays on disk, simply unreferenced.
+ * which shipped CSS and no `<script>`. A build deletes the file itself; dev keeps it, simply unreferenced.
  */
 export function styleEntryNames(entry: RspackEntry | undefined): Set<string> {
     const names = new Set<string>();

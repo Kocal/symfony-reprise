@@ -2,7 +2,6 @@
 /.agents export-ignore
 /.claude export-ignore
 /.editorconfig export-ignore
-/.npmrc export-ignore
 /.nvmrc export-ignore
 /.oxfmtrc.json export-ignore
 /.oxlintrc.json export-ignore
@@ -12,6 +11,7 @@
 /CLAUDE.md export-ignore
 /MAINTAINERS.md export-ignore
 /assets export-ignore
+/composer-dependency-analyser.php export-ignore
 /docs export-ignore
 /package.json export-ignore
 /phpstan.dist.neon export-ignore
