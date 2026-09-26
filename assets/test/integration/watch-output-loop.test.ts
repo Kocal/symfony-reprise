@@ -24,15 +24,24 @@ function app(): { dir: string; publicDir: string; out: string; dependency: strin
     writeFileSync(join(dir, 'app.js'), "import dep from 'dep'\nconsole.log(dep)\n");
     // Backdated, or the watcher can count the fixture's own creation as a change and rebuild once.
     const past = new Date(Date.now() - 60_000);
-    for (const path of [join(dir, 'app.js'), join(dependencyDir, 'index.js'), publicDir, dir]) {
+    const created = [
+        join(dir, 'app.js'),
+        join(dependencyDir, 'index.js'),
+        join(dependencyDir, 'package.json'),
+        dependencyDir,
+        join(dir, 'node_modules'),
+        publicDir,
+        dir,
+    ];
+    for (const path of created) {
         utimesSync(path, past, past);
     }
     return { dir, publicDir, out: join(publicDir, 'build'), dependency: join(dependencyDir, 'index.js') };
 }
 
 // Stands in for Tailwind CSS v4, which watches the project's directories, the one holding outputPath included.
-function rsbuildWatching(dir: string): { plugin: RsbuildPlugin; builds: () => number } {
-    let builds = 0;
+function rsbuildWatching(dir: string): { plugin: RsbuildPlugin; rebuildTriggers: () => string[][] } {
+    const builds: string[][] = [];
     const plugin: RsbuildPlugin = {
         name: 'test-watch-dir',
         setup(api) {
@@ -42,12 +51,14 @@ function rsbuildWatching(dir: string): { plugin: RsbuildPlugin; builds: () => nu
                     c.hooks.afterCompile.tap('test-watch-dir', (compilation) => {
                         compilation.contextDependencies.add(dir);
                     });
-                    c.hooks.done.tap('test-watch-dir', () => builds++);
+                    c.hooks.done.tap('test-watch-dir', () => {
+                        builds.push([...(c.modifiedFiles ?? []), ...(c.removedFiles ?? [])]);
+                    });
                 }
             });
         },
     };
-    return { plugin, builds: () => builds };
+    return { plugin, rebuildTriggers: () => builds.slice(1) };
 }
 
 async function expectSingleRsbuildBuild(
@@ -73,7 +84,7 @@ async function expectSingleRsbuildBuild(
         // Without a user-set ignore, node_modules must stay ignored, as Rspack does by default.
         if (!ignored) utimesSync(dependency, new Date(), new Date());
         await sleep(SETTLE_MS);
-        expect(tool.builds()).toBe(1);
+        expect(tool.rebuildTriggers()).toEqual([]);
     } finally {
         await running.close();
     }
@@ -86,15 +97,15 @@ describe.concurrent('writing the Symfony files does not retrigger a build watchi
 
     it(
         'rsbuild dev, with a user-set RegExp ignore',
-        () => expectSingleRsbuildBuild('dev', /[\\/]\.cache[\\/]/),
+        () => expectSingleRsbuildBuild('dev', /[\\/](?:node_modules|\.cache)[\\/]/),
         30_000
     );
 
-    it('rsbuild dev, with a user-set glob ignore', () => expectSingleRsbuildBuild('dev', '**/.cache/**'), 30_000);
+    it('rsbuild dev, with a user-set glob ignore', () => expectSingleRsbuildBuild('dev', '**/node_modules/**'), 30_000);
 
     it(
         'rsbuild dev, with a user-set function ignore',
-        () => expectSingleRsbuildBuild('dev', (path) => path.includes('/.cache/')),
+        () => expectSingleRsbuildBuild('dev', (path) => /[\\/]node_modules[\\/]/.test(path)),
         30_000
     );
 
