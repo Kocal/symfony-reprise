@@ -12,6 +12,7 @@ import { writeSymfonyFiles } from './core/emit';
 import { buildEntrypoints, buildManifest, joinUrl } from './core/format';
 import { integrityFromDisk, referencedFileNames } from './core/integrity';
 import { isAbsolutePublicPath, normalizeOptions, resolvePublicPath } from './core/options';
+import { slash, trimTrailingSlash } from './core/paths';
 import {
     affectsControllersModule,
     generateControllersModule,
@@ -238,6 +239,38 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                             rspackConfig.output ??= {};
                             rspackConfig.output.module = true;
                             rspackConfig.output.chunkFormat = 'module';
+                        },
+                        (rspackConfig) => {
+                            // A tool watching outputPath's parent (Tailwind CSS v4 watches `public/`) would otherwise
+                            // rebuild on every write of the Symfony files, forever.
+                            const outputDir = trimTrailingSlash(slash(resolved.outputPath));
+                            const metadataDir = trimTrailingSlash(slash(resolved.metadataPath));
+                            const metadataFiles = [`${metadataDir}/entrypoints.json`, `${metadataDir}/manifest.json`];
+                            const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            const own = new RegExp(
+                                `^(?:${escape(outputDir)}(?:/|$)|${metadataFiles.map(escape).join('|')}$)`
+                            );
+
+                            rspackConfig.watchOptions ??= {};
+                            const { ignored } = rspackConfig.watchOptions;
+                            if (ignored === undefined || ignored instanceof RegExp) {
+                                // Setting `ignored` replaces Rspack's default (node_modules, .git): extend it instead.
+                                const base = ignored ?? /[\\/](?:\.git|node_modules)[\\/]/;
+                                rspackConfig.watchOptions.ignored = new RegExp(
+                                    `(?:${base.source})|${own.source}`,
+                                    base.flags.replace(/[gy]/g, '')
+                                );
+                            } else if (typeof ignored === 'function') {
+                                rspackConfig.watchOptions.ignored = (path: string) =>
+                                    ignored(path) || own.test(slash(path));
+                            } else {
+                                rspackConfig.watchOptions.ignored = [
+                                    ignored,
+                                    outputDir,
+                                    `${outputDir}/**`,
+                                    metadataFiles,
+                                ].flat();
+                            }
                         },
                     ];
                 });
