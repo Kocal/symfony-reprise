@@ -10,10 +10,18 @@ export interface DevOriginInput {
     https?: boolean;
 }
 
-export function resolveDevOrigin(address: AddressInfo, input: DevOriginInput): string {
+// The spellings Vite and Rsbuild both treat as "every interface".
+const WILDCARD_HOSTS = new Set(['0.0.0.0', '::', '0000:0000:0000:0000:0000:0000:0000:0000']);
+
+// A browser can't dial a wildcard bind address, so advertise localhost instead.
+export function urlHost(host: string): string {
+    if (WILDCARD_HOSTS.has(host)) return 'localhost';
+    return host.includes(':') ? `[${host}]` : host;
+}
+
+export function resolveDevOrigin(address: Pick<AddressInfo, 'address' | 'port'>, input: DevOriginInput): string {
     if (input.override) return trimTrailingSlash(input.override);
     if (input.serverOrigin) return trimTrailingSlash(input.serverOrigin);
 
-    const host = address.family === 'IPv6' ? `[${address.address}]` : address.address;
-    return `${input.https ? 'https' : 'http'}://${host}:${address.port}`;
+    return `${input.https ? 'https' : 'http'}://${urlHost(address.address)}:${address.port}`;
 }

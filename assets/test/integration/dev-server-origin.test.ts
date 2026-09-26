@@ -1,4 +1,5 @@
 import { mkdtempSync, readFileSync } from 'node:fs';
+import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRsbuild } from '@rsbuild/core';
@@ -59,4 +60,61 @@ describe('devServerOrigin overrides the advertised dev-server origin', () => {
             await server.server.close();
         }
     }, 30_000);
+});
+
+describe('a wildcard or IPv6 dev-server host is advertised as a dialable origin', () => {
+    it.each([
+        ['0.0.0.0', 'localhost'],
+        [true, 'localhost'],
+        ['::1', '[::1]'],
+    ] as const)(
+        'vite, server.host: %s -> %s',
+        async (host, expected) => {
+            const out = mkdtempSync(join(tmpdir(), 'ups-host-vite-'));
+            const server = await createServer({
+                root: fixture,
+                logLevel: 'silent',
+                server: { port: 0, host },
+                build: { rollupOptions: { input: { app: join(fixture, 'app.js') } } },
+                plugins: [SymfonyVite({ outputPath: out, publicPath: '/build/' })],
+            });
+            await server.listen();
+            try {
+                const { port } = server.httpServer!.address() as AddressInfo;
+                expect(readEntrypoints(out).devServer.origin).toBe(`http://${expected}:${port}`);
+            } finally {
+                await server.close();
+            }
+        },
+        30_000
+    );
+
+    it.each([
+        ['0.0.0.0', 'localhost'],
+        ['::', 'localhost'],
+        ['::1', '[::1]'],
+    ])(
+        'rsbuild, server.host: %s -> %s',
+        async (host, expected) => {
+            const out = mkdtempSync(join(tmpdir(), 'ups-host-rsbuild-'));
+            const firstWrite = createSymfonyWriteWaiter();
+            const rsbuild = await createRsbuild({
+                cwd: fixture,
+                rsbuildConfig: {
+                    mode: 'development',
+                    source: { entry: { app: join(fixture, 'app.js') } },
+                    server: { port: await getFreePort(), host },
+                    plugins: [SymfonyRsbuild({ outputPath: out, publicPath: '/build/' }), firstWrite.plugin],
+                },
+            });
+            const server = await rsbuild.startDevServer();
+            try {
+                await firstWrite.written;
+                expect(readEntrypoints(out).devServer.origin).toBe(`http://${expected}:${server.port}`);
+            } finally {
+                await server.server.close();
+            }
+        },
+        30_000
+    );
 });
