@@ -23,7 +23,8 @@ export function bundleToGraph(bundle: Rollup.OutputBundle, root: string): Normal
             // Rollup can emit the entry as a thin *facade* that just re-imports the real chunk (e.g. when the
             // entry module uses top-level await); the CSS then rides on that statically-imported chunk, not the
             // facade. Walk static imports so entry CSS is collected wherever Rollup parked it.
-            const css = collectEntryCss(chunk, bundle);
+            const imports = staticImports(chunk, bundle);
+            const css = collectEntryCss([chunk.fileName, ...imports], bundle);
             for (const name of css) entryCss.add(name);
             // Vite drops a style entry's empty JS chunk from the bundle *after* this hook, so advertising it
             // would render a `<script>` for a file that was never written (and break SRI, which hashes off disk).
@@ -31,7 +32,7 @@ export function bundleToGraph(bundle: Rollup.OutputBundle, root: string): Normal
             entryPoints[chunk.name] = {
                 js: styleEntry ? [] : [chunk.fileName],
                 css,
-                preload: emittedChunks(chunk.imports, bundle),
+                preload: emittedChunks(imports, bundle),
                 dynamic: emittedChunks(chunk.dynamicImports, bundle),
             };
             if (!styleEntry) assets.push({ logicalName: `${chunk.name}.js`, fileName: chunk.fileName });
@@ -61,23 +62,30 @@ function emittedChunks(names: readonly string[], bundle: Rollup.OutputBundle): s
     });
 }
 
-// Collect an entry's CSS: its own `importedCss` plus that of every statically-imported chunk, reached
-// transitively. Static imports only — dynamic-import CSS loads with its chunk and stays out of the entry.
-function collectEntryCss(entry: ViteOutputChunk, bundle: Rollup.OutputBundle): string[] {
-    const css = new Set<string>();
+// Under Vite 8, `chunk.imports` lists direct imports only.
+function staticImports(entry: Rollup.OutputChunk, bundle: Rollup.OutputBundle): string[] {
     const visited = new Set<string>();
-    const walk = (chunk: ViteOutputChunk): void => {
-        if (chunk.viteMetadata) {
-            for (const name of chunk.viteMetadata.importedCss) css.add(name);
-        }
+    const walk = (chunk: Rollup.OutputChunk): void => {
         for (const imported of chunk.imports) {
-            if (visited.has(imported)) continue;
+            if (visited.has(imported) || imported === entry.fileName) continue;
             visited.add(imported);
             const dep = bundle[imported];
-            if (dep && dep.type === 'chunk') walk(dep as ViteOutputChunk);
+            if (dep?.type === 'chunk') walk(dep);
         }
     };
     walk(entry);
+    return [...visited];
+}
+
+// Collect an entry's CSS: its own `importedCss` plus that of every statically-imported chunk, reached
+// transitively. Static imports only — dynamic-import CSS loads with its chunk and stays out of the entry.
+function collectEntryCss(names: readonly string[], bundle: Rollup.OutputBundle): string[] {
+    const css = new Set<string>();
+    for (const name of names) {
+        const output = bundle[name];
+        if (output?.type !== 'chunk') continue;
+        for (const file of (output as ViteOutputChunk).viteMetadata?.importedCss ?? []) css.add(file);
+    }
     return [...css];
 }
 
