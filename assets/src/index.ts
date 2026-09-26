@@ -182,6 +182,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
             setup(api) {
                 // Rsbuild's dev/build signal; feeds the shared `isDev` the universal `load` reads.
                 isDev = api.context.action === 'dev';
+                const publicOrigin = resolved.devServerOrigin ? new URL(resolved.devServerOrigin) : null;
 
                 // Symfony renders the HTML, so no per-entry HTML pages.
                 api.modifyRsbuildConfig((config) => {
@@ -210,6 +211,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                         typeof config.server.host === 'string' && config.server.host !== '0.0.0.0'
                             ? config.server.host
                             : 'localhost';
+                    const secure = publicOrigin ? publicOrigin.protocol === 'https:' : Boolean(config.server.https);
 
                     // Pin the HMR/lazy-compilation client to the dev server: by default it derives its WS URL from
                     // `window.location` (the Symfony page) and 404s. `<port>` is substituted at server start; the
@@ -217,14 +219,15 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                     config.dev ??= {};
                     config.dev.client = {
                         ...config.dev.client,
-                        host: devHost,
-                        port: '<port>',
-                        protocol: config.server.https ? 'wss' : 'ws',
+                        host: publicOrigin?.hostname ?? devHost,
+                        port: publicOrigin ? publicOrigin.port || (secure ? '443' : '80') : '<port>',
+                        protocol: secure ? 'wss' : 'ws',
                     };
                     // Async chunk URLs come from `dev.assetPrefix` (default `/` -> 404 against the Symfony page).
                     // It's used verbatim (no `server.base` composed in), so carry the full publicPath; skip CDN.
                     if (!isAbsolutePublicPath(resolved.publicPath)) {
-                        config.dev.assetPrefix = `${config.server.https ? 'https' : 'http'}://${devHost}:<port>${resolved.publicPath}`;
+                        const origin = resolved.devServerOrigin ?? `${secure ? 'https' : 'http'}://${devHost}:<port>`;
+                        config.dev.assetPrefix = `${origin}${resolved.publicPath}`;
                     }
 
                     // The Rspack-layer flags behind `output.module` above, so async chunks are `import()`ed.
@@ -335,7 +338,8 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                             const hostname = devServer?.hostname === '0.0.0.0' ? 'localhost' : devServer?.hostname;
                             const origin =
                                 isDev && devServer
-                                    ? `${devServer.https ? 'https' : 'http'}://${hostname}:${devServer.port}`
+                                    ? (resolved.devServerOrigin ??
+                                      `${devServer.https ? 'https' : 'http'}://${hostname}:${devServer.port}`)
                                     : null;
                             const urlPrefix = origin
                                 ? resolvePublicPath(resolved.publicPath, origin)

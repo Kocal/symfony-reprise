@@ -78,7 +78,7 @@ export function normalizeOptions(options: Options | undefined, cwd: string): Res
         metadataPath,
         publicPath,
         manifestKeyPrefix,
-        devServerOrigin: options?.devServerOrigin,
+        devServerOrigin: options?.devServerOrigin ? trimTrailingSlash(options.devServerOrigin) : undefined,
         stimulus: normalizeStimulus(options?.stimulus, cwd),
         integrity: normalizeIntegrity(options?.integrity),
         copy: normalizeCopy(options?.copy, cwd),
