@@ -57,6 +57,11 @@ describe('normalizeOptions', () => {
         expect(r.manifestKeyPrefix).toBe('build/');
     });
 
+    it('drops a trailing slash from devServerOrigin', () => {
+        const r = normalizeOptions({ devServerOrigin: 'https://assets.example.test/' }, '/app');
+        expect(r.devServerOrigin).toBe('https://assets.example.test');
+    });
+
     it('honors an explicit empty manifestKeyPrefix', () => {
         const r = normalizeOptions({ publicPath: '/build/', manifestKeyPrefix: '' }, '/app');
         expect(r.manifestKeyPrefix).toBe('');

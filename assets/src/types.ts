@@ -79,8 +79,8 @@ export interface Options {
     manifestKeyPrefix?: string;
 
     /**
-     * Explicit dev-server origin used in `entrypoints.json` (serve mode),
-     * e.g. `http://localhost:5173`. Overrides the auto-detected origin.
+     * Explicit dev-server origin (serve mode), e.g. `https://assets.myapp.test`: the entry files,
+     * the HMR client and the async chunks are loaded from it instead of the auto-detected origin.
      * Useful behind a proxy or when the server binds to `0.0.0.0` (Docker).
      */
     devServerOrigin?: string;

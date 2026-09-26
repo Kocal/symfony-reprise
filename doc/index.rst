@@ -565,6 +565,46 @@ And, if you rely on ``manifest.json`` for ``asset()`` calls:
     because every build had its own ``outputPath``, so give each build its own subdirectory instead, for example
     ``var/reprise/app`` and ``var/reprise/widget``. See `Multiple builds`_ for the full setup.
 
+Reaching the dev server through another address
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In dev, ``entrypoints.json`` points the rendered tags at the dev server's own address, for example
+``http://localhost:5173``. When the browser reaches the dev server through another address instead, such as a
+reverse proxy, a Docker port mapping, or a local domain like ``https://assets.myapp.test``, set ``devServerOrigin``
+to that public origin.
+
+The browser then loads everything from that origin in dev: the entry files, the HMR client and its WebSocket, and the
+async chunks. Whatever sits in front of the dev server has to forward WebSocket connections too, or hot reloading
+stops working.
+
+.. code-block:: javascript
+
+    // vite.config.ts
+    import { defineConfig } from 'vite'
+    import Symfony from '@symfony/reprise/vite'
+
+    export default defineConfig({
+      plugins: [
+        Symfony({
+          devServerOrigin: 'https://assets.myapp.test',
+        }),
+      ],
+    })
+
+.. code-block:: javascript
+
+    // rsbuild.config.ts
+    import { defineConfig } from '@rsbuild/core'
+    import Symfony from '@symfony/reprise/rsbuild'
+
+    export default defineConfig({
+      plugins: [
+        Symfony({
+          devServerOrigin: 'https://assets.myapp.test',
+        }),
+      ],
+    })
+
 Subresource Integrity
 ~~~~~~~~~~~~~~~~~~~~~~~
 
