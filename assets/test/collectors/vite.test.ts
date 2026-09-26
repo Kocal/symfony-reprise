@@ -166,9 +166,19 @@ describe('bundleToGraph', () => {
         const graph = bundleToGraph(bundle, '/app');
 
         expect(graph.entryPoints.app.css).toEqual(['mid.css', 'leaf.css']);
+        expect(graph.entryPoints.app.preload).toEqual(['mid.js', 'leaf.js']);
         // Both stay in the manifest (keyed by name), not dropped as async chunk CSS.
         expect(graph.assets).toContainEqual({ logicalName: 'mid.css', fileName: 'mid.css' });
         expect(graph.assets).toContainEqual({ logicalName: 'leaf.css', fileName: 'leaf.css' });
+    });
+
+    it('never preloads the entry itself when a chunk it imports imports it back', () => {
+        const bundle = {
+            'app.js': chunk({ fileName: 'app.js', name: 'app', isEntry: true, imports: ['shared.js'] }),
+            'shared.js': chunk({ fileName: 'shared.js', name: 'shared', isEntry: false, imports: ['app.js'] }),
+        } as unknown as Rollup.OutputBundle;
+
+        expect(bundleToGraph(bundle, '/app').entryPoints.app.preload).toEqual(['shared.js']);
     });
 
     it('collects manifest assets: entry chunks by "<name>.js" and assets by names[0] without a source path', () => {
