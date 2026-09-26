@@ -1,18 +1,16 @@
 import type { UnpluginFactory, UnpluginInstance } from 'unplugin';
 import type { RspackEntry, RspackStats } from './collectors/rspack';
 import type { CopyResult } from './core/copy';
-import type { BuildContext, ManifestJson, NormalizedGraph, Options } from './types';
+import type { NormalizedGraph, Options } from './types';
 import * as process from 'node:process';
 import { createUnplugin } from 'unplugin';
 import { statsToGraph, styleEntryNames } from './collectors/rspack';
 import { bundleToGraph, configToDevGraph } from './collectors/vite';
-import { copyManifest, resolveCopyFiles, writeCopyFiles } from './core/copy';
+import { resolveCopyFiles, writeCopyFiles } from './core/copy';
 import { resolveDevOrigin, urlHost } from './core/dev-server';
-import { writeSymfonyFiles } from './core/emit';
-import { buildEntrypoints, buildManifest } from './core/format';
-import { integrityFromDisk, referencedFileNames } from './core/integrity';
+import { metadataWatchIgnore, writeMetadata } from './core/emit';
 import { isAbsolutePublicPath, normalizeOptions, resolvePublicPath } from './core/options';
-import { slash, trimTrailingSlash } from './core/paths';
+import { escapeRegExp, slash, trimTrailingSlash } from './core/paths';
 import {
     affectsControllersModule,
     generateControllersModule,
@@ -31,7 +29,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
     // Vite project root (from `configResolved`); keys imported assets in `bundleToGraph`.
     let root = cwd;
     // The Symfony files are written in `writeBundle`; stash what they need.
-    let pending: { graph: NormalizedGraph; ctx: BuildContext; manifest: ManifestJson } | null = null;
+    let pending: { graph: NormalizedGraph; copyFiles: CopyResult[] } | null = null;
 
     return {
         name: '@symfony/reprise',
@@ -74,38 +72,20 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
 
             generateBundle(_outputOptions, bundle) {
                 const graph = bundleToGraph(bundle, root);
-                const ctx: BuildContext = {
-                    isProd: true,
-                    devServer: null,
-                    publicPath: resolved.publicPath,
-                    urlPrefix: resolved.publicPath,
-                    manifestKeyPrefix: resolved.manifestKeyPrefix,
-                };
                 const copyFiles = resolveCopyFiles(resolved.copy, true);
                 for (const file of copyFiles) {
                     this.emitFile({ type: 'asset', fileName: file.physicalName, source: file.source });
                 }
-                const manifest = {
-                    ...buildManifest(graph, ctx),
-                    ...copyManifest(copyFiles, resolved),
-                };
                 // Vite finalizes chunk bytes only on disk write (replacing markers like `__VITE_PRELOAD__`),
                 // so the in-memory bundle differs from the file — hash for SRI in `writeBundle`, not here.
-                pending = { graph, ctx, manifest };
+                pending = { graph, copyFiles };
             },
 
             writeBundle() {
                 if (!pending) return;
-                const { graph, ctx, manifest } = pending;
+                const { graph, copyFiles } = pending;
                 pending = null;
-                if (resolved.integrity) {
-                    graph.integrity = integrityFromDisk(
-                        referencedFileNames(graph.entryPoints),
-                        resolved.outputPath,
-                        resolved.integrity.algorithms
-                    );
-                }
-                writeSymfonyFiles(resolved.metadataPath, buildEntrypoints(graph, ctx), manifest);
+                writeMetadata(resolved, graph, { isProd: true, devServer: null, copyFiles });
             },
 
             configResolved(config) {
@@ -147,25 +127,19 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                     const usesReactPlugin = server.config.plugins.some((plugin) =>
                         plugin.name?.startsWith('vite:react')
                     );
-                    const ctx: BuildContext = {
-                        isProd: false,
-                        devServer: {
-                            origin,
-                            client: `${urlPrefix}@vite/client`,
-                            reactRefresh: usesReactPlugin ? `${urlPrefix}@react-refresh` : null,
-                        },
-                        publicPath: resolved.publicPath,
-                        urlPrefix,
-                        manifestKeyPrefix: resolved.manifestKeyPrefix,
+                    const devServer = {
+                        origin,
+                        client: `${urlPrefix}@vite/client`,
+                        reactRefresh: usesReactPlugin ? `${urlPrefix}@react-refresh` : null,
                     };
                     try {
                         const copyFiles = resolveCopyFiles(resolved.copy, false);
                         writeCopyFiles(copyFiles, resolved.outputPath);
-                        writeSymfonyFiles(
-                            resolved.metadataPath,
-                            buildEntrypoints(configToDevGraph(server.config), ctx),
-                            copyManifest(copyFiles, resolved)
-                        );
+                        writeMetadata(resolved, configToDevGraph(server.config), {
+                            isProd: false,
+                            devServer,
+                            copyFiles,
+                        });
                     } catch (err) {
                         server.config.logger.error(
                             `[@symfony/reprise] failed to write dev entrypoints.json: ${err instanceof Error ? err.message : String(err)}`
@@ -244,13 +218,8 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                             // A tool watching outputPath's parent (Tailwind CSS v4 watches `public/`) would otherwise
                             // rebuild on every write of the Symfony files, forever.
                             const outputDir = trimTrailingSlash(slash(resolved.outputPath));
-                            const metadataDir = trimTrailingSlash(slash(resolved.metadataPath));
-                            const metadataFiles = [`${metadataDir}/entrypoints.json`, `${metadataDir}/manifest.json`];
-                            const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                            // The metadata files are written through a temporary sibling that changes their directory too.
-                            const own = new RegExp(
-                                `^(?:${escape(outputDir)}(?:/|$)|${escape(metadataDir)}(?:/(?:entrypoints|manifest)\\.json(?:\\.[^/]+\\.tmp)?)?$)`
-                            );
+                            const metadata = metadataWatchIgnore(resolved.metadataPath);
+                            const own = new RegExp(`^${escapeRegExp(outputDir)}(?:/|$)|${metadata.pattern.source}`);
 
                             rspackConfig.watchOptions ??= {};
                             const { ignored } = rspackConfig.watchOptions;
@@ -269,8 +238,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                                     ignored,
                                     outputDir,
                                     `${outputDir}/**`,
-                                    metadataFiles,
-                                    metadataFiles.map((file) => `${file}.*.tmp`),
+                                    metadata.globs,
                                 ].flat();
                             }
                         },
@@ -329,7 +297,8 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                             });
                         }
 
-                        c.hooks.done.tap('@symfony/reprise', (stats) => {
+                        // Ahead of Rsbuild's own `done` taps, which read `hasErrors()` to report the build and settle it.
+                        c.hooks.done.tap({ name: '@symfony/reprise', stage: -Infinity }, (stats) => {
                             // Derive the dev origin ourselves from `api.context.devServer` + our `publicPath`, rather
                             // than reading back `compiler.options.output.publicPath` (whose dev value depends on Rsbuild's merge).
                             const devServer = api.context.devServer;
@@ -340,48 +309,27 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                                           { override: resolved.devServerOrigin, https: devServer.https }
                                       )
                                     : null;
-                            const urlPrefix = origin
-                                ? resolvePublicPath(resolved.publicPath, origin)
-                                : resolved.publicPath;
-
-                            const ctx: BuildContext = {
-                                isProd: !isDev,
-                                devServer: origin ? { origin, client: null } : null,
-                                publicPath: resolved.publicPath,
-                                urlPrefix,
-                                manifestKeyPrefix: resolved.manifestKeyPrefix,
-                            };
                             const graph = statsToGraph(
                                 stats.toJson({ assets: true, entrypoints: true }) as RspackStats,
                                 // The normalized entry rather than `source.entry`: Rsbuild resolves and reshapes
                                 // entries on the way to Rspack, and this is the form the stats keys match.
                                 c.options.entry as RspackEntry
                             );
-                            // SRI (build only): `done` fires after emit, so hash files off disk. Dev has no stable hashes.
-                            if (!isDev && resolved.integrity) {
-                                graph.integrity = integrityFromDisk(
-                                    referencedFileNames(graph.entryPoints),
-                                    resolved.outputPath,
-                                    resolved.integrity.algorithms
-                                );
-                            }
-                            // Copied files: build emits them into the compilation, so statsToGraph already keys them,
-                            // but only `copyManifest` knows the `hash: false` version query, hence the overlay. Dev
-                            // isn't emitted, so write them to disk and key them here.
-                            let manifest: ManifestJson;
-                            if (isDev) {
-                                const copyFiles = resolveCopyFiles(resolved.copy, false);
-                                writeCopyFiles(copyFiles, resolved.outputPath);
-                                manifest = copyManifest(copyFiles, resolved);
-                            } else {
-                                manifest = { ...buildManifest(graph, ctx), ...copyManifest(copiedInBuild, resolved) };
-                            }
                             try {
-                                writeSymfonyFiles(resolved.metadataPath, buildEntrypoints(graph, ctx), manifest);
+                                let copyFiles = copiedInBuild;
+                                if (isDev) {
+                                    copyFiles = resolveCopyFiles(resolved.copy, false);
+                                    writeCopyFiles(copyFiles, resolved.outputPath);
+                                }
+                                writeMetadata(resolved, graph, {
+                                    isProd: !isDev,
+                                    devServer: origin ? { origin, client: null } : null,
+                                    copyFiles,
+                                });
                             } catch (err) {
-                                c.getInfrastructureLogger('@symfony/reprise').error(
-                                    `[@symfony/reprise] failed to write entrypoints.json: ${err instanceof Error ? err.message : String(err)}`
-                                );
+                                const message = `[@symfony/reprise] failed to write entrypoints.json: ${err instanceof Error ? err.message : String(err)}`;
+                                if (isDev) c.getInfrastructureLogger('@symfony/reprise').error(message);
+                                else stats.compilation.errors.push(new Error(message));
                             }
                         });
                     }

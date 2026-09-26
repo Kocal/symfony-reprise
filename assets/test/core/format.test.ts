@@ -79,15 +79,12 @@ describe('buildEntrypoints', () => {
 
 describe('buildManifest', () => {
     it('maps logical keys (prefixed) to public URLs, sorted', () => {
-        const g: NormalizedGraph = {
-            entryPoints: {},
-            assets: [
-                { logicalName: 'app.js', fileName: 'app-a1b2.js' },
-                { logicalName: 'app.css', fileName: 'app-c3d4.css' },
-                { logicalName: 'images/logo.png', fileName: 'logo-77.png' },
-            ],
-        };
-        expect(buildManifest(g, ctx)).toEqual({
+        const assets = [
+            { logicalName: 'app.js', fileName: 'app-a1b2.js' },
+            { logicalName: 'app.css', fileName: 'app-c3d4.css' },
+            { logicalName: 'images/logo.png', fileName: 'logo-77.png' },
+        ];
+        expect(buildManifest(assets, ctx)).toEqual({
             'build/app.css': '/build/app-c3d4.css',
             'build/app.js': '/build/app-a1b2.js',
             'build/images/logo.png': '/build/logo-77.png',
@@ -95,18 +92,13 @@ describe('buildManifest', () => {
     });
 
     it('returns an empty object for no assets', () => {
-        expect(buildManifest({ entryPoints: {}, assets: [] }, ctx)).toEqual({});
+        expect(buildManifest([], ctx)).toEqual({});
     });
 
-    it('builds manifest values from urlPrefix, keys from manifestKeyPrefix', () => {
-        const g: NormalizedGraph = { entryPoints: {}, assets: [{ logicalName: 'app.js', fileName: 'app-a1b2.js' }] };
-        const devCtx: BuildContext = {
-            isProd: false,
-            devServer: { origin: 'http://127.0.0.1:5173', client: 'http://127.0.0.1:5173/build/@vite/client' },
-            publicPath: '/build/',
-            urlPrefix: 'http://127.0.0.1:5173/build/',
-            manifestKeyPrefix: 'build/',
-        };
-        expect(buildManifest(g, devCtx)).toEqual({ 'build/app.js': 'http://127.0.0.1:5173/build/app-a1b2.js' });
+    it('builds values from publicPath, keys from manifestKeyPrefix', () => {
+        const cdn = { publicPath: 'https://cdn.example.com/assets/', manifestKeyPrefix: 'build/' };
+        expect(buildManifest([{ logicalName: 'app.js', fileName: 'app-a1b2.js' }], cdn)).toEqual({
+            'build/app.js': 'https://cdn.example.com/assets/app-a1b2.js',
+        });
     });
 });

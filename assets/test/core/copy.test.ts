@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { ResolvedCopyEntry } from '../../src/types';
-import { contentHash, copyManifest, enumerateCopyFiles, hashedName, resolveCopyFiles } from '../../src/core/copy';
+import { contentHash, enumerateCopyFiles, hashedName, resolveCopyFiles } from '../../src/core/copy';
 
 const src = join(import.meta.dirname, '../fixtures/copy-src');
 const binSrc = join(import.meta.dirname, '../fixtures/copy-binary');
@@ -89,21 +89,6 @@ describe('resolveCopyFiles', () => {
         )!;
         expect(logo.physicalName).toBe('images/logo.svg');
         expect(logo.versionQuery).toBe('');
-    });
-});
-
-describe('copyManifest', () => {
-    it('keys by manifestKeyPrefix + logicalName, values by publicPath + physicalName', () => {
-        const files = resolveCopyFiles([entry()], true);
-        const manifest = copyManifest(files, { publicPath: '/build/', manifestKeyPrefix: 'build/' });
-        expect(manifest['build/images/logo.svg']).toMatch(/^\/build\/images\/logo\.[0-9a-f]{8}\.svg$/);
-        expect(manifest['build/images/icons/cat.svg']).toMatch(/^\/build\/images\/icons\/cat\.[0-9a-f]{8}\.svg$/);
-    });
-
-    it('appends the version query for `hash: false` entries', () => {
-        const files = resolveCopyFiles([entry({ hash: false })], true);
-        const manifest = copyManifest(files, { publicPath: '/build/', manifestKeyPrefix: 'build/' });
-        expect(manifest['build/images/logo.svg']).toMatch(/^\/build\/images\/logo\.svg\?[0-9a-f]{8}$/);
     });
 });
 

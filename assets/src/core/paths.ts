@@ -10,6 +10,10 @@ export function trimTrailingSlash(s: string): string {
     return s.replace(/\/$/, '');
 }
 
+export function escapeRegExp(s: string): string {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /** Drop a `url()` query/fragment (`./x.woff2?v=1`): Rspack keeps it in `sourceFilename`, Vite doesn't. */
 export function stripUrlSuffix(name: string): string {
     return name.replace(/[?#].*$/, '');

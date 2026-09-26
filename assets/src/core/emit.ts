@@ -1,7 +1,22 @@
-import type { EntrypointsJson, ManifestJson } from '../types';
+import type {
+    BuildContext,
+    DevServer,
+    EntrypointsJson,
+    ManifestJson,
+    NormalizedGraph,
+    ResolvedOptions,
+} from '../types';
+import type { CopyResult } from './copy';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { buildEntrypoints, buildManifest } from './format';
+import { integrityFromDisk, referencedFileNames } from './integrity';
+import { resolvePublicPath } from './options';
+import { escapeRegExp, slash, trimTrailingSlash } from './paths';
+
+const ENTRYPOINTS_FILE = 'entrypoints.json';
+const MANIFEST_FILE = 'manifest.json';
 
 // RepriseBundle can read these files mid-rebuild, so it must never see a truncated one.
 function writeFileAtomic(path: string, content: string): void {
@@ -18,6 +33,61 @@ function writeFileAtomic(path: string, content: string): void {
 
 export function writeSymfonyFiles(metadataPath: string, entrypoints: EntrypointsJson, manifest: ManifestJson): void {
     mkdirSync(metadataPath, { recursive: true });
-    writeFileAtomic(join(metadataPath, 'entrypoints.json'), `${JSON.stringify(entrypoints, null, 2)}\n`);
-    writeFileAtomic(join(metadataPath, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+    writeFileAtomic(join(metadataPath, ENTRYPOINTS_FILE), `${JSON.stringify(entrypoints, null, 2)}\n`);
+    writeFileAtomic(join(metadataPath, MANIFEST_FILE), `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+export function metadataWatchIgnore(metadataPath: string): { pattern: RegExp; globs: string[] } {
+    const dir = trimTrailingSlash(slash(metadataPath));
+    const names = [ENTRYPOINTS_FILE, MANIFEST_FILE];
+    const files = names.map((name) => `${dir}/${name}`);
+    // The metadata files are written through a temporary sibling that changes their directory too.
+    return {
+        pattern: new RegExp(`^${escapeRegExp(dir)}(?:/(?:${names.map(escapeRegExp).join('|')})(?:\\.[^/]+\\.tmp)?)?$`),
+        globs: [...files, ...files.map((file) => `${file}.*.tmp`)],
+    };
+}
+
+export interface MetadataInput {
+    isProd: boolean;
+    devServer: DevServer | null;
+    /** Keyed in the manifest only: the adapter writes or emits the files themselves. */
+    copyFiles: CopyResult[];
+}
+
+/** Call once the build output is on disk: SRI hashes are read from there. */
+export function writeMetadata(
+    options: ResolvedOptions,
+    graph: NormalizedGraph,
+    { isProd, devServer, copyFiles }: MetadataInput
+): void {
+    const ctx: BuildContext = {
+        isProd,
+        devServer,
+        publicPath: options.publicPath,
+        urlPrefix: resolvePublicPath(options.publicPath, devServer?.origin ?? null),
+        manifestKeyPrefix: options.manifestKeyPrefix,
+    };
+    const integrity =
+        isProd && options.integrity
+            ? integrityFromDisk(
+                  referencedFileNames(graph.entryPoints),
+                  options.outputPath,
+                  options.integrity.algorithms
+              )
+            : undefined;
+    const assets = [
+        // In dev the bundler's assets live in the dev server's memory: only the copied files are on disk.
+        ...(isProd ? graph.assets : []),
+        // Last, to win over Rsbuild's entry for the same file, which lacks the `hash: false` version query.
+        ...copyFiles.map((file) => ({
+            logicalName: file.logicalName,
+            fileName: file.physicalName + file.versionQuery,
+        })),
+    ];
+    writeSymfonyFiles(
+        options.metadataPath,
+        buildEntrypoints(integrity ? { ...graph, integrity } : graph, ctx),
+        buildManifest(assets, ctx)
+    );
 }
