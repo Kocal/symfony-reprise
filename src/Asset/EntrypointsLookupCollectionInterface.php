@@ -14,7 +14,7 @@ namespace Symfony\Reprise\Asset;
 use Symfony\Reprise\Exception\UndefinedBuildException;
 
 /**
- * Resolves the EntrypointsLookup for a named build (or the default build when none is given).
+ * Returns the entrypoints lookup of a given build.
  *
  * @author Hugo Alliaume <hugo@alliau.me>
  */
