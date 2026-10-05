@@ -12,7 +12,7 @@
 namespace Symfony\Reprise\Asset;
 
 /**
- * Reads a single entrypoints.json file and resolves each entry's asset URLs.
+ * Returns the JavaScript and CSS files of an entry.
  *
  * @author Hugo Alliaume <hugo@alliau.me>
  */
